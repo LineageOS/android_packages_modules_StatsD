@@ -177,9 +177,9 @@ public class AtomTestCase extends BaseTestCase {
 
     protected String getCurrentLogcatDate() throws Exception {
         // TODO: Do something more robust than this for getting logcat markers.
-        long timestampSecs = getDevice().getDeviceDate();
+        long timestampMs = getDevice().getDeviceDate();
         return new SimpleDateFormat("MM-dd HH:mm:ss.SSS")
-                .format(new Date(timestampSecs * 1000L));
+                .format(new Date(timestampMs));
     }
 
     protected String getLogcatSince(String date, String logcatParams) throws Exception {
