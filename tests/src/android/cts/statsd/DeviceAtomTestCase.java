@@ -25,9 +25,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -97,24 +95,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
         LogUtil.CLog.d("\nPerforming device-side test of " + methodName + " for uid " + appUid);
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", methodName);
 
-        ConfigMetricsReportList reportList = getReportList();
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
-
-        List<EventMetricData> data = new ArrayList<>();
-        for (com.android.os.StatsLog.StatsLogReport metric : report.getMetricsList()) {
-            data.addAll(metric.getEventMetrics().getDataList());
-        }
-        data.sort(Comparator.comparing(EventMetricData::getTimestampNanos));
-
-        for (EventMetricData d : data) {
-            LogUtil.CLog.d("Atom at " + d.getTimestampNanos() + ":\n" + d.getAtom().toString());
-        }
-        return data;
-    }
-
-    protected static StatsdConfig.Builder createConfigBuilder() {
-        return StatsdConfig.newBuilder().setName("12345");
+        return getReportMetricListData();
     }
 
     /**

@@ -35,6 +35,14 @@ import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.StatsLog.EventMetricData;
+import com.android.tradefed.log.LogUtil;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Statsd atom tests that are done via adb (hostside).
@@ -47,57 +55,42 @@ public class HostAtomTests extends AtomTestCase {
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = false;
 
-    public void testScreenOnAtom() throws Exception {
+    public void testScreenStateChangedAtom() throws Exception {
         if (!TESTS_ENABLED) {return;}
-        StatsdConfig config = getDefaultConfig()
-                .addEventMetric(
-                        EventMetric.newBuilder().setName("METRIC").setWhat("SCREEN_TURNED_ON"))
-                .build();
-        uploadConfig(config);
 
+        // Setup, make sure the screen is off.
         turnScreenOff();
         Thread.sleep(2000);
-        turnScreenOn();
+
+        final int atomTag = Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER;
+        final int key = ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER;
+        Set<Integer> screenOnStates = new HashSet<>(
+                Arrays.asList(ScreenStateChanged.State.STATE_ON_VALUE,
+                              ScreenStateChanged.State.STATE_ON_SUSPEND_VALUE,
+                              ScreenStateChanged.State.STATE_VR_VALUE));
+        Set<Integer> screenOffStates = new HashSet<>(
+                Arrays.asList(ScreenStateChanged.State.STATE_OFF_VALUE,
+                              ScreenStateChanged.State.STATE_DOZE_VALUE,
+                              ScreenStateChanged.State.STATE_DOZE_SUSPEND_VALUE,
+                              ScreenStateChanged.State.STATE_UNKNOWN_VALUE));
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(screenOnStates, screenOffStates);
+
+        createAndUploadConfig(atomTag);
         Thread.sleep(2000);
 
-        ConfigMetricsReportList reportList = getReportList();
-
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
-        assertTrue(report.getMetricsCount() == 1);
-        assertTrue(report.getMetrics(0).getEventMetrics().getDataCount() == 1);
-        assertTrue(report.getMetrics(0).getEventMetrics().getData(
-                0).getAtom().getScreenStateChanged()
-                .getDisplayState().getNumber() ==
-                ScreenStateChanged.State.STATE_ON_VALUE);
-    }
-
-    public void testScreenOffAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-        StatsdConfig config = getDefaultConfig()
-                .addEventMetric(
-                        EventMetric.newBuilder().setName("METRIC").setWhat("SCREEN_TURNED_OFF"))
-                .build();
-        uploadConfig(config);
-
+        // Trigger events in same order.
         turnScreenOn();
         Thread.sleep(2000);
         turnScreenOff();
         Thread.sleep(2000);
 
-        ConfigMetricsReportList reportList = getReportList();
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();
 
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
-        assertTrue(report.getMetricsCount() == 1);
-        // one of them can be DOZE
-        assertTrue(report.getMetrics(0).getEventMetrics().getDataCount() >= 1);
-        assertTrue(report.getMetrics(0).getEventMetrics().getData(
-                0).getAtom().getScreenStateChanged()
-                .getDisplayState().getNumber() == ScreenStateChanged.State.STATE_OFF_VALUE ||
-                report.getMetrics(0).getEventMetrics().getData(0).getAtom().getScreenStateChanged()
-                        .getDisplayState().getNumber()
-                        == ScreenStateChanged.State.STATE_DOZE_VALUE);
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(
+                stateSet, data, atom -> atom.getScreenStateChanged().getDisplayState().getNumber());
     }
 
     // TODO: Anomaly detection will be moved to general statsd device-side tests.
@@ -107,7 +100,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!TESTS_ENABLED) return;
         if (!INCIDENTD_TESTS_ENABLED) return;
         // TODO: Don't use screen-state as the atom.
-        StatsdConfig config = getDefaultConfig()
+        StatsdConfig config = getPulledAndAnomalyConfig()
                 .addCountMetric(CountMetric.newBuilder()
                     .setName("METRIC")
                     .setWhat("SCREEN_TURNED_ON")
@@ -152,7 +145,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!TESTS_ENABLED) return;
         if (!INCIDENTD_TESTS_ENABLED) return;
         // TODO: Do NOT use screenState for this, since screens auto-turn-off after a variable time.
-        StatsdConfig config = getDefaultConfig()
+        StatsdConfig config = getPulledAndAnomalyConfig()
                 .addDurationMetric(DurationMetric.newBuilder()
                         .setName("METRIC")
                         .setWhat("SCREEN_IS_ON")
@@ -209,7 +202,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!TESTS_ENABLED) return;
         if (!INCIDENTD_TESTS_ENABLED) return;
         // TODO: Definitely don't use screen-state as the atom. This MUST be changed.
-        StatsdConfig config = getDefaultConfig()
+        StatsdConfig config = getPulledAndAnomalyConfig()
                 .addValueMetric(ValueMetric.newBuilder()
                         .setName("METRIC")
                         .setWhat("SCREEN_TURNED_ON")
@@ -246,7 +239,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!TESTS_ENABLED) return;
         if (!INCIDENTD_TESTS_ENABLED) return;
         // TODO: Definitely don't use screen-state as the atom. This MUST be changed.
-        StatsdConfig config = getDefaultConfig()
+        StatsdConfig config = getPulledAndAnomalyConfig()
                 .addGaugeMetric(GaugeMetric.newBuilder()
                         .setName("METRIC")
                         .setWhat("SCREEN_TURNED_ON")
@@ -281,7 +274,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testKernelWakelock() throws Exception {
         if (!TESTS_ENABLED) {return;}
-        StatsdConfig config = getDefaultConfig()
+        StatsdConfig config = getPulledAndAnomalyConfig()
                 .addGaugeMetric(
                         GaugeMetric.newBuilder()
                                 .setName("METRIC")
@@ -317,11 +310,11 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     /**
-     * Get default config builder for atoms CTS testing.
-     * All matchers are included. One just need to add event metric for pushed events or
-     * gauge metric for pulled metric.
+     * TODO: Anomaly detection will be moved to general statsd device-side tests.
+     * Pulled atoms also should have a better way of constructing the config.
+     * Remove this config when that happens.
      */
-    protected StatsdConfig.Builder getDefaultConfig() {
+    protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
         StatsdConfig.Builder configBuilder = StatsdConfig.newBuilder();
         configBuilder.setName("12345");
         configBuilder
@@ -350,26 +343,10 @@ public class HostAtomTests extends AtomTestCase {
                 )
             )
             .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("UID_PROCESS_STATE_CHANGED")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER)
-                )
-            )
-            .addAtomMatcher(AtomMatcher.newBuilder()
                 .setName("KERNEL_WAKELOCK")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                     .setTag(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
                 )
-            )
-            .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("CPU_TIME_PER_UID")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.CPU_TIME_PER_UID_FIELD_NUMBER))
-            )
-            .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("CPU_TIME_PER_FREQ")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER))
             )
             .addPredicate(Predicate.newBuilder()
                 .setName("SCREEN_IS_ON")

@@ -20,8 +20,11 @@ import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.KeyMatcher;
 import com.android.internal.os.StatsdConfigProto.KeyValueMatcher;
+import com.android.internal.os.StatsdConfigProto.LogicalOperation;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.os.AtomsProto.Atom;
+import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
@@ -30,9 +33,14 @@ import com.google.common.io.Files;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.function.Function;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Base class for testing Statsd atoms.
@@ -79,6 +87,16 @@ public class AtomTestCase extends BaseTestCase {
         return log.contains(INCIDENTD_STARTED_STRING);
     }
 
+    protected static StatsdConfig.Builder createConfigBuilder() {
+        return StatsdConfig.newBuilder().setName("CTSConfig");
+    }
+
+    protected void createAndUploadConfig(int atomTag) throws Exception {
+        StatsdConfig.Builder conf = createConfigBuilder();
+        addAtomEvent(conf, atomTag);
+        uploadConfig(conf);
+    }
+
     protected void uploadConfig(StatsdConfig.Builder config) throws Exception {
         uploadConfig(config.build());
     }
@@ -99,16 +117,37 @@ public class AtomTestCase extends BaseTestCase {
                 String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, configName));
     }
 
+    protected List<EventMetricData> getReportMetricListData() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue(reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<EventMetricData> data = new ArrayList<>();
+        for (com.android.os.StatsLog.StatsLogReport metric : report.getMetricsList()) {
+            data.addAll(metric.getEventMetrics().getDataList());
+        }
+        data.sort(Comparator.comparing(EventMetricData::getTimestampNanos));
+
+        LogUtil.CLog.d("Get EventMetricDataList as following:\n");
+        for (EventMetricData d : data) {
+            LogUtil.CLog.d("Atom at " + d.getTimestampNanos() + ":\n" + d.getAtom().toString());
+        }
+        return data;
+    }
+
     protected ConfigMetricsReportList getReportList() throws Exception {
         ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
                 String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, CONFIG_NAME, "--proto"));
-        LogUtil.CLog.d("get report list as following:\n" + reportList.toString());
         return reportList;
     }
 
     /** Creates a KeyValueMatcher.Builder corresponding to the given key. */
     protected static KeyValueMatcher.Builder createKvm(int key) {
         return KeyValueMatcher.newBuilder().setKeyMatcher(KeyMatcher.newBuilder().setKey(key));
+    }
+
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
+        addAtomEvent(conf, atomTag, new ArrayList<KeyValueMatcher.Builder>());
     }
 
     /**
@@ -146,6 +185,40 @@ public class AtomTestCase extends BaseTestCase {
         conf.addEventMetric(EventMetric.newBuilder()
                 .setName(eventName)
                 .setWhat(atomName));
+    }
+
+    /**
+     * Asserts that each set of states in stateSets occurs at least once in data.
+     * Asserts that the states in data occur in the same order as the sets in stateSets.
+     * @param stateSets A list of set of states, where each set represents an equivalent state of
+     *                  the device for the purpose of CTS.
+     * @param data list of EventMetricData from statsd, produced by getReportMetricListData()
+     * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
+     */
+    public void assertStatesOccurred(List<Set<Integer>> stateSets, List<EventMetricData> data,
+            Function<Atom, Integer> getStateFromAtom) {
+        // Sometimes, there are more events than there are states.
+        // Eg: When the screen turns off, it may go into OFF and then DOZE immediately.
+        assertTrue(data.size() >= stateSets.size());
+        int stateSetIndex = 0; // Tracks which state set we expect the data to be in.
+        for (int dataIndex = 0; dataIndex < data.size(); dataIndex++) {
+            Atom atom = data.get(dataIndex).getAtom();
+            int state = getStateFromAtom.apply(atom);
+            // If state is in the current state set, we do not assert anything.
+            // If it is not, we expect to have transitioned to the next state set.
+            if (!stateSets.get(stateSetIndex).contains(state)) {
+                stateSetIndex += 1;
+                LogUtil.CLog.i("Assert that the following atom at dataIndex=" + dataIndex + " is"
+                        + " in stateSetIndex " + stateSetIndex + ":\n"
+                        + data.get(dataIndex).getAtom().toString());
+                assertTrue(dataIndex != 0); // We shoud not be on the first data.
+                assertTrue(stateSetIndex < stateSets.size()); // Out of bounds check.
+                assertTrue(stateSets.get(stateSetIndex).contains(state));
+                assertTrue(isTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
+                        1_000, 10_000));
+        }
+      }
+      assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
     }
 
     protected void turnScreenOn() throws Exception {
