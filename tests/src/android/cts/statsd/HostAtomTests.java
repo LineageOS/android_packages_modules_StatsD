@@ -21,6 +21,7 @@ import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
+import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.KeyMatcher;
 import com.android.internal.os.StatsdConfigProto.KeyValueMatcher;
@@ -42,9 +43,9 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.HostAtomTests";
 
-    private static final boolean TESTS_ENABLED = false;
+    private static final boolean TESTS_ENABLED = true;
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
-    private static final boolean INCIDENTD_TESTS_ENABLED = true;
+    private static final boolean INCIDENTD_TESTS_ENABLED = false;
 
     public void testScreenOnAtom() throws Exception {
         if (!TESTS_ENABLED) {return;}
@@ -249,7 +250,8 @@ public class HostAtomTests extends AtomTestCase {
                 .addGaugeMetric(GaugeMetric.newBuilder()
                         .setName("METRIC")
                         .setWhat("SCREEN_TURNED_ON")
-                        .setGaugeField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
+                        .setGaugeFields(FieldFilter.newBuilder()
+                                .addFieldNum(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
                         .setBucket(Bucket.newBuilder().setBucketSizeMillis(10_000))
                 )
                 .addAlert(Alert.newBuilder()
@@ -277,7 +279,7 @@ public class HostAtomTests extends AtomTestCase {
         turnScreenOff();
     }
 
-    public void testKernelWakelockCount() throws Exception {
+    public void testKernelWakelock() throws Exception {
         if (!TESTS_ENABLED) {return;}
         StatsdConfig config = getDefaultConfig()
                 .addGaugeMetric(
@@ -287,8 +289,9 @@ public class HostAtomTests extends AtomTestCase {
                                 .setCondition("SCREEN_IS_ON")
                                 .addDimension(KeyMatcher.newBuilder()
                                         .setKey(KernelWakelockPulled.NAME_FIELD_NUMBER))
-                                .setGaugeField(KernelWakelockPulled.COUNT_FIELD_NUMBER)
-                                .setBucket(Bucket.newBuilder().setBucketSizeMillis(10)))
+                                .setGaugeFields(FieldFilter.newBuilder().
+                                        setIncludeAll(true))
+                                .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000)))
                 .build();
 
         turnScreenOff();
@@ -305,37 +308,12 @@ public class HostAtomTests extends AtomTestCase {
         ConfigMetricsReport report = reportList.getReports(0);
         assertTrue(report.getMetricsCount() >= 1);
         assertTrue(report.getMetrics(0).getGaugeMetrics().getDataCount() >= 1);
-    }
-
-    public void testKernelWakelockTime() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-        StatsdConfig config = getDefaultConfig()
-                .addGaugeMetric(
-                        GaugeMetric.newBuilder()
-                                .setName("METRIC")
-                                .setWhat("KERNEL_WAKELOCK_PULLED")
-                                .setCondition("SCREEN_IS_ON")
-                                .addDimension(KeyMatcher.newBuilder()
-                                        .setKey(KernelWakelockPulled.NAME_FIELD_NUMBER))
-                                .setGaugeField(KernelWakelockPulled.TIME_FIELD_NUMBER)
-                                .setBucket(Bucket.newBuilder().setBucketSizeMillis(10)))
-                .build();
-        String configName = "testKernelWakelockPulledAtom";
-        removeConfig(configName);
-        turnScreenOff();
-
-        uploadConfig(config);
-
-        Thread.sleep(2000);
-        turnScreenOn();
-        Thread.sleep(2000);
-
-        ConfigMetricsReportList reportList = getReportList();
-
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
-        assertTrue(report.getMetricsCount() >= 1);
-        assertTrue(report.getMetrics(0).getGaugeMetrics().getDataCount() >= 1);
+        Atom atom = report.getMetrics(0).getGaugeMetrics().getData(1).getBucketInfo(0).getAtom();
+        assertTrue(!atom.getKernelWakelockPulled().getName().equals(""));
+        assertTrue(atom.getKernelWakelockPulled().hasCount());
+        assertTrue(atom.getKernelWakelockPulled().hasVersion());
+        assertTrue(atom.getKernelWakelockPulled().getVersion() > 0);
+        assertTrue(atom.getKernelWakelockPulled().hasTime());
     }
 
     /**
