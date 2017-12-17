@@ -31,7 +31,7 @@ import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
-import com.android.os.AtomsProto.KernelWakelockPulled;
+import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -43,7 +43,7 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.HostAtomTests";
 
-    private static final boolean TESTS_ENABLED = true;
+    private static final boolean TESTS_ENABLED = false;
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = false;
 
@@ -285,10 +285,10 @@ public class HostAtomTests extends AtomTestCase {
                 .addGaugeMetric(
                         GaugeMetric.newBuilder()
                                 .setName("METRIC")
-                                .setWhat("KERNEL_WAKELOCK_PULLED")
+                                .setWhat("KERNEL_WAKELOCK")
                                 .setCondition("SCREEN_IS_ON")
                                 .addDimension(KeyMatcher.newBuilder()
-                                        .setKey(KernelWakelockPulled.NAME_FIELD_NUMBER))
+                                        .setKey(KernelWakelock.NAME_FIELD_NUMBER))
                                 .setGaugeFields(FieldFilter.newBuilder().
                                         setIncludeAll(true))
                                 .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000)))
@@ -309,11 +309,11 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(report.getMetricsCount() >= 1);
         assertTrue(report.getMetrics(0).getGaugeMetrics().getDataCount() >= 1);
         Atom atom = report.getMetrics(0).getGaugeMetrics().getData(1).getBucketInfo(0).getAtom();
-        assertTrue(!atom.getKernelWakelockPulled().getName().equals(""));
-        assertTrue(atom.getKernelWakelockPulled().hasCount());
-        assertTrue(atom.getKernelWakelockPulled().hasVersion());
-        assertTrue(atom.getKernelWakelockPulled().getVersion() > 0);
-        assertTrue(atom.getKernelWakelockPulled().hasTime());
+        assertTrue(!atom.getKernelWakelock().getName().equals(""));
+        assertTrue(atom.getKernelWakelock().hasCount());
+        assertTrue(atom.getKernelWakelock().hasVersion());
+        assertTrue(atom.getKernelWakelock().getVersion() > 0);
+        assertTrue(atom.getKernelWakelock().hasTime());
     }
 
     /**
@@ -356,20 +356,20 @@ public class HostAtomTests extends AtomTestCase {
                 )
             )
             .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("KERNEL_WAKELOCK_PULLED")
+                .setName("KERNEL_WAKELOCK")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.KERNEL_WAKELOCK_PULLED_FIELD_NUMBER)
+                    .setTag(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
                 )
             )
             .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("CPU_TIME_PER_UID_PULLED")
+                .setName("CPU_TIME_PER_UID")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.CPU_TIME_PER_UID_PULLED_FIELD_NUMBER))
+                    .setTag(Atom.CPU_TIME_PER_UID_FIELD_NUMBER))
             )
             .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("CPU_TIME_PER_FREQ_PULLED")
+                .setName("CPU_TIME_PER_FREQ")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.CPU_TIME_PER_FREQ_PULLED_FIELD_NUMBER))
+                    .setTag(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER))
             )
             .addPredicate(Predicate.newBuilder()
                 .setName("SCREEN_IS_ON")
