@@ -31,7 +31,13 @@ import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.BatteryLevelChanged;
+import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.KernelWakelock;
+import com.android.os.AtomsProto.ChargingStateChanged;
+import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
+import com.android.os.AtomsProto.PluggedStateChanged;
+import com.android.os.AtomsProto.ScreenBrightnessChanged;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -73,6 +79,7 @@ public class HostAtomTests extends AtomTestCase {
                               ScreenStateChanged.State.STATE_DOZE_VALUE,
                               ScreenStateChanged.State.STATE_DOZE_SUSPEND_VALUE,
                               ScreenStateChanged.State.STATE_UNKNOWN_VALUE));
+
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(screenOnStates, screenOffStates);
 
@@ -91,6 +98,277 @@ public class HostAtomTests extends AtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(
                 stateSet, data, atom -> atom.getScreenStateChanged().getDisplayState().getNumber());
+    }
+
+    public void testChargingStateChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup, set charging state to full.
+        setChargingState(5);
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.CHARGING_STATE_CHANGED_FIELD_NUMBER;
+        final int key = ChargingStateChanged.CHARGING_STATE_FIELD_NUMBER;
+        Set<Integer> batteryUnknownStates = new HashSet<>(
+            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_UNKNOWN_VALUE));
+        Set<Integer> batteryChargingStates = new HashSet<>(
+            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_CHARGING_VALUE));
+        Set<Integer> batteryDischargingStates = new HashSet<>(
+            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_DISCHARGING_VALUE));
+        Set<Integer> batteryNotChargingStates = new HashSet<>(
+            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_NOT_CHARGING_VALUE));
+        Set<Integer> batteryFullStates = new HashSet<>(
+            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_FULL_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(batteryUnknownStates, batteryChargingStates,
+                batteryDischargingStates, batteryNotChargingStates, batteryFullStates);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        setChargingState(1);
+        Thread.sleep(2000);
+        setChargingState(2);
+        Thread.sleep(2000);
+        setChargingState(3);
+        Thread.sleep(2000);
+        setChargingState(4);
+        Thread.sleep(2000);
+        setChargingState(5);
+        Thread.sleep(2000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();
+
+        // Unfreeze battery state after test
+        resetBatteryStatus();
+        Thread.sleep(2000);
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+                atom -> atom.getChargingStateChanged().getChargingState().getNumber());
+    }
+
+    public void testPluggedStateChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup, unplug device.
+        unplugDevice();
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.PLUGGED_STATE_CHANGED_FIELD_NUMBER;
+        final int key = PluggedStateChanged.PLUGGED_STATE_FIELD_NUMBER;
+        Set<Integer> unpluggedStates = new HashSet<>(
+            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_NONE_VALUE));
+        Set<Integer> acStates = new HashSet<>(
+            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_AC_VALUE));
+        Set<Integer> usbStates = new HashSet<>(
+            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_USB_VALUE));
+        Set<Integer> wirelessStates = new HashSet<>(
+            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_WIRELESS_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(acStates, unpluggedStates, usbStates,
+                unpluggedStates, wirelessStates, unpluggedStates);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        plugInAc();
+        Thread.sleep(2000);
+        unplugDevice();
+        Thread.sleep(2000);
+        plugInUsb();
+        Thread.sleep(2000);
+        unplugDevice();
+        Thread.sleep(2000);
+        plugInWireless();
+        Thread.sleep(2000);
+        unplugDevice();
+        Thread.sleep(2000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();
+
+        // Unfreeze battery state after test
+        resetBatteryStatus();
+        Thread.sleep(2000);
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+            atom -> atom.getPluggedStateChanged().getPluggedState().getNumber());
+    }
+
+    public void testBatteryLevelChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup, set battery level to full.
+        setBatteryLevel(100);
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.BATTERY_LEVEL_CHANGED_FIELD_NUMBER;
+        final int key = BatteryLevelChanged.BATTERY_LEVEL_FIELD_NUMBER;
+        Set<Integer> batteryDead = new HashSet<>(Arrays.asList(0));
+        Set<Integer> battery25p = new HashSet<>(Arrays.asList(25));
+        Set<Integer> battery50p = new HashSet<>(Arrays.asList(50));
+        Set<Integer> battery75p = new HashSet<>(Arrays.asList(75));
+        Set<Integer> batteryFull = new HashSet<>(Arrays.asList(100));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(batteryDead, battery25p, battery50p,
+                battery75p, batteryFull);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        setBatteryLevel(0);
+        Thread.sleep(2000);
+        setBatteryLevel(25);
+        Thread.sleep(2000);
+        setBatteryLevel(50);
+        Thread.sleep(2000);
+        setBatteryLevel(75);
+        Thread.sleep(2000);
+        setBatteryLevel(100);
+        Thread.sleep(2000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();
+
+        // Unfreeze battery state after test
+        resetBatteryStatus();
+        Thread.sleep(2000);
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+                atom -> atom.getBatteryLevelChanged().getBatteryLevel());
+    }
+
+    public void testScreenBrightnessChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup: record initial brightness state, set mode to manual and brightness to full.
+        int initialBrightness = getScreenBrightness();
+        boolean isInitialManual = isScreenBrightnessModeManual();
+        int initialTimeout = getScreenTimeoutMs();
+        setScreenTimeoutMs(600000);
+        turnScreenOn();
+        setScreenBrightnessMode(true);
+        setScreenBrightness(255);
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.SCREEN_BRIGHTNESS_CHANGED_FIELD_NUMBER;
+        final int key = ScreenBrightnessChanged.LEVEL_FIELD_NUMBER;
+        Set<Integer> screenMin = new HashSet<>(Arrays.asList(25));
+        Set<Integer> screen100 = new HashSet<>(Arrays.asList(100));
+        Set<Integer> screen200 = new HashSet<>(Arrays.asList(200));
+        Set<Integer> screenMax = new HashSet<>(Arrays.asList(255));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(screenMin, screen100, screen200, screenMax);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        setScreenBrightness(25);
+        Thread.sleep(2000);
+        setScreenBrightness(100);
+        Thread.sleep(2000);
+        setScreenBrightness(200);
+        Thread.sleep(2000);
+        setScreenBrightness(255);
+        Thread.sleep(2000);
+
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();
+
+        // Restore initial screen brightness
+        setScreenBrightness(initialBrightness);
+        setScreenBrightnessMode(isInitialManual);
+        setScreenTimeoutMs(initialTimeout);
+        turnScreenOff();
+        Thread.sleep(2000);
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, atom -> atom.getScreenBrightnessChanged().getLevel());
+    }
+
+    public void testDeviceIdleModeStateChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup, leave doze mode.
+        leaveDozeMode();
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.DEVICE_IDLE_MODE_STATE_CHANGED_FIELD_NUMBER;
+        final int key = DeviceIdleModeStateChanged.STATE_FIELD_NUMBER;
+        Set<Integer> dozeOff = new HashSet<>(
+            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_OFF_VALUE));
+        Set<Integer> dozeLight = new HashSet<>(
+            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_LIGHT_VALUE));
+        Set<Integer> dozeDeep = new HashSet<>(
+            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_DEEP_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(dozeLight, dozeDeep, dozeOff);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        enterDozeModeLight();
+        Thread.sleep(2000);
+        enterDozeModeDeep();
+        Thread.sleep(2000);
+        leaveDozeMode();
+        Thread.sleep(2000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();;
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+            atom -> atom.getDeviceIdleModeStateChanged().getState().getNumber());
+    }
+
+    public void testBatterySaverModeStateChangedAtom() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+
+        // Setup, turn off battery saver.
+        turnBatterySaverOff();
+        Thread.sleep(2000);
+
+        final int atomTag = Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER;
+        final int key = BatterySaverModeStateChanged.STATE_FIELD_NUMBER;
+        Set<Integer> batterySaverOn = new HashSet<>(
+            Arrays.asList(BatterySaverModeStateChanged.State.ON_VALUE));
+        Set<Integer> batterySaverOff = new HashSet<>(
+            Arrays.asList(BatterySaverModeStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(batterySaverOn, batterySaverOff);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        // Trigger events in same order.
+        turnBatterySaverOn();
+        Thread.sleep(2000);
+        turnBatterySaverOff();
+        Thread.sleep(2000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();;
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+            atom -> atom.getBatterySaverModeStateChanged().getState().getNumber());
     }
 
     // TODO: Anomaly detection will be moved to general statsd device-side tests.

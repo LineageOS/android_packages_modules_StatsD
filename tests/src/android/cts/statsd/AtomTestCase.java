@@ -88,7 +88,7 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
-        return StatsdConfig.newBuilder().setName("CTSConfig");
+        return StatsdConfig.newBuilder().setName(CONFIG_NAME);
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {
@@ -228,6 +228,84 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void turnScreenOff() throws Exception {
         getDevice().executeShellCommand("input keyevent KEYCODE_SLEEP");
+    }
+
+    protected void setChargingState(int state) throws Exception {
+        getDevice().executeShellCommand("cmd battery set status " + state);
+    }
+
+    protected void unplugDevice() throws Exception {
+        getDevice().executeShellCommand("cmd battery unplug");
+    }
+
+    protected void plugInAc() throws Exception {
+        getDevice().executeShellCommand("cmd battery set ac 1");
+    }
+
+    protected void plugInUsb() throws Exception {
+        getDevice().executeShellCommand("cmd battery set usb 1");
+    }
+
+    protected void plugInWireless() throws Exception {
+        getDevice().executeShellCommand("cmd battery set wireless 1");
+    }
+
+    protected void setBatteryLevel(int level) throws Exception {
+        getDevice().executeShellCommand("cmd battery set level " + level);
+    }
+
+    protected void resetBatteryStatus() throws Exception {
+        getDevice().executeShellCommand("cmd battery reset");
+    }
+
+    protected int getScreenBrightness() throws Exception {
+        return Integer.parseInt(
+                getDevice().executeShellCommand("settings get system screen_brightness").trim());
+    }
+
+    protected void setScreenBrightness(int brightness) throws Exception {
+        getDevice().executeShellCommand("settings put system screen_brightness " + brightness);
+    }
+
+    protected boolean isScreenBrightnessModeManual() throws Exception {
+        String mode = getDevice().executeShellCommand("settings get system screen_brightness_mode");
+        return Integer.parseInt(mode.trim()) == 0;
+    }
+
+    protected void setScreenBrightnessMode(boolean manual) throws Exception {
+        getDevice().executeShellCommand(
+                "settings put system screen_brightness_mode " + (manual? 0 : 1));
+    }
+
+    protected int getScreenTimeoutMs() throws Exception {
+        return Integer.parseInt(
+                getDevice().executeShellCommand("settings get system screen_off_timeout").trim());
+    }
+    protected void setScreenTimeoutMs(int timeout) throws Exception {
+        getDevice().executeShellCommand("settings put system screen_off_timeout " + timeout);
+    }
+
+    protected void enterDozeModeLight() throws Exception {
+        getDevice().executeShellCommand("dumpsys deviceidle force-idle light");
+    }
+
+    protected void enterDozeModeDeep() throws Exception {
+        getDevice().executeShellCommand("dumpsys deviceidle force-idle deep");
+    }
+    protected void leaveDozeMode() throws Exception {
+        getDevice().executeShellCommand("dumpsys deviceidle unforce");
+        getDevice().executeShellCommand("dumpsys deviceidle disable");
+        getDevice().executeShellCommand("dumpsys deviceidle enable");
+    }
+
+    protected void turnBatterySaverOn() throws Exception {
+        getDevice().executeShellCommand("cmd battery unplug");
+        getDevice().executeShellCommand("settings put global low_power 1");
+    }
+
+    protected void turnBatterySaverOff() throws Exception {
+        getDevice().executeShellCommand("settings put global low_power 0");
+        getDevice().executeShellCommand("cmd battery reset");
     }
 
     protected void rebootDevice() throws Exception {
