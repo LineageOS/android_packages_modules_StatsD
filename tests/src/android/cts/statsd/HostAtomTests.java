@@ -65,10 +65,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, make sure the screen is off.
         turnScreenOff();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER;
-        final int key = ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER;
+
         Set<Integer> screenOnStates = new HashSet<>(
                 Arrays.asList(ScreenStateChanged.State.STATE_ON_VALUE,
                         ScreenStateChanged.State.STATE_ON_SUSPEND_VALUE,
@@ -83,20 +83,20 @@ public class HostAtomTests extends AtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(screenOnStates, screenOffStates);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOff();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(
-                stateSet, data, atom -> atom.getScreenStateChanged().getDisplayState().getNumber());
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getScreenStateChanged().getDisplayState().getNumber());
     }
 
     public void testChargingStateChangedAtom() throws Exception {
@@ -104,10 +104,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, set charging state to full.
         setChargingState(5);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.CHARGING_STATE_CHANGED_FIELD_NUMBER;
-        final int key = ChargingStateChanged.CHARGING_STATE_FIELD_NUMBER;
+
         Set<Integer> batteryUnknownStates = new HashSet<>(
                 Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_UNKNOWN_VALUE));
         Set<Integer> batteryChargingStates = new HashSet<>(
@@ -124,29 +124,29 @@ public class HostAtomTests extends AtomTestCase {
                 batteryDischargingStates, batteryNotChargingStates, batteryFullStates);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         setChargingState(1);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setChargingState(2);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setChargingState(3);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setChargingState(4);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setChargingState(5);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getChargingStateChanged().getChargingState().getNumber());
     }
 
@@ -155,10 +155,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, unplug device.
         unplugDevice();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.PLUGGED_STATE_CHANGED_FIELD_NUMBER;
-        final int key = PluggedStateChanged.PLUGGED_STATE_FIELD_NUMBER;
+
         Set<Integer> unpluggedStates = new HashSet<>(
                 Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_NONE_VALUE));
         Set<Integer> acStates = new HashSet<>(
@@ -173,31 +173,31 @@ public class HostAtomTests extends AtomTestCase {
                 unpluggedStates, wirelessStates, unpluggedStates);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         plugInAc();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         unplugDevice();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         plugInUsb();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         unplugDevice();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         plugInWireless();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         unplugDevice();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getPluggedStateChanged().getPluggedState().getNumber());
     }
 
@@ -206,10 +206,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, set battery level to full.
         setBatteryLevel(100);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.BATTERY_LEVEL_CHANGED_FIELD_NUMBER;
-        final int key = BatteryLevelChanged.BATTERY_LEVEL_FIELD_NUMBER;
+
         Set<Integer> batteryDead = new HashSet<>(Arrays.asList(0));
         Set<Integer> battery25p = new HashSet<>(Arrays.asList(25));
         Set<Integer> battery50p = new HashSet<>(Arrays.asList(50));
@@ -221,29 +221,29 @@ public class HostAtomTests extends AtomTestCase {
                 battery75p, batteryFull);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         setBatteryLevel(0);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setBatteryLevel(25);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setBatteryLevel(50);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setBatteryLevel(75);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setBatteryLevel(100);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getBatteryLevelChanged().getBatteryLevel());
     }
 
@@ -258,10 +258,10 @@ public class HostAtomTests extends AtomTestCase {
         turnScreenOn();
         setScreenBrightnessMode(true);
         setScreenBrightness(255);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.SCREEN_BRIGHTNESS_CHANGED_FIELD_NUMBER;
-        final int key = ScreenBrightnessChanged.LEVEL_FIELD_NUMBER;
+
         Set<Integer> screenMin = new HashSet<>(Arrays.asList(25));
         Set<Integer> screen100 = new HashSet<>(Arrays.asList(100));
         Set<Integer> screen200 = new HashSet<>(Arrays.asList(200));
@@ -271,17 +271,17 @@ public class HostAtomTests extends AtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(screenMin, screen100, screen200, screenMax);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         setScreenBrightness(25);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setScreenBrightness(100);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setScreenBrightness(200);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         setScreenBrightness(255);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
 
         // Sorted list of events in order in which they occurred.
@@ -292,10 +292,11 @@ public class HostAtomTests extends AtomTestCase {
         setScreenBrightnessMode(isInitialManual);
         setScreenTimeoutMs(initialTimeout);
         turnScreenOff();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, atom -> atom.getScreenBrightnessChanged().getLevel());
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+                atom -> atom.getScreenBrightnessChanged().getLevel());
     }
 
     public void testDeviceIdleModeStateChangedAtom() throws Exception {
@@ -303,10 +304,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, leave doze mode.
         leaveDozeMode();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.DEVICE_IDLE_MODE_STATE_CHANGED_FIELD_NUMBER;
-        final int key = DeviceIdleModeStateChanged.STATE_FIELD_NUMBER;
+
         Set<Integer> dozeOff = new HashSet<>(
                 Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_OFF_VALUE));
         Set<Integer> dozeLight = new HashSet<>(
@@ -318,21 +319,21 @@ public class HostAtomTests extends AtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(dozeLight, dozeDeep, dozeOff);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         enterDozeModeLight();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         enterDozeModeDeep();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         leaveDozeMode();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();;
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getDeviceIdleModeStateChanged().getState().getNumber());
     }
 
@@ -341,10 +342,10 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, turn off battery saver.
         turnBatterySaverOff();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER;
-        final int key = BatterySaverModeStateChanged.STATE_FIELD_NUMBER;
+
         Set<Integer> batterySaverOn = new HashSet<>(
                 Arrays.asList(BatterySaverModeStateChanged.State.ON_VALUE));
         Set<Integer> batterySaverOff = new HashSet<>(
@@ -354,19 +355,19 @@ public class HostAtomTests extends AtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(batterySaverOn, batterySaverOff);
 
         createAndUploadConfig(atomTag);
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
         turnBatterySaverOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
         turnBatterySaverOff();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getBatterySaverModeStateChanged().getState().getNumber());
     }
 
@@ -582,9 +583,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -609,9 +610,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -634,9 +635,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -659,9 +660,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -682,9 +683,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -706,9 +707,9 @@ public class HostAtomTests extends AtomTestCase {
 
         uploadConfig(config);
 
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
         turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 

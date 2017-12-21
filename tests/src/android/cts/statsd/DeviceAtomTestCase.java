@@ -114,6 +114,18 @@ public class DeviceAtomTestCase extends AtomTestCase {
     }
 
     /**
+     * Adds an event to the config for an atom that matches the app's uid.
+     * @param conf configuration
+     * @param atomTag atom tag (from atoms.proto)
+     */
+    @Override
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
+        final int UID_KEY = 1;
+        FieldValueMatcher.Builder kvmUid = createKvm(UID_KEY).setEqInt(getUid());
+        addAtomEvent(conf, atomTag, Arrays.asList(kvmUid));
+    }
+
+    /**
      * Gets the uid of the test app.
      */
     protected int getUid() throws Exception {
