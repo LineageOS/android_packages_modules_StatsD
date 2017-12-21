@@ -18,8 +18,7 @@ package android.cts.statsd;
 
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
-import com.android.internal.os.StatsdConfigProto.KeyMatcher;
-import com.android.internal.os.StatsdConfigProto.KeyValueMatcher;
+import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.LogicalOperation;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
@@ -142,22 +141,22 @@ public class AtomTestCase extends BaseTestCase {
         return reportList;
     }
 
-    /** Creates a KeyValueMatcher.Builder corresponding to the given key. */
-    protected static KeyValueMatcher.Builder createKvm(int key) {
-        return KeyValueMatcher.newBuilder().setKeyMatcher(KeyMatcher.newBuilder().setKey(key));
+    /** Creates a FieldValueMatcher.Builder corresponding to the given key. */
+    protected static FieldValueMatcher.Builder createKvm(int key) {
+        return FieldValueMatcher.newBuilder().setField(key);
     }
 
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
-        addAtomEvent(conf, atomTag, new ArrayList<KeyValueMatcher.Builder>());
+        addAtomEvent(conf, atomTag, new ArrayList<FieldValueMatcher.Builder>());
     }
 
     /**
      * Adds an event to the config for an atom that matches the given key.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param kvm KeyValueMatcher.Builder for the relevant key
+     * @param kvm FieldValueMatcher.Builder for the relevant key
      */
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, KeyValueMatcher.Builder kvm)
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder kvm)
             throws Exception {
         addAtomEvent(conf, atomTag, Arrays.asList(kvm));
     }
@@ -166,18 +165,18 @@ public class AtomTestCase extends BaseTestCase {
      * Adds an event to the config for an atom that matches the given keys.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param kvms list of KeyValueMatcher.Builders to attach to the atom. May be null.
+     * @param kvms list of FieldValueMatcher.Builders to attach to the atom. May be null.
      */
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag,
-            List<KeyValueMatcher.Builder> kvms) throws Exception {
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomId,
+            List<FieldValueMatcher.Builder> kvms) throws Exception {
 
         final String atomName = "Atom" + System.nanoTime();
         final String eventName = "Event" +  + System.nanoTime();
 
-        SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setTag(atomTag);
+        SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         if (kvms != null) {
-          for (KeyValueMatcher.Builder kvm : kvms) {
-            sam.addKeyValueMatcher(kvm);
+          for (FieldValueMatcher.Builder kvm : kvms) {
+            sam.addFieldValueMatcher(kvm);
           }
         }
         conf.addAtomMatcher(AtomMatcher.newBuilder()

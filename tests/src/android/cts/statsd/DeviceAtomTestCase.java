@@ -17,7 +17,7 @@ package android.cts.statsd;
 
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
-import com.android.internal.os.StatsdConfigProto.KeyValueMatcher;
+import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.StatsLog.ConfigMetricsReport;
@@ -102,14 +102,14 @@ public class DeviceAtomTestCase extends AtomTestCase {
      * Adds an event to the config for an atom that matches the given key AND has the app's uid.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param kvm KeyValueMatcher.Builder for the relevant key
+     * @param kvm FieldValueMatcher.Builder for the relevant key
      */
     @Override
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, KeyValueMatcher.Builder kvm)
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder kvm)
             throws Exception {
 
         final int UID_KEY = 1;
-        KeyValueMatcher.Builder kvmUid = createKvm(UID_KEY).setEqInt(getUid());
+        FieldValueMatcher.Builder kvmUid = createKvm(UID_KEY).setEqInt(getUid());
         addAtomEvent(conf, atomTag, Arrays.asList(kvm, kvmUid));
     }
 

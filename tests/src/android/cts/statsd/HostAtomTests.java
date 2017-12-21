@@ -23,8 +23,8 @@ import com.android.internal.os.StatsdConfigProto.DurationMetric;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
-import com.android.internal.os.StatsdConfigProto.KeyMatcher;
-import com.android.internal.os.StatsdConfigProto.KeyValueMatcher;
+import com.android.internal.os.StatsdConfigProto.FieldMatcher;
+import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
@@ -521,8 +521,13 @@ public class HostAtomTests extends AtomTestCase {
                 .addGaugeMetric(GaugeMetric.newBuilder()
                         .setName("METRIC")
                         .setWhat("SCREEN_TURNED_ON")
-                        .setGaugeFields(FieldFilter.newBuilder()
-                                .addFieldNum(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
+                        .setGaugeFieldsFilter(
+                                FieldFilter.newBuilder()
+                                        .setFields(FieldMatcher.newBuilder()
+                                                .setField(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                                                .addChild(FieldMatcher.newBuilder()
+                                                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
+                                ))
                         .setBucket(Bucket.newBuilder().setBucketSizeMillis(10_000))
                 )
                 .addAlert(Alert.newBuilder()
@@ -558,10 +563,11 @@ public class HostAtomTests extends AtomTestCase {
                                 .setName("METRIC")
                                 .setWhat("KERNEL_WAKELOCK")
                                 .setCondition("SCREEN_IS_ON")
-                                .addDimension(KeyMatcher.newBuilder()
-                                        .setKey(KernelWakelock.NAME_FIELD_NUMBER))
-                                .setGaugeFields(FieldFilter.newBuilder().
-                                        setIncludeAll(true))
+                                .setDimensions(FieldMatcher.newBuilder()
+                                        .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
+                                        .addChild(FieldMatcher.newBuilder()
+                                                .setField(KernelWakelock.NAME_FIELD_NUMBER)))
+                                .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true))
                                 .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000)))
                 .build();
 
@@ -599,11 +605,9 @@ public class HostAtomTests extends AtomTestCase {
             .addAtomMatcher(AtomMatcher.newBuilder()
                 .setName("SCREEN_TURNED_ON")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
-                    .addKeyValueMatcher(KeyValueMatcher.newBuilder()
-                        .setKeyMatcher(KeyMatcher.newBuilder()
-                            .setKey(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                        )
+                    .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                    .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
                         .setEqInt(ScreenStateChanged.State.STATE_ON_VALUE)
                     )
                 )
@@ -611,11 +615,9 @@ public class HostAtomTests extends AtomTestCase {
             .addAtomMatcher(AtomMatcher.newBuilder()
                 .setName("SCREEN_TURNED_OFF")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
-                    .addKeyValueMatcher(KeyValueMatcher.newBuilder()
-                        .setKeyMatcher(KeyMatcher.newBuilder()
-                            .setKey(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                        )
+                    .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                    .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
                         .setEqInt(ScreenStateChanged.State.STATE_OFF_VALUE)
                     )
                 )
@@ -623,7 +625,7 @@ public class HostAtomTests extends AtomTestCase {
             .addAtomMatcher(AtomMatcher.newBuilder()
                 .setName("KERNEL_WAKELOCK")
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setTag(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
+                    .setAtomId(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
                 )
             )
             .addPredicate(Predicate.newBuilder()
