@@ -25,6 +25,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraCharacteristics;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -180,6 +182,26 @@ public class AtomTests {
         }
     }
 
+    @Test
+    public void testFlashlight() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        CameraManager cam = context.getSystemService(CameraManager.class);
+        String[] cameraIds = cam.getCameraIdList();
+        boolean foundFlash = false;
+        for (int i = 0; i < cameraIds.length; i++) {
+            String id = cameraIds[i];
+            if(cam.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE)) {
+                cam.setTorchMode(id, true);
+                sleep(2_000);
+                cam.setTorchMode(id, false);
+                foundFlash = true;
+                break;
+            }
+        }
+        if(!foundFlash) {
+            Log.e(TAG, "No flashlight found on device");
+        }
+    }
     // ------- Helper methods
 
     /** Puts the current thread to sleep. */

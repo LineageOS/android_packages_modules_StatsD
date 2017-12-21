@@ -20,11 +20,16 @@ import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
+import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Statsd atom tests that are done via app, for atoms that report a uid.
@@ -39,6 +44,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
     private static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
+    private static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
 
     public void testBleScan() throws Exception {
         if (!TESTS_ENABLED) return;
@@ -151,5 +157,35 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+    }
+
+    public void testFlashlightState() throws Exception {
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
+
+        final int atomTag = Atom.FLASHLIGHT_STATE_CHANGED_FIELD_NUMBER;
+        final int key = FlashlightStateChanged.STATE_FIELD_NUMBER;
+        final String name = "testFlashlight";
+        int appUid = getUid();
+
+        Set<Integer> flashlightOn = new HashSet<>(
+            Arrays.asList(FlashlightStateChanged.State.ON_VALUE));
+        Set<Integer> flashlightOff = new HashSet<>(
+            Arrays.asList(FlashlightStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(flashlightOn, flashlightOff);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(2000);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getReportMetricListData();;
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+            atom -> atom.getFlashlightStateChanged().getState().getNumber());
     }
 }
