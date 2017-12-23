@@ -25,6 +25,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraCharacteristics;
 import android.location.Location;
@@ -121,6 +122,48 @@ public class AtomTests {
         if (bluetoothEnabledByTest) {
             bluetoothAdapter.disable();
         }
+    }
+
+    @Test
+    public void testCameraState() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        CameraManager cam = context.getSystemService(CameraManager.class);
+        String[] cameraIds = cam.getCameraIdList();
+        if (cameraIds.length == 0) {
+            Log.e(TAG, "No camera found on device");
+            return;
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        final CameraDevice.StateCallback cb = new CameraDevice.StateCallback() {
+            @Override
+            public void onOpened(CameraDevice cd) {
+                Log.i(TAG, "CameraDevice " + cd.getId() + " opened");
+                sleep(2_000);
+                cd.close();
+            }
+            @Override
+            public void onClosed(CameraDevice cd) {
+                latch.countDown();
+                Log.i(TAG, "CameraDevice " + cd.getId() + " closed");
+            }
+            @Override
+            public void onDisconnected(CameraDevice cd) {
+                Log.w(TAG, "CameraDevice  " + cd.getId() + " disconnected");
+            }
+            @Override
+            public void onError(CameraDevice cd, int error) {
+                Log.e(TAG, "CameraDevice " + cd.getId() + "had error " + error);
+            }
+        };
+
+        HandlerThread handlerThread = new HandlerThread("br_handler_thread");
+        handlerThread.start();
+        Looper looper = handlerThread.getLooper();
+        Handler handler = new Handler(looper);
+
+        cam.openCamera(cameraIds[0], cb, handler);
+        waitForReceiver(context, 10_000, latch, null);
     }
 
     @Test

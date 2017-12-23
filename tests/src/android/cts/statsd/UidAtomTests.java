@@ -20,6 +20,7 @@ import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
+import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
@@ -45,6 +46,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
+    private static final String FEATURE_CAMERA = "android.hardware.camera";
+    private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
 
     public void testBleScan() throws Exception {
         if (!TESTS_ENABLED) return;
@@ -110,6 +113,28 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(a0.getNumOfResults() >= 1);
 
         turnScreenOff();
+    }
+
+    public void testCameraState() throws Exception {
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_CAMERA, true) && !hasFeature(FEATURE_CAMERA_FRONT, true)) return;
+
+        final int atomTag = Atom.CAMERA_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> cameraOn = new HashSet<>(Arrays.asList(CameraStateChanged.State.ON_VALUE));
+        Set<Integer> cameraOff = new HashSet<>(Arrays.asList(CameraStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(cameraOn, cameraOff);
+
+        createAndUploadConfig(atomTag);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testCameraState");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data,
+            atom -> atom.getCameraStateChanged().getState().getNumber());
     }
 
     public void testGpsScan() throws Exception {
