@@ -103,6 +103,7 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void uploadConfig(StatsdConfig config) throws Exception {
         File configFile = File.createTempFile("statsdconfig", ".config");
+        configFile.deleteOnExit();
         Files.write(config.toByteArray(), configFile);
         String remotePath = "/data/" + configFile.getName();
         getDevice().pushFile(configFile, remotePath);
