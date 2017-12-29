@@ -17,18 +17,26 @@ package android.cts.statsd;
 
 
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
+import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
+import com.android.internal.os.StatsdConfigProto.FieldFilter;
+import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
-import com.android.internal.os.StatsdConfigProto.LogicalOperation;
+import com.android.internal.os.StatsdConfigProto.GaugeMetric;
+import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
+import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.os.StatsLog.GaugeMetricData;
+import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.log.LogUtil;
-
 import com.google.common.io.Files;
+import com.sun.istack.internal.Nullable;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -36,10 +44,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.function.Function;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Base class for testing Statsd atoms.
@@ -63,7 +70,6 @@ public class AtomTestCase extends BaseTestCase {
         // These should go away once we have statsd properly set up.
 
         // Uninstall to clear the history in case it's still on the device.
-        removeConfig("fake");
         removeConfig(CONFIG_NAME);
     }
 
@@ -117,13 +123,13 @@ public class AtomTestCase extends BaseTestCase {
                 String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, configName));
     }
 
-    protected List<EventMetricData> getReportMetricListData() throws Exception {
+    protected List<EventMetricData> getEventMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
         assertTrue(reportList.getReportsCount() == 1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<EventMetricData> data = new ArrayList<>();
-        for (com.android.os.StatsLog.StatsLogReport metric : report.getMetricsList()) {
+        for (StatsLogReport metric : report.getMetricsList()) {
             data.addAll(metric.getEventMetrics().getDataList());
         }
         data.sort(Comparator.comparing(EventMetricData::getTimestampNanos));
@@ -131,6 +137,25 @@ public class AtomTestCase extends BaseTestCase {
         LogUtil.CLog.d("Get EventMetricDataList as following:\n");
         for (EventMetricData d : data) {
             LogUtil.CLog.d("Atom at " + d.getTimestampNanos() + ":\n" + d.getAtom().toString());
+        }
+        return data;
+    }
+
+    protected List<Atom> getGaugeMetricDataList() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue(reportList.getReportsCount() == 1);
+        // only config
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<Atom> data = new ArrayList<>();
+        for (GaugeMetricData gaugeMetricData : report.getMetrics(0).getGaugeMetrics().getDataList()) {
+            // only one bucket
+            data.add(gaugeMetricData.getBucketInfo(0).getAtom());
+        }
+
+        LogUtil.CLog.d("Get GaugeMetricDataList as following:\n");
+        for (Atom d : data) {
+            LogUtil.CLog.d("Atom:\n" + d.toString());
         }
         return data;
     }
@@ -185,6 +210,64 @@ public class AtomTestCase extends BaseTestCase {
         conf.addEventMetric(EventMetric.newBuilder()
                 .setName(eventName)
                 .setWhat(atomName));
+    }
+
+    /**
+     * Adds an atom to a gauge metric of a config
+     * @param conf configuration
+     * @param atomId atom id (from atoms.proto)
+     * @param dimension dimension is needed for most pulled atoms
+     */
+    protected void addGaugeAtom(StatsdConfig.Builder conf, int atomId, @Nullable FieldMatcher.Builder dimension) throws Exception {
+        final String atomName = "Atom" + System.nanoTime();
+        final String gaugeName = "Gauge" +  + System.nanoTime();
+        final String predicateName = "SCREEN_IS_ON";
+        SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
+        conf.addAtomMatcher(AtomMatcher.newBuilder()
+                .setName(atomName)
+                .setSimpleAtomMatcher(sam));
+        // TODO: change this predicate to something simpler and easier
+        final String predicateTrueName = "SCREEN_TURNED_ON";
+        final String predicateFalseName = "SCREEN_TURNED_OFF";
+        conf.addAtomMatcher(AtomMatcher.newBuilder()
+                .setName(predicateTrueName)
+                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                        .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                        .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
+                                .setEqInt(ScreenStateChanged.State.STATE_ON_VALUE)
+                        )
+                )
+        )
+                // Used to trigger predicate
+                .addAtomMatcher(AtomMatcher.newBuilder()
+                        .setName(predicateFalseName)
+                        .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                                .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                                .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
+                                        .setEqInt(ScreenStateChanged.State.STATE_OFF_VALUE)
+                                )
+                        )
+                );
+        conf.addPredicate(Predicate.newBuilder()
+                .setName(predicateName)
+                .setSimplePredicate(SimplePredicate.newBuilder()
+                        .setStart(predicateTrueName)
+                        .setStop(predicateFalseName)
+                        .setCountNesting(false)
+                )
+        );
+        GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
+                .setName(gaugeName)
+                .setWhat(atomName)
+                .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
+                .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000))
+                .setCondition(predicateName);
+        if (dimension != null) {
+            gaugeMetric.setDimensions(dimension.build());
+        }
+        conf.addGaugeMetric(gaugeMetric.build());
     }
 
     /**

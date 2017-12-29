@@ -182,7 +182,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();;
+        List<EventMetricData> data = getEventMetricDataList();;
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,

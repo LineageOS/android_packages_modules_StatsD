@@ -16,35 +16,30 @@
 package android.cts.statsd;
 
 import com.android.internal.os.StatsdConfigProto.Alert;
-import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
-import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
-import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
-import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
-import com.android.internal.os.StatsdConfigProto.Predicate;
-import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
-import com.android.internal.os.StatsdConfigProto.SimplePredicate;
+import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatteryLevelChanged;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
-import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.ChargingStateChanged;
+import com.android.os.AtomsProto.CpuTimePerUid;
+import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
+import com.android.os.AtomsProto.KernelWakelock;
+import com.android.os.AtomsProto.PlatformSleepState;
 import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.ScreenBrightnessChanged;
 import com.android.os.AtomsProto.ScreenStateChanged;
-import com.android.os.StatsLog.ConfigMetricsReport;
-import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.AtomsProto.SleepStateVoter;
+import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -60,6 +55,8 @@ public class HostAtomTests extends AtomTestCase {
     private static final boolean TESTS_ENABLED = false;
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = false;
+
+    private static final String TEST_CONFIG_NAME = "cts_test_config";
 
     public void testScreenStateChangedAtom() throws Exception {
         if (!TESTS_ENABLED) {return;}
@@ -93,7 +90,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(
@@ -140,7 +137,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
@@ -191,7 +188,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
@@ -237,7 +234,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Unfreeze battery state after test
         resetBatteryStatus();
@@ -286,7 +283,7 @@ public class HostAtomTests extends AtomTestCase {
 
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Restore initial screen brightness
         setScreenBrightness(initialBrightness);
@@ -330,7 +327,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();;
+        List<EventMetricData> data = getEventMetricDataList();;
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,
@@ -364,7 +361,7 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(2000);
 
         // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getReportMetricListData();;
+        List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,
@@ -557,19 +554,12 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testKernelWakelock() throws Exception {
         if (!TESTS_ENABLED) {return;}
-        StatsdConfig config = getPulledAndAnomalyConfig()
-                .addGaugeMetric(
-                        GaugeMetric.newBuilder()
-                                .setName("METRIC")
-                                .setWhat("KERNEL_WAKELOCK")
-                                .setCondition("SCREEN_IS_ON")
-                                .setDimensions(FieldMatcher.newBuilder()
-                                        .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
-                                        .addChild(FieldMatcher.newBuilder()
-                                                .setField(KernelWakelock.NAME_FIELD_NUMBER)))
-                                .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true))
-                                .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000)))
-                .build();
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(KernelWakelock.NAME_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, dimension);
 
         turnScreenOff();
 
@@ -579,18 +569,135 @@ public class HostAtomTests extends AtomTestCase {
         turnScreenOn();
         Thread.sleep(2000);
 
-        ConfigMetricsReportList reportList = getReportList();
+        List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
-        assertTrue(report.getMetricsCount() >= 1);
-        assertTrue(report.getMetrics(0).getGaugeMetrics().getDataCount() >= 1);
-        Atom atom = report.getMetrics(0).getGaugeMetrics().getData(1).getBucketInfo(0).getAtom();
+        Atom atom = data.get(0);
         assertTrue(!atom.getKernelWakelock().getName().equals(""));
         assertTrue(atom.getKernelWakelock().hasCount());
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
+    }
+
+    public void testCpuTimePerUidFreq() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuTimePerUidFreq.UID_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(atom.getCpuTimePerUidFreq().getUid() > 0);
+        assertTrue(atom.getCpuTimePerUidFreq().getFreqIdx() >= 0);
+        assertTrue(atom.getCpuTimePerUidFreq().getTimeMs() > 0);
+    }
+
+    public void testCpuTimePerUid() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuTimePerUid.UID_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(atom.getCpuTimePerUid().getUid() > 0);
+        assertTrue(atom.getCpuTimePerUid().getUserTimeMs() > 0);
+        assertTrue(atom.getCpuTimePerUid().getSysTimeMs() > 0);
+    }
+
+    public void testPlatformSleepState() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.PLATFORM_SLEEP_STATE_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(PlatformSleepState.NAME_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.PLATFORM_SLEEP_STATE_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(!atom.getPlatformSleepState().getName().equals(""));
+    }
+
+    public void testSleepStateVoter() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.SLEEP_STATE_VOTER_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(SleepStateVoter.VOTER_NAME_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.SLEEP_STATE_VOTER_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(!atom.getSleepStateVoter().getPlatformSleepStateName().equals(""));
+        assertTrue(!atom.getSleepStateVoter().getVoterName().equals(""));
+    }
+
+    public void testSubsystemSleepState() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(SubsystemSleepState.SUBSYSTEM_NAME_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(!atom.getSubsystemSleepState().getSubsystemName().equals(""));
+        assertTrue(!atom.getSubsystemSleepState().getSubsystemSleepStateName().equals(""));
     }
 
     /**
@@ -599,43 +706,6 @@ public class HostAtomTests extends AtomTestCase {
      * Remove this config when that happens.
      */
     protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
-        StatsdConfig.Builder configBuilder = StatsdConfig.newBuilder();
-        configBuilder.setName("12345");
-        configBuilder
-            .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("SCREEN_TURNED_ON")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
-                    .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                        .setEqInt(ScreenStateChanged.State.STATE_ON_VALUE)
-                    )
-                )
-            )
-            .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("SCREEN_TURNED_OFF")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
-                    .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                        .setEqInt(ScreenStateChanged.State.STATE_OFF_VALUE)
-                    )
-                )
-            )
-            .addAtomMatcher(AtomMatcher.newBuilder()
-                .setName("KERNEL_WAKELOCK")
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                    .setAtomId(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
-                )
-            )
-            .addPredicate(Predicate.newBuilder()
-                .setName("SCREEN_IS_ON")
-                .setSimplePredicate(SimplePredicate.newBuilder()
-                    .setStart("SCREEN_TURNED_ON")
-                    .setStop("SCREEN_TURNED_OFF")
-                    .setCountNesting(false)
-                )
-            );
-        return configBuilder;
+        return StatsdConfig.newBuilder().setName(TEST_CONFIG_NAME);
     }
 }

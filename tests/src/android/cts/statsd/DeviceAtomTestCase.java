@@ -95,7 +95,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
         LogUtil.CLog.d("\nPerforming device-side test of " + methodName + " for uid " + appUid);
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", methodName);
 
-        return getReportMetricListData();
+        return getEventMetricDataList();
     }
 
     /**
