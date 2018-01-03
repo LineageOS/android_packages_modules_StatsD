@@ -16,6 +16,7 @@
 package android.cts.statsd;
 
 import com.android.internal.os.StatsdConfigProto.Alert;
+import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
 import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
@@ -23,6 +24,7 @@ import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatteryLevelChanged;
@@ -56,7 +58,7 @@ public class HostAtomTests extends AtomTestCase {
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = false;
 
-    private static final String TEST_CONFIG_NAME = "cts_test_config";
+    private static final long TEST_CONFIG_ID = "cts_test_config".hashCode();
 
     public void testScreenStateChangedAtom() throws Exception {
         if (!TESTS_ENABLED) {return;}
@@ -69,13 +71,13 @@ public class HostAtomTests extends AtomTestCase {
         final int key = ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER;
         Set<Integer> screenOnStates = new HashSet<>(
                 Arrays.asList(ScreenStateChanged.State.STATE_ON_VALUE,
-                              ScreenStateChanged.State.STATE_ON_SUSPEND_VALUE,
-                              ScreenStateChanged.State.STATE_VR_VALUE));
+                        ScreenStateChanged.State.STATE_ON_SUSPEND_VALUE,
+                        ScreenStateChanged.State.STATE_VR_VALUE));
         Set<Integer> screenOffStates = new HashSet<>(
                 Arrays.asList(ScreenStateChanged.State.STATE_OFF_VALUE,
-                              ScreenStateChanged.State.STATE_DOZE_VALUE,
-                              ScreenStateChanged.State.STATE_DOZE_SUSPEND_VALUE,
-                              ScreenStateChanged.State.STATE_UNKNOWN_VALUE));
+                        ScreenStateChanged.State.STATE_DOZE_VALUE,
+                        ScreenStateChanged.State.STATE_DOZE_SUSPEND_VALUE,
+                        ScreenStateChanged.State.STATE_UNKNOWN_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(screenOnStates, screenOffStates);
@@ -107,15 +109,15 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.CHARGING_STATE_CHANGED_FIELD_NUMBER;
         final int key = ChargingStateChanged.CHARGING_STATE_FIELD_NUMBER;
         Set<Integer> batteryUnknownStates = new HashSet<>(
-            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_UNKNOWN_VALUE));
+                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_UNKNOWN_VALUE));
         Set<Integer> batteryChargingStates = new HashSet<>(
-            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_CHARGING_VALUE));
+                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_CHARGING_VALUE));
         Set<Integer> batteryDischargingStates = new HashSet<>(
-            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_DISCHARGING_VALUE));
+                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_DISCHARGING_VALUE));
         Set<Integer> batteryNotChargingStates = new HashSet<>(
-            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_NOT_CHARGING_VALUE));
+                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_NOT_CHARGING_VALUE));
         Set<Integer> batteryFullStates = new HashSet<>(
-            Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_FULL_VALUE));
+                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_FULL_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(batteryUnknownStates, batteryChargingStates,
@@ -158,13 +160,13 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.PLUGGED_STATE_CHANGED_FIELD_NUMBER;
         final int key = PluggedStateChanged.PLUGGED_STATE_FIELD_NUMBER;
         Set<Integer> unpluggedStates = new HashSet<>(
-            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_NONE_VALUE));
+                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_NONE_VALUE));
         Set<Integer> acStates = new HashSet<>(
-            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_AC_VALUE));
+                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_AC_VALUE));
         Set<Integer> usbStates = new HashSet<>(
-            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_USB_VALUE));
+                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_USB_VALUE));
         Set<Integer> wirelessStates = new HashSet<>(
-            Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_WIRELESS_VALUE));
+                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_WIRELESS_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(acStates, unpluggedStates, usbStates,
@@ -196,7 +198,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,
-            atom -> atom.getPluggedStateChanged().getPluggedState().getNumber());
+                atom -> atom.getPluggedStateChanged().getPluggedState().getNumber());
     }
 
     public void testBatteryLevelChangedAtom() throws Exception {
@@ -306,11 +308,11 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.DEVICE_IDLE_MODE_STATE_CHANGED_FIELD_NUMBER;
         final int key = DeviceIdleModeStateChanged.STATE_FIELD_NUMBER;
         Set<Integer> dozeOff = new HashSet<>(
-            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_OFF_VALUE));
+                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_OFF_VALUE));
         Set<Integer> dozeLight = new HashSet<>(
-            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_LIGHT_VALUE));
+                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_LIGHT_VALUE));
         Set<Integer> dozeDeep = new HashSet<>(
-            Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_DEEP_VALUE));
+                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_DEEP_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(dozeLight, dozeDeep, dozeOff);
@@ -331,7 +333,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,
-            atom -> atom.getDeviceIdleModeStateChanged().getState().getNumber());
+                atom -> atom.getDeviceIdleModeStateChanged().getState().getNumber());
     }
 
     public void testBatterySaverModeStateChangedAtom() throws Exception {
@@ -344,9 +346,9 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER;
         final int key = BatterySaverModeStateChanged.STATE_FIELD_NUMBER;
         Set<Integer> batterySaverOn = new HashSet<>(
-            Arrays.asList(BatterySaverModeStateChanged.State.ON_VALUE));
+                Arrays.asList(BatterySaverModeStateChanged.State.ON_VALUE));
         Set<Integer> batterySaverOff = new HashSet<>(
-            Arrays.asList(BatterySaverModeStateChanged.State.OFF_VALUE));
+                Arrays.asList(BatterySaverModeStateChanged.State.OFF_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(batterySaverOn, batterySaverOff);
@@ -365,7 +367,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data,
-            atom -> atom.getBatterySaverModeStateChanged().getState().getNumber());
+                atom -> atom.getBatterySaverModeStateChanged().getState().getNumber());
     }
 
     // TODO: Anomaly detection will be moved to general statsd device-side tests.
@@ -377,19 +379,22 @@ public class HostAtomTests extends AtomTestCase {
         // TODO: Don't use screen-state as the atom.
         StatsdConfig config = getPulledAndAnomalyConfig()
                 .addCountMetric(CountMetric.newBuilder()
-                    .setName("METRIC")
-                    .setWhat("SCREEN_TURNED_ON")
-                    .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
+                        .setId("METRIC".hashCode())
+                        .setWhat("SCREEN_TURNED_ON".hashCode())
+                        .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
                 )
                 .addAlert(Alert.newBuilder()
-                    .setName("testCountAnomalyDetectionAlert")
-                    .setMetricName("METRIC")
-                    .setNumberOfBuckets(4)
-                    .setRefractoryPeriodSecs(20)
-                    .setTriggerIfSumGt(2)
-                    .setIncidentdDetails(Alert.IncidentdDetails.newBuilder()
-                        .addSection(-1)
-                    )
+                        .setId("testCountAnomalyDetectionAlert".hashCode())
+                        .setMetricId("METRIC".hashCode())
+                        .setNumberOfBuckets(4)
+                        .setRefractoryPeriodSecs(20)
+                        .setTriggerIfSumGt(2)
+                )
+                .addSubscription(Subscription.newBuilder()
+                        .setId("AlertSub".hashCode())
+                        .setRuleType(Subscription.RuleType.ALERT)
+                        .setRuleId("testCountAnomalyDetectionAlert".hashCode())
+                        .setIncidentdDetails(IncidentdDetails.newBuilder().addSection(-1))
                 )
                 .build();
         uploadConfig(config);
@@ -422,20 +427,23 @@ public class HostAtomTests extends AtomTestCase {
         // TODO: Do NOT use screenState for this, since screens auto-turn-off after a variable time.
         StatsdConfig config = getPulledAndAnomalyConfig()
                 .addDurationMetric(DurationMetric.newBuilder()
-                        .setName("METRIC")
-                        .setWhat("SCREEN_IS_ON")
+                        .setId("METRIC".hashCode())
+                        .setWhat("SCREEN_IS_ON".hashCode())
                         .setAggregationType(DurationMetric.AggregationType.SUM)
                         .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
                 )
                 .addAlert(Alert.newBuilder()
-                        .setName("testDurationAnomalyDetectionAlert")
-                        .setMetricName("METRIC")
+                        .setId("testDurationAnomalyDetectionAlert".hashCode())
+                        .setMetricId("METRIC".hashCode())
                         .setNumberOfBuckets(12)
                         .setRefractoryPeriodSecs(20)
                         .setTriggerIfSumGt(15_000_000_000L) // 15 seconds in nanoseconds
-                        .setIncidentdDetails(Alert.IncidentdDetails.newBuilder()
-                                .addSection(-1)
-                        )
+                )
+                .addSubscription(Subscription.newBuilder()
+                        .setId("AlertSub".hashCode())
+                        .setRuleType(Subscription.RuleType.ALERT)
+                        .setRuleId("testDurationAnomalyDetectionAlert".hashCode())
+                        .setIncidentdDetails(IncidentdDetails.newBuilder().addSection(-1))
                 )
                 .build();
         uploadConfig(config);
@@ -479,20 +487,23 @@ public class HostAtomTests extends AtomTestCase {
         // TODO: Definitely don't use screen-state as the atom. This MUST be changed.
         StatsdConfig config = getPulledAndAnomalyConfig()
                 .addValueMetric(ValueMetric.newBuilder()
-                        .setName("METRIC")
-                        .setWhat("SCREEN_TURNED_ON")
+                        .setId("METRIC".hashCode())
+                        .setWhat("SCREEN_TURNED_ON".hashCode())
                         .setValueField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
                         .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
                 )
                 .addAlert(Alert.newBuilder()
-                        .setName("testValueAnomalyDetectionAlert")
-                        .setMetricName("METRIC")
+                        .setId("testValueAnomalyDetectionAlert".hashCode())
+                        .setMetricId("METRIC".hashCode())
                         .setNumberOfBuckets(4)
                         .setRefractoryPeriodSecs(20)
                         .setTriggerIfSumGt(ScreenStateChanged.State.STATE_OFF.getNumber())
-                        .setIncidentdDetails(Alert.IncidentdDetails.newBuilder()
-                                .addSection(-1)
-                        )
+                )
+                .addSubscription(Subscription.newBuilder()
+                        .setId("AlertSub".hashCode())
+                        .setRuleType(Subscription.RuleType.ALERT)
+                        .setRuleId("testValueAnomalyDetectionAlert".hashCode())
+                        .setIncidentdDetails(IncidentdDetails.newBuilder().addSection(-1))
                 )
                 .build();
         uploadConfig(config);
@@ -516,26 +527,29 @@ public class HostAtomTests extends AtomTestCase {
         // TODO: Definitely don't use screen-state as the atom. This MUST be changed.
         StatsdConfig config = getPulledAndAnomalyConfig()
                 .addGaugeMetric(GaugeMetric.newBuilder()
-                        .setName("METRIC")
-                        .setWhat("SCREEN_TURNED_ON")
+                        .setId("METRIC".hashCode())
+                        .setWhat("SCREEN_TURNED_ON".hashCode())
                         .setGaugeFieldsFilter(
                                 FieldFilter.newBuilder()
                                         .setFields(FieldMatcher.newBuilder()
                                                 .setField(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                                 .addChild(FieldMatcher.newBuilder()
                                                         .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
-                                ))
+                                        ))
                         .setBucket(Bucket.newBuilder().setBucketSizeMillis(10_000))
                 )
                 .addAlert(Alert.newBuilder()
-                        .setName("testGaugeAnomalyDetectionAlert")
-                        .setMetricName("METRIC")
+                        .setId("testGaugeAnomalyDetectionAlert".hashCode())
+                        .setMetricId("METRIC".hashCode())
                         .setNumberOfBuckets(1)
                         .setRefractoryPeriodSecs(20)
                         .setTriggerIfSumGt(ScreenStateChanged.State.STATE_OFF.getNumber())
-                        .setIncidentdDetails(Alert.IncidentdDetails.newBuilder()
-                                .addSection(-1)
-                        )
+                )
+                .addSubscription(Subscription.newBuilder()
+                        .setId("AlertSub".hashCode())
+                        .setRuleType(Subscription.RuleType.ALERT)
+                        .setRuleId("testGaugeAnomalyDetectionAlert".hashCode())
+                        .setIncidentdDetails(IncidentdDetails.newBuilder().addSection(-1))
                 )
                 .build();
         uploadConfig(config);
@@ -706,6 +720,6 @@ public class HostAtomTests extends AtomTestCase {
      * Remove this config when that happens.
      */
     protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
-        return StatsdConfig.newBuilder().setName(TEST_CONFIG_NAME);
+        return StatsdConfig.newBuilder().setId(TEST_CONFIG_ID);
     }
 }

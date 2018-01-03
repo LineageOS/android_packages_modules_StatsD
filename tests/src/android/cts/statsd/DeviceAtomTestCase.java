@@ -89,7 +89,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
      */
     protected List<EventMetricData> doDeviceMethod(String methodName, StatsdConfig.Builder cfg)
             throws Exception {
-        removeConfig(CONFIG_NAME);
+        removeConfig(CONFIG_ID);
         uploadConfig(cfg);
         int appUid = getUid();
         LogUtil.CLog.d("\nPerforming device-side test of " + methodName + " for uid " + appUid);

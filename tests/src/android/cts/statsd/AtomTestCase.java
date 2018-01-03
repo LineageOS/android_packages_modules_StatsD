@@ -58,7 +58,7 @@ public class AtomTestCase extends BaseTestCase {
     private static final String DUMP_REPORT_CMD = "cmd stats dump-report";
     private static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     protected static final String CONFIG_UID = "1000";
-    protected static final String CONFIG_NAME = "cts_config";
+    protected static final long CONFIG_ID = "cts_config".hashCode();
 
     @Override
     protected void setUp() throws Exception {
@@ -70,12 +70,12 @@ public class AtomTestCase extends BaseTestCase {
         // These should go away once we have statsd properly set up.
 
         // Uninstall to clear the history in case it's still on the device.
-        removeConfig(CONFIG_NAME);
+        removeConfig(CONFIG_ID);
     }
 
     @Override
     protected void tearDown() throws Exception {
-        removeConfig(CONFIG_NAME);
+        removeConfig(CONFIG_ID);
         super.tearDown();
     }
 
@@ -93,7 +93,7 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
-        return StatsdConfig.newBuilder().setName(CONFIG_NAME);
+        return StatsdConfig.newBuilder().setId(CONFIG_ID);
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {
@@ -114,13 +114,13 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().pushFile(configFile, remotePath);
         getDevice().executeShellCommand(
                 String.join(" ", "cat", remotePath, "|", UPDATE_CONFIG_CMD, CONFIG_UID,
-                        CONFIG_NAME));
+                        String.valueOf(CONFIG_ID)));
         getDevice().executeShellCommand("rm " + remotePath);
     }
 
-    protected void removeConfig(String configName) throws Exception {
+    protected void removeConfig(long configId) throws Exception {
         getDevice().executeShellCommand(
-                String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, configName));
+                String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, String.valueOf(configId)));
     }
 
     protected List<EventMetricData> getEventMetricDataList() throws Exception {
@@ -162,7 +162,7 @@ public class AtomTestCase extends BaseTestCase {
 
     protected ConfigMetricsReportList getReportList() throws Exception {
         ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
-                String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, CONFIG_NAME, "--proto"));
+                String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, String.valueOf(CONFIG_ID), "--proto"));
         return reportList;
     }
 
@@ -196,20 +196,20 @@ public class AtomTestCase extends BaseTestCase {
             List<FieldValueMatcher.Builder> kvms) throws Exception {
 
         final String atomName = "Atom" + System.nanoTime();
-        final String eventName = "Event" +  + System.nanoTime();
+        final String eventName = "Event" + System.nanoTime();
 
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         if (kvms != null) {
-          for (FieldValueMatcher.Builder kvm : kvms) {
-            sam.addFieldValueMatcher(kvm);
-          }
+            for (FieldValueMatcher.Builder kvm : kvms) {
+                sam.addFieldValueMatcher(kvm);
+            }
         }
         conf.addAtomMatcher(AtomMatcher.newBuilder()
-                .setName(atomName)
+                .setId(atomName.hashCode())
                 .setSimpleAtomMatcher(sam));
         conf.addEventMetric(EventMetric.newBuilder()
-                .setName(eventName)
-                .setWhat(atomName));
+                .setId(eventName.hashCode())
+                .setWhat(atomName.hashCode()));
     }
 
     /**
@@ -224,13 +224,13 @@ public class AtomTestCase extends BaseTestCase {
         final String predicateName = "SCREEN_IS_ON";
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         conf.addAtomMatcher(AtomMatcher.newBuilder()
-                .setName(atomName)
+                .setId(atomName.hashCode())
                 .setSimpleAtomMatcher(sam));
         // TODO: change this predicate to something simpler and easier
         final String predicateTrueName = "SCREEN_TURNED_ON";
         final String predicateFalseName = "SCREEN_TURNED_OFF";
         conf.addAtomMatcher(AtomMatcher.newBuilder()
-                .setName(predicateTrueName)
+                .setId(predicateTrueName.hashCode())
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                         .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                         .addFieldValueMatcher(FieldValueMatcher.newBuilder()
@@ -241,7 +241,7 @@ public class AtomTestCase extends BaseTestCase {
         )
                 // Used to trigger predicate
                 .addAtomMatcher(AtomMatcher.newBuilder()
-                        .setName(predicateFalseName)
+                        .setId(predicateFalseName.hashCode())
                         .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                                 .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
@@ -251,19 +251,19 @@ public class AtomTestCase extends BaseTestCase {
                         )
                 );
         conf.addPredicate(Predicate.newBuilder()
-                .setName(predicateName)
+                .setId(predicateName.hashCode())
                 .setSimplePredicate(SimplePredicate.newBuilder()
-                        .setStart(predicateTrueName)
-                        .setStop(predicateFalseName)
+                        .setStart(predicateTrueName.hashCode())
+                        .setStop(predicateFalseName.hashCode())
                         .setCountNesting(false)
                 )
         );
         GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
-                .setName(gaugeName)
-                .setWhat(atomName)
+                .setId(gaugeName.hashCode())
+                .setWhat(atomName.hashCode())
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
                 .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000))
-                .setCondition(predicateName);
+                .setCondition(predicateName.hashCode());
         if (dimension != null) {
             gaugeMetric.setDimensions(dimension.build());
         }
@@ -299,9 +299,9 @@ public class AtomTestCase extends BaseTestCase {
                 assertTrue(stateSets.get(stateSetIndex).contains(state));
                 assertTrue(isTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
                         1_000, 10_000));
+            }
         }
-      }
-      assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
+        assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
     }
 
     protected void turnScreenOn() throws Exception {
