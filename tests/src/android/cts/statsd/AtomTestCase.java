@@ -27,6 +27,7 @@ import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
@@ -262,7 +263,7 @@ public class AtomTestCase extends BaseTestCase {
                 .setId(gaugeName.hashCode())
                 .setWhat(atomName.hashCode())
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
-                .setBucket(Bucket.newBuilder().setBucketSizeMillis(1000))
+                .setBucket(TimeUnit.CTS)
                 .setCondition(predicateName.hashCode());
         if (dimension != null) {
             gaugeMetric.setDimensions(dimension.build());

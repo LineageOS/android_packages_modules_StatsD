@@ -25,6 +25,7 @@ import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
+import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatteryLevelChanged;
@@ -381,7 +382,7 @@ public class HostAtomTests extends AtomTestCase {
                 .addCountMetric(CountMetric.newBuilder()
                         .setId("METRIC".hashCode())
                         .setWhat("SCREEN_TURNED_ON".hashCode())
-                        .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
+                        .setBucket(TimeUnit.CTS)
                 )
                 .addAlert(Alert.newBuilder()
                         .setId("testCountAnomalyDetectionAlert".hashCode())
@@ -430,7 +431,7 @@ public class HostAtomTests extends AtomTestCase {
                         .setId("METRIC".hashCode())
                         .setWhat("SCREEN_IS_ON".hashCode())
                         .setAggregationType(DurationMetric.AggregationType.SUM)
-                        .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
+                        .setBucket(TimeUnit.CTS)
                 )
                 .addAlert(Alert.newBuilder()
                         .setId("testDurationAnomalyDetectionAlert".hashCode())
@@ -493,7 +494,7 @@ public class HostAtomTests extends AtomTestCase {
                                 .setField(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                 .addChild(FieldMatcher.newBuilder()
                                         .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)))
-                        .setBucket(Bucket.newBuilder().setBucketSizeMillis(5_000))
+                        .setBucket(TimeUnit.CTS)
                 )
                 .addAlert(Alert.newBuilder()
                         .setId("testValueAnomalyDetectionAlert".hashCode())
@@ -539,7 +540,7 @@ public class HostAtomTests extends AtomTestCase {
                                                 .addChild(FieldMatcher.newBuilder()
                                                         .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
                                         ))
-                        .setBucket(Bucket.newBuilder().setBucketSizeMillis(10_000))
+                        .setBucket(TimeUnit.CTS)
                 )
                 .addAlert(Alert.newBuilder()
                         .setId("testGaugeAnomalyDetectionAlert".hashCode())
