@@ -153,7 +153,6 @@ public class AtomTestCase extends BaseTestCase {
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData : report.getMetrics(0).getGaugeMetrics().getDataList()) {
-            // only one bucket
             data.add(gaugeMetricData.getBucketInfo(0).getAtom());
         }
 
@@ -193,7 +192,7 @@ public class AtomTestCase extends BaseTestCase {
     /**
      * Adds an event to the config for an atom that matches the given keys.
      * @param conf configuration
-     * @param atomTag atom tag (from atoms.proto)
+     * @param atomId atom tag (from atoms.proto)
      * @param kvms list of FieldValueMatcher.Builders to attach to the atom. May be null.
      */
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomId,
@@ -301,8 +300,10 @@ public class AtomTestCase extends BaseTestCase {
                 assertTrue(dataIndex != 0); // We shoud not be on the first data.
                 assertTrue(stateSetIndex < stateSets.size()); // Out of bounds check.
                 assertTrue(stateSets.get(stateSetIndex).contains(state));
-                assertTrue(isTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
-                    wait / 2, wait * 5));
+                long diffMs = (data.get(dataIndex).getTimestampNanos() -
+                        data.get(dataIndex - 1).getTimestampNanos()) / 1_000_000;
+                assertTrue(wait / 2 < diffMs);
+                assertTrue(wait * 5 > diffMs);
             }
         }
         assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
