@@ -16,6 +16,8 @@
 
 package com.android.server.cts.device.statsd;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -38,6 +40,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 
 import org.junit.Test;
@@ -167,6 +170,27 @@ public class AtomTests {
     }
 
     @Test
+    public void testFlashlight() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        CameraManager cam = context.getSystemService(CameraManager.class);
+        String[] cameraIds = cam.getCameraIdList();
+        boolean foundFlash = false;
+        for (int i = 0; i < cameraIds.length; i++) {
+            String id = cameraIds[i];
+            if(cam.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE)) {
+                cam.setTorchMode(id, true);
+                sleep(500);
+                cam.setTorchMode(id, false);
+                foundFlash = true;
+                break;
+            }
+        }
+        if(!foundFlash) {
+            Log.e(TAG, "No flashlight found on device");
+        }
+    }
+
+    @Test
     public void testGpsScan() {
         Context context = InstrumentationRegistry.getContext();
         final LocationManager locManager = context.getSystemService(LocationManager.class);
@@ -208,6 +232,20 @@ public class AtomTests {
     }
 
     @Test
+    public void testWakeupAlarm() {
+        Context context = InstrumentationRegistry.getContext();
+        String name = "android.cts.statsd.testWakeupAlarm";
+        CountDownLatch onReceiveLatch = new CountDownLatch(1);
+        BroadcastReceiver receiver =
+                registerReceiver(context, onReceiveLatch, new IntentFilter(name));
+        AlarmManager manager = (AlarmManager) (context.getSystemService(AlarmManager.class));
+        PendingIntent pintent = PendingIntent.getBroadcast(context, 0, new Intent(name), 0);
+        manager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            SystemClock.elapsedRealtime() + 2_000, pintent);
+        waitForReceiver(context, 10_000, onReceiveLatch, receiver);
+    }
+
+    @Test
     /** Does two wifi scans. */
     // TODO: Copied this from BatterystatsValidation but we probably don't need to wait for results.
     public void testWifiScan() {
@@ -225,26 +263,6 @@ public class AtomTests {
         }
     }
 
-    @Test
-    public void testFlashlight() throws Exception {
-        Context context = InstrumentationRegistry.getContext();
-        CameraManager cam = context.getSystemService(CameraManager.class);
-        String[] cameraIds = cam.getCameraIdList();
-        boolean foundFlash = false;
-        for (int i = 0; i < cameraIds.length; i++) {
-            String id = cameraIds[i];
-            if(cam.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE)) {
-                cam.setTorchMode(id, true);
-                sleep(2_000);
-                cam.setTorchMode(id, false);
-                foundFlash = true;
-                break;
-            }
-        }
-        if(!foundFlash) {
-            Log.e(TAG, "No flashlight found on device");
-        }
-    }
     // ------- Helper methods
 
     /** Puts the current thread to sleep. */

@@ -61,6 +61,9 @@ public class AtomTestCase extends BaseTestCase {
     protected static final String CONFIG_UID = "1000";
     protected static final long CONFIG_ID = "cts_config".hashCode();
 
+    protected static final int WAIT_TIME_SHORT = 500;
+    protected static final int WAIT_TIME_LONG = 2_000;
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -280,7 +283,7 @@ public class AtomTestCase extends BaseTestCase {
      * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
      */
     public void assertStatesOccurred(List<Set<Integer>> stateSets, List<EventMetricData> data,
-            Function<Atom, Integer> getStateFromAtom) {
+            int wait, Function<Atom, Integer> getStateFromAtom) {
         // Sometimes, there are more events than there are states.
         // Eg: When the screen turns off, it may go into OFF and then DOZE immediately.
         assertTrue(data.size() >= stateSets.size());
@@ -299,7 +302,7 @@ public class AtomTestCase extends BaseTestCase {
                 assertTrue(stateSetIndex < stateSets.size()); // Out of bounds check.
                 assertTrue(stateSets.get(stateSetIndex).contains(state));
                 assertTrue(isTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
-                        1_000, 10_000));
+                    wait / 2, wait * 5));
             }
         }
         assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
