@@ -32,6 +32,7 @@ import com.android.os.AtomsProto.BatteryLevelChanged;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
+import com.android.os.AtomsProto.CpuTimePerFreq;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
 import com.android.os.AtomsProto.KernelWakelock;
@@ -596,6 +597,31 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
+    }
+
+    public void testCpuTimePerFreq() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuTimePerFreq.CLUSTER_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(2000);
+        turnScreenOn();
+        Thread.sleep(2000);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        Atom atom = data.get(0);
+        assertTrue(atom.getCpuTimePerFreq().getCluster() >= 0);
+        assertTrue(atom.getCpuTimePerFreq().getFreqIndex() >= 0);
+        assertTrue(atom.getCpuTimePerFreq().getTimeMs() > 0);
     }
 
     public void testCpuTimePerUidFreq() throws Exception {
