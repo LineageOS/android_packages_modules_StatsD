@@ -25,6 +25,8 @@ import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.SyncStateChanged;
+import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
@@ -192,6 +194,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+    }
+
+    public void testSyncState() throws Exception {
+        if (!TESTS_ENABLED) return;
+
+        final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
+        Set<Integer> syncOff = new HashSet<>(Arrays.asList(SyncStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(syncOn, syncOff, syncOn, syncOff);
+
+        createAndUploadConfig(atomTag, true);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSyncState");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
     }
 
     public void testWakeupAlarm() throws Exception {

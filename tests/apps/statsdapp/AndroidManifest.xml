@@ -48,6 +48,28 @@
             </intent-filter>
         </activity>
 
+
+        <service android:name=".StatsdAuthenticator"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+
+            <meta-data android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/authenticator" />
+        </service>
+        <service android:name="StatsdSyncService"
+            android:exported="false" >
+            <intent-filter>
+                <action android:name="android.content.SyncAdapter" />
+            </intent-filter>
+            <meta-data android:name="android.content.SyncAdapter"
+                android:resource="@xml/syncadapter" />
+        </service>
+
+        <provider android:name=".StatsdProvider"
+            android:authorities="com.android.server.cts.device.statsd.provider" />
+
     </application>
 
     <instrumentation android:name="android.support.test.runner.AndroidJUnitRunner"
