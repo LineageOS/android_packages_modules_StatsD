@@ -48,6 +48,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.PowerManager;
 import android.os.SystemClock;
 import android.support.test.InstrumentationRegistry;
 import android.util.Log;
@@ -296,6 +297,17 @@ public class AtomTests {
         CountDownLatch latch = StatsdJobService.resetCountDownLatch();
         js.schedule(job);
         waitForReceiver(context, 2_500, latch, null);
+    }
+
+    @Test
+    public void testWakelockState() {
+        Context context = InstrumentationRegistry.getContext();
+        PowerManager pm = context.getSystemService(PowerManager.class);
+        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                "StatsdPartialWakelock");
+        wl.acquire();
+        sleep(500);
+        wl.release();
     }
 
     @Test
