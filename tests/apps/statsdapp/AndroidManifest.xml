@@ -48,7 +48,6 @@
             </intent-filter>
         </activity>
 
-
         <service android:name=".StatsdAuthenticator"
             android:exported="false">
             <intent-filter>
@@ -69,6 +68,9 @@
 
         <provider android:name=".StatsdProvider"
             android:authorities="com.android.server.cts.device.statsd.provider" />
+
+        <service android:name=".StatsdJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
 

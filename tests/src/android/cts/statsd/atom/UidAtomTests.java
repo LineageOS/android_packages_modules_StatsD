@@ -28,6 +28,7 @@ import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
+import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
@@ -270,6 +271,36 @@ public class UidAtomTests extends DeviceAtomTestCase {
         GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+    }
+
+    public void testScheduledJobState() throws Exception {
+        if (!TESTS_ENABLED)
+            return;
+
+        String expectedName = "com.android.server.cts.device.statsd/.StatsdJobService";
+        final int atomTag = Atom.SCHEDULED_JOB_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> jobSchedule = new HashSet<>(
+                Arrays.asList(ScheduledJobStateChanged.State.SCHEDULED_VALUE));
+        Set<Integer> jobOn = new HashSet<>(
+                Arrays.asList(ScheduledJobStateChanged.State.STARTED_VALUE));
+        Set<Integer> jobOff = new HashSet<>(
+                Arrays.asList(ScheduledJobStateChanged.State.FINISHED_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(jobSchedule, jobOn, jobOff);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testScheduledJob");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertStatesOccurred(stateSet, data, 0,
+                atom -> atom.getScheduledJobStateChanged().getState().getNumber());
+
+        for (EventMetricData e : data) {
+            assertTrue(e.getAtom().getScheduledJobStateChanged().getName().equals(expectedName));
+        }
     }
 
     public void testSyncState() throws Exception {
