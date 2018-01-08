@@ -24,6 +24,7 @@ import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.WakeupAlarmOccurred;
+import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
@@ -207,6 +208,28 @@ public class UidAtomTests extends DeviceAtomTestCase {
             String tag = data.get(i).getAtom().getWakeupAlarmOccurred().getTag();
             assertTrue(tag.equals("*walarm*:android.cts.statsd.testWakeupAlarm"));
         }
+    }
+
+    public void testWifiLock() throws Exception {
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_WIFI, true)) return;
+
+        final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> lockOn = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.ON_VALUE));
+        Set<Integer> lockOff = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
+
+        createAndUploadConfig(atomTag);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiLock");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+            atom -> atom.getWifiLockStateChanged().getState().getNumber());
     }
 
     public void testWifiScan() throws Exception {
