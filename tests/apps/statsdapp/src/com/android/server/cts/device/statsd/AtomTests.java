@@ -288,7 +288,7 @@ public class AtomTests{
     // ------- Helper methods
 
     /** Puts the current thread to sleep. */
-    private static void sleep(int millis) {
+    static void sleep(int millis) {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException e) {

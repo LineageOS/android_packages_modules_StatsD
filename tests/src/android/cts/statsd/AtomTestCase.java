@@ -17,7 +17,6 @@ package android.cts.statsd;
 
 
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
-import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
@@ -59,10 +58,14 @@ public class AtomTestCase extends BaseTestCase {
     private static final String DUMP_REPORT_CMD = "cmd stats dump-report";
     private static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     protected static final String CONFIG_UID = "1000";
+    /** ID of the config, which evaluates to -1572883457. */
     protected static final long CONFIG_ID = "cts_config".hashCode();
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
+
+    protected static final long SCREEN_STATE_CHANGE_TIMEOUT = 4000;
+    protected static final long SCREEN_STATE_POLLING_INTERVAL = 500;
 
     @Override
     protected void setUp() throws Exception {
@@ -279,34 +282,66 @@ public class AtomTestCase extends BaseTestCase {
      * @param stateSets A list of set of states, where each set represents an equivalent state of
      *                  the device for the purpose of CTS.
      * @param data list of EventMetricData from statsd, produced by getReportMetricListData()
+     * @param wait expected duration (in ms) between state changes; asserts that the actual wait
+     *             time was wait/2 <= actual_wait <= 5*wait. Use 0 to ignore this assertion.
      * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
      */
     public void assertStatesOccurred(List<Set<Integer>> stateSets, List<EventMetricData> data,
             int wait, Function<Atom, Integer> getStateFromAtom) {
         // Sometimes, there are more events than there are states.
         // Eg: When the screen turns off, it may go into OFF and then DOZE immediately.
-        assertTrue(data.size() >= stateSets.size());
+        assertTrue("Too few states found (" + data.size() + ")", data.size() >= stateSets.size());
         int stateSetIndex = 0; // Tracks which state set we expect the data to be in.
         for (int dataIndex = 0; dataIndex < data.size(); dataIndex++) {
             Atom atom = data.get(dataIndex).getAtom();
             int state = getStateFromAtom.apply(atom);
             // If state is in the current state set, we do not assert anything.
             // If it is not, we expect to have transitioned to the next state set.
-            if (!stateSets.get(stateSetIndex).contains(state)) {
+            if (stateSets.get(stateSetIndex).contains(state)) {
+                // No need to assert anything. Just log it.
+                LogUtil.CLog.i("The following atom at dataIndex=" + dataIndex + " is "
+                        + "in stateSetIndex " + stateSetIndex + ":\n"
+                        + data.get(dataIndex).getAtom().toString());
+            } else {
                 stateSetIndex += 1;
                 LogUtil.CLog.i("Assert that the following atom at dataIndex=" + dataIndex + " is"
                         + " in stateSetIndex " + stateSetIndex + ":\n"
                         + data.get(dataIndex).getAtom().toString());
-                assertTrue(dataIndex != 0); // We shoud not be on the first data.
-                assertTrue(stateSetIndex < stateSets.size()); // Out of bounds check.
-                assertTrue(stateSets.get(stateSetIndex).contains(state));
-                long diffMs = (data.get(dataIndex).getTimestampNanos() -
-                        data.get(dataIndex - 1).getTimestampNanos()) / 1_000_000;
-                assertTrue(wait / 2 < diffMs);
-                assertTrue(wait * 5 > diffMs);
+                assertTrue("Missed first state", dataIndex != 0); // should not be on first data
+                assertTrue("Too many states (" + (stateSetIndex + 1) + ")",
+                        stateSetIndex < stateSets.size());
+                assertTrue("Is in wrong state (" + state + ")",
+                        stateSets.get(stateSetIndex).contains(state));
+                if (wait > 0) {
+                    assertTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
+                            wait / 2, wait * 5);
+                }
             }
         }
-        assertTrue(stateSetIndex == stateSets.size() - 1); // We saw each state set.
+        assertTrue("Too few states (" + (stateSetIndex + 1) + ")",
+                stateSetIndex == stateSets.size() - 1);
+    }
+
+    /**
+     * Removes all elements from data prior to the first occurrence of an element of state. After
+     * this method is called, the first element of data (if non-empty) is guaranteed to be an
+     * element in state.
+     * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
+     */
+    public void popUntilFind(List<EventMetricData> data, Set<Integer> state,
+            Function<Atom, Integer> getStateFromAtom) {
+        int firstStateIdx;
+        for (firstStateIdx = 0; firstStateIdx < data.size(); firstStateIdx++) {
+            Atom atom = data.get(firstStateIdx).getAtom();
+            if (state.contains(getStateFromAtom.apply(atom))) {
+                break;
+            }
+        }
+        if (firstStateIdx == 0) {
+            // First first element already is in state, so there's nothing to do.
+            return;
+        }
+        data.subList(0, firstStateIdx).clear();
     }
 
     protected void turnScreenOn() throws Exception {
@@ -400,18 +435,57 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().rebootUntilOnline();
     }
 
+    protected void assertScreenOff() throws Exception {
+        final long deadLine = System.currentTimeMillis() + SCREEN_STATE_CHANGE_TIMEOUT;
+        boolean screenAwake = true;
+        do {
+            final String dumpsysPower = getDevice().executeShellCommand("dumpsys power").trim();
+            for (String line : dumpsysPower.split("\n")) {
+                if (line.contains("Display Power")) {
+                    screenAwake = line.trim().endsWith("ON");
+                    break;
+                }
+            }
+            Thread.sleep(SCREEN_STATE_POLLING_INTERVAL);
+        } while (screenAwake && System.currentTimeMillis() < deadLine);
+        assertFalse("Screen could not be turned off", screenAwake);
+    }
+
+    protected void assertScreenOn() throws Exception {
+        // this also checks that the keyguard is dismissed
+        final long deadLine = System.currentTimeMillis() + SCREEN_STATE_CHANGE_TIMEOUT;
+        boolean screenAwake;
+        do {
+            final String dumpsysWindowPolicy =
+                    getDevice().executeShellCommand("dumpsys window policy").trim();
+            boolean keyguardStateLines = false;
+            screenAwake = true;
+            for (String line : dumpsysWindowPolicy.split("\n")) {
+                if (line.contains("KeyguardServiceDelegate")) {
+                    keyguardStateLines = true;
+                } else if (keyguardStateLines && line.contains("showing=")) {
+                    screenAwake &= line.trim().endsWith("false");
+                } else if (keyguardStateLines && line.contains("screenState=")) {
+                    screenAwake &= line.trim().endsWith("SCREEN_STATE_ON");
+                }
+            }
+            Thread.sleep(SCREEN_STATE_POLLING_INTERVAL);
+        } while (!screenAwake && System.currentTimeMillis() < deadLine);
+        assertTrue("Screen could not be turned on", screenAwake);
+    }
+
     /**
-     * Determines whether the two events are within the specified range of each other.
+     * Asserts that the two events are within the specified range of each other.
      * @param d0 the event that should occur first
      * @param d1 the event that should occur second
      * @param minDiffMs d0 should precede d1 by at least this amount
      * @param maxDiffMs d0 should precede d1 by at most this amount
-     * @return
      */
-    public static boolean isTimeDiffBetween(EventMetricData d0, EventMetricData d1,
+    public static void assertTimeDiffBetween(EventMetricData d0, EventMetricData d1,
             int minDiffMs, int maxDiffMs) {
         long diffMs = (d1.getTimestampNanos() - d0.getTimestampNanos()) / 1_000_000;
-        return minDiffMs <= diffMs && diffMs <= maxDiffMs;
+        assertTrue("Illegal time difference (" + diffMs + "ms)", minDiffMs <= diffMs);
+        assertTrue("Illegal time difference (" + diffMs + "ms)", diffMs <= maxDiffMs);
     }
 
     protected String getCurrentLogcatDate() throws Exception {

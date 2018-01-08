@@ -58,7 +58,7 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final boolean TESTS_ENABLED = false;
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
-    private static final boolean INCIDENTD_TESTS_ENABLED = false;
+    private static final boolean INCIDENTD_TESTS_ENABLED = true;
 
     private static final long TEST_CONFIG_ID = "cts_test_config".hashCode();
 

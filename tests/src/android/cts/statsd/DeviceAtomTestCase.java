@@ -15,13 +15,8 @@
  */
 package android.cts.statsd;
 
-import com.android.internal.os.StatsdConfigProto.AtomMatcher;
-import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
-import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.os.StatsLog.ConfigMetricsReport;
-import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
 
@@ -77,7 +72,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
         } else {
             assertTrue(data.size() >= 2);
         }
-        assertTrue(isTimeDiffBetween(data.get(0), data.get(1), minTimeDiffMs, maxTimeDiffMs));
+        assertTimeDiffBetween(data.get(0), data.get(1), minTimeDiffMs, maxTimeDiffMs);
         return data;
     }
 

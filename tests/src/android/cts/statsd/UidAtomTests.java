@@ -31,9 +31,7 @@ import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
