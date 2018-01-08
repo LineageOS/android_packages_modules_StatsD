@@ -246,6 +246,16 @@ public class AtomTests {
     }
 
     @Test
+    public void testWifiLock() {
+        Context context = InstrumentationRegistry.getContext();
+        WifiManager wm = context.getSystemService(WifiManager.class);
+        WifiManager.WifiLock lock = wm.createWifiLock("StatsdCTSWifiLock");
+        lock.acquire();
+        sleep(500);
+        lock.release();
+    }
+
+    @Test
     /** Does two wifi scans. */
     // TODO: Copied this from BatterystatsValidation but we probably don't need to wait for results.
     public void testWifiScan() {
