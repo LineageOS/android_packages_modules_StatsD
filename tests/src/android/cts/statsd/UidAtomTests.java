@@ -22,6 +22,10 @@ import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
+import com.android.os.AtomsProto.WifiRadioPowerStateChanged;
+import com.android.os.AtomsProto.MobileRadioPowerStateChanged;
+import com.android.os.AtomsProto.AudioStateChanged;
+import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
@@ -51,6 +55,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
     private static final String FEATURE_CAMERA = "android.hardware.camera";
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
+    private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
 
     public void testBleScan() throws Exception {
         if (!TESTS_ENABLED) return;
@@ -253,5 +258,68 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+    }
+
+    public void testAudioState() throws Exception {
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
+
+        final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
+        final String name = "testAudioState";
+
+        Set<Integer> onState = new HashSet<>(
+                Arrays.asList(AudioStateChanged.State.ON_VALUE));
+        Set<Integer> offState = new HashSet<>(
+                Arrays.asList(AudioStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Sorted list of events in order in which they occurred.
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, 200,
+                atom -> atom.getAudioStateChanged().getState().getNumber());
+    }
+
+    public void testMediaCodecActivity() throws Exception {
+        if (!TESTS_ENABLED) return;
+        final int atomTag = Atom.MEDIA_CODEC_ACTIVITY_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> onState = new HashSet<>(
+                Arrays.asList(MediaCodecActivityChanged.State.ON_VALUE));
+        Set<Integer> offState = new HashSet<>(
+                Arrays.asList(MediaCodecActivityChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+
+        getDevice().executeShellCommand(
+                "am start -n com.android.server.cts.device.statsd/.VideoPlayerActivity");
+
+        Thread.sleep(WAIT_TIME_LONG);
+        getDevice().executeShellCommand(
+                "am force-stop com.android.server.cts.device.statsd");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
     }
 }

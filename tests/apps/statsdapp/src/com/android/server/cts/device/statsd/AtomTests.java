@@ -18,6 +18,7 @@ package com.android.server.cts.device.statsd;
 
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -30,17 +31,19 @@ import android.content.IntentFilter;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.MediaPlayer;
 import android.net.wifi.WifiManager;
-import android.support.test.InstrumentationRegistry;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.support.test.InstrumentationRegistry;
 import android.util.Log;
 
 import org.junit.Test;
@@ -49,8 +52,17 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-public class AtomTests {
+public class AtomTests{
     private static final String TAG = AtomTests.class.getSimpleName();
+
+    @Test
+    public void testAudioState() {
+        Context context = InstrumentationRegistry.getContext();
+        MediaPlayer mediaPlayer = MediaPlayer.create(context, R.raw.good);
+        mediaPlayer.start();
+        sleep(2_000);
+        mediaPlayer.stop();
+    }
 
     @Test
     public void testBleScanOptimized() {
