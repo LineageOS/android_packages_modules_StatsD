@@ -315,6 +315,15 @@ public class AtomTests{
         }
     }
 
+    @Test
+    public void testSimpleCpu() {
+        long timestamp = System.currentTimeMillis();
+        for (int i = 0; i < 10000; i ++) {
+            timestamp += i;
+        }
+        Log.i(TAG, "The answer is " + timestamp);
+    }
+
     // ------- Helper methods
 
     /** Puts the current thread to sleep. */

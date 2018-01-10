@@ -15,18 +15,20 @@
  */
 package android.cts.statsd.atom;
 
+import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
+import com.android.os.AtomsProto.CpuTimePerUid;
+import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.FlashlightStateChanged;
-import com.android.os.AtomsProto.AudioStateChanged;
-import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
-import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
@@ -140,6 +142,80 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getCameraStateChanged().getState().getNumber());
+    }
+
+    public void testCpuTimePerUid() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuTimePerUid.UID_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, dimension);
+
+        uploadConfig(config);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+
+        List<Atom> atomList = getGaugeMetricDataList();
+
+        // TODO: We don't have atom matching on gauge yet. Let's refactor this after that feature is
+        // implemented.
+        boolean found = false;
+        int uid = getUid();
+        for (Atom atom : atomList) {
+            if (atom.getCpuTimePerUid().getUid() == uid) {
+                found = true;
+                assertTrue(atom.getCpuTimePerUid().getUserTimeMs() > 0);
+                assertTrue(atom.getCpuTimePerUid().getSysTimeMs() > 0);
+            }
+        }
+        assertTrue("found uid " + uid, found);
+    }
+
+    public void testCpuTimePerUidFreq() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuTimePerUidFreq.UID_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER, dimension);
+
+        uploadConfig(config);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+
+        List<Atom> atomList = getGaugeMetricDataList();
+
+        // TODO: We don't have atom matching on gauge yet. Let's refactor this after that feature is
+        // implemented.
+        boolean found = false;
+        int uid = getUid();
+        for (Atom atom : atomList) {
+            if (atom.getCpuTimePerUidFreq().getUid() == uid) {
+                found = true;
+                assertTrue(atom.getCpuTimePerUidFreq().getFreqIdx() >= 0);
+                assertTrue(atom.getCpuTimePerUidFreq().getTimeMs() > 0);
+            }
+        }
+        assertTrue("found uid " + uid, found);
     }
 
     public void testFlashlightState() throws Exception {
@@ -322,8 +398,19 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
 
+        runVideoPlayerApp();
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
+    }
+
+    private void runVideoPlayerApp() throws Exception {
+        turnScreenOn();
         getDevice().executeShellCommand(
                 "am start -n com.android.server.cts.device.statsd/.VideoPlayerActivity");
 
@@ -332,12 +419,5 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 "am force-stop com.android.server.cts.device.statsd");
 
         Thread.sleep(WAIT_TIME_SHORT);
-
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
     }
 }

@@ -501,6 +501,15 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     /**
+     * TODO: Anomaly detection will be moved to general statsd device-side tests.
+     * Pulled atoms also should have a better way of constructing the config.
+     * Remove this config when that happens.
+     */
+    protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
+        return StatsdConfig.newBuilder().setId(CONFIG_ID);
+    }
+
+    /**
      * Determines if the device has the given feature.
      * Prints a warning if its value differs from requiredAnswer.
      */
