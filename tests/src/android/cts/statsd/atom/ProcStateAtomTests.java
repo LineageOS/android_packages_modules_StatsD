@@ -15,7 +15,7 @@
  */
 package android.cts.statsd.atom;
 
-import android.app.ProcessState; // from atoms.proto's activitymanager.proto's enum.
+import android.app.ProcessStateEnum; // From enums.proto for atoms.proto's UidProcessStateChanged.
 
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.EventMetricData;
@@ -63,37 +63,37 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     // The tests here are using the BatteryStats definition of 'background'.
     private static final Set<Integer> BG_STATES = new HashSet<>(
             Arrays.asList(
-                    ProcessState.PROCESS_STATE_IMPORTANT_BACKGROUND_VALUE,
-                    ProcessState.PROCESS_STATE_TRANSIENT_BACKGROUND_VALUE,
-                    ProcessState.PROCESS_STATE_BACKUP_VALUE,
-                    ProcessState.PROCESS_STATE_SERVICE_VALUE,
-                    ProcessState.PROCESS_STATE_RECEIVER_VALUE,
-                    ProcessState.PROCESS_STATE_HEAVY_WEIGHT_VALUE
+                    ProcessStateEnum.PROCESS_STATE_IMPORTANT_BACKGROUND_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_TRANSIENT_BACKGROUND_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_BACKUP_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_SERVICE_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_RECEIVER_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_HEAVY_WEIGHT_VALUE
             ));
 
     // Using the BatteryStats definition of 'cached', which is why HOME (etc) are considered cached.
     private static final Set<Integer> CACHED_STATES = new HashSet<>(
             Arrays.asList(
-                    ProcessState.PROCESS_STATE_HOME_VALUE,
-                    ProcessState.PROCESS_STATE_LAST_ACTIVITY_VALUE,
-                    ProcessState.PROCESS_STATE_CACHED_ACTIVITY_VALUE,
-                    ProcessState.PROCESS_STATE_CACHED_ACTIVITY_CLIENT_VALUE,
-                    ProcessState.PROCESS_STATE_CACHED_RECENT_VALUE,
-                    ProcessState.PROCESS_STATE_CACHED_EMPTY_VALUE
+                    ProcessStateEnum.PROCESS_STATE_HOME_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_LAST_ACTIVITY_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_CACHED_ACTIVITY_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_CACHED_ACTIVITY_CLIENT_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_CACHED_RECENT_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_CACHED_EMPTY_VALUE
             ));
 
     private static final Set<Integer> MISC_STATES = new HashSet<>(
             Arrays.asList(
-                    ProcessState.PROCESS_STATE_PERSISTENT_VALUE, // TODO: untested
-                    ProcessState.PROCESS_STATE_PERSISTENT_UI_VALUE, // TODO: untested
-                    ProcessState.PROCESS_STATE_TOP_VALUE,
-                    ProcessState.PROCESS_STATE_BOUND_FOREGROUND_SERVICE_VALUE, // TODO: untested
-                    ProcessState.PROCESS_STATE_FOREGROUND_SERVICE_VALUE,
-                    ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE,
-                    ProcessState.PROCESS_STATE_TOP_SLEEPING_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_PERSISTENT_VALUE, // TODO: untested
+                    ProcessStateEnum.PROCESS_STATE_PERSISTENT_UI_VALUE, // TODO: untested
+                    ProcessStateEnum.PROCESS_STATE_TOP_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_BOUND_FOREGROUND_SERVICE_VALUE, // TODO: untested
+                    ProcessStateEnum.PROCESS_STATE_FOREGROUND_SERVICE_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_TOP_SLEEPING_VALUE,
 
-                    ProcessState.PROCESS_STATE_UNKNOWN_VALUE,
-                    ProcessState.PROCESS_STATE_NONEXISTENT_VALUE
+                    ProcessStateEnum.PROCESS_STATE_UNKNOWN_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_NONEXISTENT_VALUE
             ));
 
     private static final Set<Integer> ALL_STATES = Stream.of(MISC_STATES, CACHED_STATES, BG_STATES)
@@ -107,7 +107,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     public void testForegroundService() throws Exception {
         if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
-                ProcessState.PROCESS_STATE_FOREGROUND_SERVICE_VALUE));
+                ProcessStateEnum.PROCESS_STATE_FOREGROUND_SERVICE_VALUE));
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
@@ -126,7 +126,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     public void testForeground() throws Exception {
         if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
-                ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE));
+                ProcessStateEnum.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE));
         // There are no offStates, since the app remains in foreground until killed.
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates); // state sets, in order
@@ -167,7 +167,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     public void testTop() throws Exception {
         if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
-                ProcessState.PROCESS_STATE_TOP_VALUE));
+                ProcessStateEnum.PROCESS_STATE_TOP_VALUE));
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
@@ -188,7 +188,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     public void testTopSleeping() throws Exception {
         if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
-                ProcessState.PROCESS_STATE_TOP_SLEEPING_VALUE));
+                ProcessStateEnum.PROCESS_STATE_TOP_SLEEPING_VALUE));
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
@@ -241,6 +241,11 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         popUntilFind(data, onStates, PROC_STATE_FUNCTION);
         // The result is that data should start at step #3, definitively in a cached state.
         assertStatesOccurred(stateSet, data, 1_000, PROC_STATE_FUNCTION);
+    }
+
+    public void testValidityOfStates() throws Exception {
+        assertFalse("UNKNOWN_TO_PROTO should not be a valid state",
+                ALL_STATES.contains(ProcessStateEnum.PROCESS_STATE_UNKNOWN_TO_PROTO_VALUE));
     }
 
     /**
