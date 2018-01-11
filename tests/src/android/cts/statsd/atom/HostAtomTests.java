@@ -13,11 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.cts.statsd;
+package android.cts.statsd.atom;
 
 import com.android.internal.os.StatsdConfigProto.Alert;
 import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
-import com.android.internal.os.StatsdConfigProto.Bucket;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
@@ -28,7 +27,6 @@ import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
-import com.android.os.AtomsProto.BatteryLevelChanged;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
@@ -38,7 +36,6 @@ import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
 import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.PlatformSleepState;
 import com.android.os.AtomsProto.PluggedStateChanged;
-import com.android.os.AtomsProto.ScreenBrightnessChanged;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SleepStateVoter;
 import com.android.os.AtomsProto.SubsystemSleepState;

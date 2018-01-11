@@ -24,21 +24,19 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_PATH := $(TARGET_OUT_DATA_APPS)
 
 LOCAL_SRC_FILES := \
-    $(call all-java-files-under, src) \
+    $(call all-java-files-under, src)
 
 LOCAL_JAVA_LIBRARIES := android.test.runner cts-junit org.apache.http.legacy
 
 LOCAL_PRIVILEGED_MODULE := true
-LOCAL_PROTOC_OPTIMIZE_TYPE := lite-static
 
 LOCAL_STATIC_JAVA_LIBRARIES := \
     ctstestrunner \
     compatibility-device-util \
     android-support-v4 \
     legacy-android-test \
-    android-support-test
-
-LOCAL_SDK_VERSION := test_current
+    android-support-test \
+    statsdprotolite
 
 # tag this module as a cts test artifact
 LOCAL_COMPATIBILITY_SUITE := cts vts general-tests

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.cts.statsd;
+package android.cts.statsd.atom;
 
 import android.app.ProcessState; // from atoms.proto's activitymanager.proto's enum.
 

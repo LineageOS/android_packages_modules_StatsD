@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package android.cts.statsd;
+package android.cts.statsd.atom;
 
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.ddmlib.testrunner.RemoteAndroidTestRunner;

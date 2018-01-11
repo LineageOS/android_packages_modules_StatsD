@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.cts.statsd;
+package android.cts.statsd.atom;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
@@ -22,12 +22,9 @@ import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
-import com.android.os.AtomsProto.WifiRadioPowerStateChanged;
-import com.android.os.AtomsProto.MobileRadioPowerStateChanged;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
-import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;

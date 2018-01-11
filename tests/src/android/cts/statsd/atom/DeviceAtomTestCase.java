@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package android.cts.statsd;
+package android.cts.statsd.atom;
 
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
