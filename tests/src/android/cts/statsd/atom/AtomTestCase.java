@@ -15,6 +15,7 @@
  */
 package android.cts.statsd.atom;
 
+import android.view.DisplayStateEnum;
 
 import com.android.annotations.Nullable;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
@@ -240,8 +241,8 @@ public class AtomTestCase extends BaseTestCase {
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                         .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                         .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                                .setEqInt(ScreenStateChanged.State.STATE_ON_VALUE)
+                                .setField(ScreenStateChanged.STATE_FIELD_NUMBER)
+                                .setEqInt(DisplayStateEnum.DISPLAY_STATE_ON_VALUE)
                         )
                 )
         )
@@ -251,8 +252,8 @@ public class AtomTestCase extends BaseTestCase {
                         .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                                 .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)
-                                        .setEqInt(ScreenStateChanged.State.STATE_OFF_VALUE)
+                                        .setField(ScreenStateChanged.STATE_FIELD_NUMBER)
+                                        .setEqInt(DisplayStateEnum.DISPLAY_STATE_OFF_VALUE)
                                 )
                         )
                 );
