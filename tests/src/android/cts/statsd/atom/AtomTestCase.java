@@ -271,7 +271,7 @@ public class AtomTestCase extends BaseTestCase {
                 .setBucket(TimeUnit.CTS)
                 .setCondition(predicateName.hashCode());
         if (dimension != null) {
-            gaugeMetric.setDimensions(dimension.build());
+            gaugeMetric.setDimensionsInWhat(dimension.build());
         }
         conf.addGaugeMetric(gaugeMetric.build());
     }
