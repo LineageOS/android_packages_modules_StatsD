@@ -16,12 +16,12 @@
 package android.cts.statsd.atom;
 
 import com.android.internal.os.StatsdConfigProto.Alert;
-import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
+import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
@@ -29,15 +29,13 @@ import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
-import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerFreq;
+import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
 import com.android.os.AtomsProto.KernelWakelock;
-import com.android.os.AtomsProto.PlatformSleepState;
 import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.ScreenStateChanged;
-import com.android.os.AtomsProto.SleepStateVoter;
 import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
 
@@ -671,60 +669,13 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getCpuTimePerUid().getSysTimeMs() > 0);
     }
 
-    public void testPlatformSleepState() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.PLATFORM_SLEEP_STATE_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(PlatformSleepState.NAME_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.PLATFORM_SLEEP_STATE_FIELD_NUMBER, dimension);
-
-        turnScreenOff();
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> data = getGaugeMetricDataList();
-
-        Atom atom = data.get(0);
-        assertTrue(!atom.getPlatformSleepState().getName().equals(""));
-    }
-
-    public void testSleepStateVoter() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.SLEEP_STATE_VOTER_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(SleepStateVoter.VOTER_NAME_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.SLEEP_STATE_VOTER_FIELD_NUMBER, dimension);
-
-        turnScreenOff();
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> data = getGaugeMetricDataList();
-
-        Atom atom = data.get(0);
-        assertTrue(!atom.getSleepStateVoter().getPlatformSleepStateName().equals(""));
-        assertTrue(!atom.getSleepStateVoter().getVoterName().equals(""));
-    }
-
     public void testSubsystemSleepState() throws Exception {
         if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
-                        .setField(SubsystemSleepState.SUBSYSTEM_NAME_FIELD_NUMBER));
+                        .setField(SubsystemSleepState.NAME_FIELD_NUMBER));
         addGaugeAtom(config, Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER, dimension);
 
         turnScreenOff();
@@ -735,11 +686,13 @@ public class HostAtomTests extends AtomTestCase {
         turnScreenOn();
         Thread.sleep(WAIT_TIME_LONG);
 
-        List<Atom> data = getGaugeMetricDataList();
+        List<Atom> dataList = getGaugeMetricDataList();
 
-        Atom atom = data.get(0);
-        assertTrue(!atom.getSubsystemSleepState().getSubsystemName().equals(""));
-        assertTrue(!atom.getSubsystemSleepState().getSubsystemSleepStateName().equals(""));
+        for (Atom atom: dataList) {
+            assertTrue(!atom.getSubsystemSleepState().getName().equals(""));
+            assertTrue(atom.getSubsystemSleepState().getCount() >= 0);
+            assertTrue(atom.getSubsystemSleepState().getTimeMs() >= 0);
+        }
     }
 
     /**
