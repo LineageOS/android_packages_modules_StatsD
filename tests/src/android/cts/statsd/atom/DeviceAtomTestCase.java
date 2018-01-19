@@ -16,6 +16,8 @@
 package android.cts.statsd.atom;
 
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
+import com.android.internal.os.StatsdConfigProto.MessageMatcher;
+import com.android.internal.os.StatsdConfigProto.Position;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
@@ -63,8 +65,8 @@ public class DeviceAtomTestCase extends AtomTestCase {
             String methodName, int atom, int key, int stateOn, int stateOff,
             int minTimeDiffMs, int maxTimeDiffMs, boolean demandExactlyTwo) throws Exception {
         StatsdConfig.Builder conf = createConfigBuilder();
-        addAtomEvent(conf, atom, createKvm(key).setEqInt(stateOn));
-        addAtomEvent(conf, atom, createKvm(key).setEqInt(stateOff));
+        addAtomEvent(conf, atom, createFvm(key).setEqInt(stateOn));
+        addAtomEvent(conf, atom, createFvm(key).setEqInt(stateOff));
         List<EventMetricData> data = doDeviceMethod(methodName, conf);
 
         if (demandExactlyTwo) {
@@ -93,31 +95,54 @@ public class DeviceAtomTestCase extends AtomTestCase {
         return getEventMetricDataList();
     }
 
+    protected void createAndUploadConfig(int atomTag, boolean useAttribution) throws Exception {
+        StatsdConfig.Builder conf = createConfigBuilder();
+        addAtomEvent(conf, atomTag, useAttribution);
+        uploadConfig(conf);
+    }
+
     /**
      * Adds an event to the config for an atom that matches the given key AND has the app's uid.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param kvm FieldValueMatcher.Builder for the relevant key
+     * @param fvm FieldValueMatcher.Builder for the relevant key
      */
     @Override
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder kvm)
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder fvm)
             throws Exception {
 
         final int UID_KEY = 1;
-        FieldValueMatcher.Builder kvmUid = createKvm(UID_KEY).setEqInt(getUid());
-        addAtomEvent(conf, atomTag, Arrays.asList(kvm, kvmUid));
+        FieldValueMatcher.Builder fvmUid = createAttributionFvm(UID_KEY);
+        addAtomEvent(conf, atomTag, Arrays.asList(fvm, fvmUid));
     }
 
     /**
      * Adds an event to the config for an atom that matches the app's uid.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
+     * @param useAttribution if the atom has a uid or AttributionNode
      */
-    @Override
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag,
+            boolean useAttribution) throws Exception {
         final int UID_KEY = 1;
-        FieldValueMatcher.Builder kvmUid = createKvm(UID_KEY).setEqInt(getUid());
-        addAtomEvent(conf, atomTag, Arrays.asList(kvmUid));
+        FieldValueMatcher.Builder fvmUid;
+        if (useAttribution) {
+            fvmUid = createAttributionFvm(UID_KEY);
+        } else {
+            fvmUid = createFvm(UID_KEY).setEqInt(getUid());
+        }
+        addAtomEvent(conf, atomTag, Arrays.asList(fvmUid));
+    }
+
+    /**
+     * Creates a FieldValueMatcher for atoms that use AttributionNode
+     */
+    protected FieldValueMatcher.Builder createAttributionFvm(int field) {
+        final int ATTRIBUTION_NODE_UID_KEY = 1;
+        return createFvm(field).setPosition(Position.ANY)
+                .setMatchesTuple(MessageMatcher.newBuilder()
+                        .addFieldValueMatcher(createFvm(ATTRIBUTION_NODE_UID_KEY)
+                                .setEqString(DEVICE_SIDE_TEST_PACKAGE)));
     }
 
     /**

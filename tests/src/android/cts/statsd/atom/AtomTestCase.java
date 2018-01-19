@@ -172,9 +172,9 @@ public class AtomTestCase extends BaseTestCase {
         return reportList;
     }
 
-    /** Creates a FieldValueMatcher.Builder corresponding to the given key. */
-    protected static FieldValueMatcher.Builder createKvm(int key) {
-        return FieldValueMatcher.newBuilder().setField(key);
+    /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
+    protected static FieldValueMatcher.Builder createFvm(int field) {
+        return FieldValueMatcher.newBuilder().setField(field);
     }
 
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
@@ -185,29 +185,29 @@ public class AtomTestCase extends BaseTestCase {
      * Adds an event to the config for an atom that matches the given key.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param kvm FieldValueMatcher.Builder for the relevant key
+     * @param fvm FieldValueMatcher.Builder for the relevant key
      */
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder kvm)
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder fvm)
             throws Exception {
-        addAtomEvent(conf, atomTag, Arrays.asList(kvm));
+        addAtomEvent(conf, atomTag, Arrays.asList(fvm));
     }
 
     /**
      * Adds an event to the config for an atom that matches the given keys.
      * @param conf configuration
      * @param atomId atom tag (from atoms.proto)
-     * @param kvms list of FieldValueMatcher.Builders to attach to the atom. May be null.
+     * @param fvms list of FieldValueMatcher.Builders to attach to the atom. May be null.
      */
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomId,
-            List<FieldValueMatcher.Builder> kvms) throws Exception {
+            List<FieldValueMatcher.Builder> fvms) throws Exception {
 
         final String atomName = "Atom" + System.nanoTime();
         final String eventName = "Event" + System.nanoTime();
 
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
-        if (kvms != null) {
-            for (FieldValueMatcher.Builder kvm : kvms) {
-                sam.addFieldValueMatcher(kvm);
+        if (fvms != null) {
+            for (FieldValueMatcher.Builder fvm :fvms) {
+                sam.addFieldValueMatcher(fvm);
             }
         }
         conf.addAtomMatcher(AtomMatcher.newBuilder()

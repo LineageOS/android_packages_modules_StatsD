@@ -16,6 +16,8 @@
 
 package com.android.server.cts.device.statsd;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Activity;
@@ -25,6 +27,7 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -48,6 +51,7 @@ import android.util.Log;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -241,6 +245,32 @@ public class AtomTests{
         }.execute();
 
         waitForReceiver(context, 59_000, latch, null);
+    }
+
+    @Test
+    public void testSyncState() throws Exception{
+
+        Context context = InstrumentationRegistry.getContext();
+        StatsdAuthenticator.removeAllAccounts(context);
+        AccountManager am = context.getSystemService(AccountManager.class);
+        CountDownLatch latch = StatsdSyncAdapter.resetCountDownLatch();
+
+        Account account = StatsdAuthenticator.getTestAccount();
+        StatsdAuthenticator.ensureTestAccount(context);
+        sleep(500);
+
+        // Just force set is syncable.
+        ContentResolver.setMasterSyncAutomatically(true);
+        sleep(500);
+        ContentResolver.setIsSyncable(account, StatsdProvider.AUTHORITY, 1);
+        // Wait for the first (automatic) sync to finish
+        waitForReceiver(context, 120_000, latch, null);
+
+        // Request and wait for the second sync to finish
+        latch = StatsdSyncAdapter.resetCountDownLatch();
+        StatsdSyncAdapter.requestSync(account);
+        waitForReceiver(context, 120_000, latch, null);
+        StatsdAuthenticator.removeAllAccounts(context);
     }
 
     @Test

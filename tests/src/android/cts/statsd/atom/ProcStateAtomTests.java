@@ -111,7 +111,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         executeForegroundService();
@@ -130,7 +130,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         // There are no offStates, since the app remains in foreground until killed.
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
@@ -152,7 +152,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         executeBackgroundService(ACTION_BACKGROUND_SLEEP);
@@ -171,7 +171,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
@@ -192,7 +192,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  //False: does not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
@@ -216,7 +216,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Set<Integer> offStates = complement(onStates);
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(PROC_STATE_ATOM_TAG);
+        createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: des not use attribution.
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         // The schedule is as follows

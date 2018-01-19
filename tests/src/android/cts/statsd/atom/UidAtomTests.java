@@ -25,6 +25,8 @@ import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.SyncStateChanged;
+import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
@@ -57,13 +59,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
-        final int key = BleScanStateChanged.STATE_FIELD_NUMBER;
+        final int field = BleScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = BleScanStateChanged.State.ON_VALUE;
         final int stateOff = BleScanStateChanged.State.OFF_VALUE;
         final int minTimeDiffMs = 1_500;
         final int maxTimeDiffMs = 3_000;
 
-        List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, key,
+        List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, field,
                 stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, true);
 
         BleScanStateChanged a0 = data.get(0).getAtom().getBleScanStateChanged();
@@ -77,13 +79,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_UNOPTIMIZED_SCAN_STATE_CHANGED_FIELD_NUMBER;
-        final int key = BleUnoptimizedScanStateChanged.STATE_FIELD_NUMBER;
+        final int field = BleUnoptimizedScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = BleUnoptimizedScanStateChanged.State.ON_VALUE;
         final int stateOff = BleUnoptimizedScanStateChanged.State.OFF_VALUE;
         final int minTimeDiffMs = 1_500;
         final int maxTimeDiffMs = 3_000;
 
-        List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, key,
+        List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, field,
                 stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, true);
 
         BleUnoptimizedScanStateChanged a0 = data.get(0).getAtom().getBleUnoptimizedScanStateChanged();
@@ -93,8 +95,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         // Now repeat the test for optimized scanning and make sure no atoms are reported.
         StatsdConfig.Builder conf = createConfigBuilder();
-        addAtomEvent(conf, atom, createKvm(key).setEqInt(stateOn));
-        addAtomEvent(conf, atom, createKvm(key).setEqInt(stateOff));
+        addAtomEvent(conf, atom, createFvm(field).setEqInt(stateOn));
+        addAtomEvent(conf, atom, createFvm(field).setEqInt(stateOff));
         data = doDeviceMethod("testBleScanOptimized", conf);
         assertTrue(data.isEmpty());
     }
@@ -105,10 +107,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         turnScreenOn(); // BLE results are not given unless screen is on. TODO: make more robust.
 
         final int atom = Atom.BLE_SCAN_RESULT_RECEIVED_FIELD_NUMBER;
-        final int key = BleScanResultReceived.NUM_OF_RESULTS_FIELD_NUMBER;
+        final int field = BleScanResultReceived.NUM_OF_RESULTS_FIELD_NUMBER;
 
         StatsdConfig.Builder conf = createConfigBuilder();
-        addAtomEvent(conf, atom, createKvm(key).setGteInt(0));
+        addAtomEvent(conf, atom, createFvm(field).setGteInt(0));
         List<EventMetricData> data = doDeviceMethod("testBleScanResult", conf);
 
         assertTrue(data.size() >= 1);
@@ -129,7 +131,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(cameraOn, cameraOff);
 
-        createAndUploadConfig(atomTag);
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testCameraState");
 
         // Sorted list of events in order in which they occurred.
@@ -157,7 +159,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(flashlightOn, flashlightOff);
 
-        createAndUploadConfig(atomTag);
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
@@ -194,13 +196,34 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(a1.getState().getNumber() == stateOff);
     }
 
+    public void testSyncState() throws Exception {
+        if (!TESTS_ENABLED) return;
+
+        final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
+        Set<Integer> syncOff = new HashSet<>(Arrays.asList(SyncStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(syncOn, syncOff, syncOn, syncOff);
+
+        createAndUploadConfig(atomTag, true);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSyncState");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
+    }
+
     public void testWakeupAlarm() throws Exception {
         if (!TESTS_ENABLED) return;
 
         final int atomTag = Atom.WAKEUP_ALARM_OCCURRED_FIELD_NUMBER;
 
         StatsdConfig.Builder config = createConfigBuilder();
-        addAtomEvent(config, atomTag);
+        addAtomEvent(config, atomTag, true);  // True: uses attribution.
 
         List<EventMetricData> data = doDeviceMethod("testWakeupAlarm", config);
         assertTrue(data.size() >= 1);
@@ -221,7 +244,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
 
-        createAndUploadConfig(atomTag);
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiLock");
 
         // Sorted list of events in order in which they occurred.
@@ -270,7 +293,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
 
-        createAndUploadConfig(atomTag);
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
@@ -297,7 +320,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
 
-        createAndUploadConfig(atomTag);
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
         turnScreenOn();
 
