@@ -33,6 +33,7 @@ import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -57,6 +58,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
 
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        if (!TESTS_ENABLED) {
+            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
+        }
+    }
     public void testBleScan() throws Exception {
         if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;

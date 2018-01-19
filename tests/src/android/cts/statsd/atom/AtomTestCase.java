@@ -54,9 +54,9 @@ import java.util.function.Function;
  */
 public class AtomTestCase extends BaseTestCase {
 
-    private static final String UPDATE_CONFIG_CMD = "cmd stats config update";
-    private static final String DUMP_REPORT_CMD = "cmd stats dump-report";
-    private static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
+    protected static final String UPDATE_CONFIG_CMD = "cmd stats config update";
+    protected static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    protected static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     protected static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
     protected static final long CONFIG_ID = "cts_config".hashCode();
