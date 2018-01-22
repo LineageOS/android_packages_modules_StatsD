@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 
+import com.android.annotations.Nullable;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
@@ -36,7 +37,6 @@ import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.log.LogUtil;
 import com.google.common.io.Files;
-import com.sun.istack.internal.Nullable;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
