@@ -21,12 +21,15 @@ import android.accounts.AccountManager;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.app.Activity;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -49,6 +52,8 @@ import android.os.SystemClock;
 import android.support.test.InstrumentationRegistry;
 import android.util.Log;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -248,7 +253,7 @@ public class AtomTests{
     }
 
     @Test
-    public void testSyncState() throws Exception{
+    public void testSyncState() throws Exception {
 
         Context context = InstrumentationRegistry.getContext();
         StatsdAuthenticator.removeAllAccounts(context);
@@ -271,6 +276,25 @@ public class AtomTests{
         StatsdSyncAdapter.requestSync(account);
         waitForReceiver(context, 120_000, latch, null);
         StatsdAuthenticator.removeAllAccounts(context);
+    }
+
+    @Test
+    public void testScheduledJob() throws Exception {
+        final ComponentName name = new ComponentName("com.android.server.cts.device.statsd",
+                StatsdJobService.class.getName());
+
+        Context context = InstrumentationRegistry.getContext();
+        JobScheduler js = context.getSystemService(JobScheduler.class);
+        assertTrue("JobScheduler service not available", js != null);
+
+        JobInfo.Builder builder = new JobInfo.Builder(1, name);
+        builder.setOverrideDeadline(0);
+        JobInfo job = builder.build();
+
+        long startTime = System.currentTimeMillis();
+        CountDownLatch latch = StatsdJobService.resetCountDownLatch();
+        js.schedule(job);
+        waitForReceiver(context, 2_500, latch, null);
     }
 
     @Test
