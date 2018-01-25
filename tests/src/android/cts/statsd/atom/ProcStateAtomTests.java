@@ -19,6 +19,7 @@ import android.app.ProcessState; // from atoms.proto's activitymanager.proto's e
 
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -103,6 +104,14 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
             atom -> atom.getUidProcessStateChanged().getState().getNumber();
 
     private static final int PROC_STATE_ATOM_TAG = Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER;
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        if (!TESTS_ENABLED) {
+            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
+        }
+    }
 
     public void testForegroundService() throws Exception {
         if (!TESTS_ENABLED) return;

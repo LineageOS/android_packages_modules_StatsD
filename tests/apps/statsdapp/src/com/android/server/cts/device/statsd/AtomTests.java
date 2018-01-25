@@ -61,11 +61,12 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-public class AtomTests{
+public class AtomTests {
     private static final String TAG = AtomTests.class.getSimpleName();
 
     @Test
     public void testAudioState() {
+        // TODO: This should surely be getTargetContext(), here and everywhere, but test first.
         Context context = InstrumentationRegistry.getContext();
         MediaPlayer mediaPlayer = MediaPlayer.create(context, R.raw.good);
         mediaPlayer.start();
@@ -365,6 +366,7 @@ public class AtomTests{
         BroadcastReceiver receiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
+                Log.d(TAG, "Received broadcast.");
                 onReceiveLatch.countDown();
             }
         };

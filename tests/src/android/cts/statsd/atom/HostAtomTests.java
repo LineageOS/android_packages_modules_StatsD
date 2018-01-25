@@ -36,6 +36,7 @@ import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -52,6 +53,17 @@ public class HostAtomTests extends AtomTestCase {
     private static final boolean TESTS_ENABLED = false;
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
+
+    @Override
+    protected void setUp() throws Exception {
+        super.setUp();
+        if (!TESTS_ENABLED) {
+            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
+        }
+        if (!INCIDENTD_TESTS_ENABLED) {
+            CLog.w(TAG, TAG + " anomaly tests are disabled by a flag. Change flag to true to run");
+        }
+    }
 
     public void testScreenStateChangedAtom() throws Exception {
         if (!TESTS_ENABLED) {return;}
