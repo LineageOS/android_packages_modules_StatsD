@@ -652,4 +652,54 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue(atom.getSubsystemSleepState().getTimeMs() >= 0);
         }
     }
+
+    public void testModemActivityInfo() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> dataList = getGaugeMetricDataList();
+
+        for (Atom atom: dataList) {
+            assertTrue(atom.getModemActivityInfo().getTimestampMs() > 0);
+            assertTrue(atom.getModemActivityInfo().getSleepTimeMs() > 0);
+            assertTrue(atom.getModemActivityInfo().getControllerIdleTimeMs() > 0);
+            assertTrue(atom.getModemActivityInfo().getControllerTxTimePl0Ms() >= 0);
+            assertTrue(atom.getModemActivityInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getModemActivityInfo().getEnergyUsed() >= 0);
+        }
+    }
+
+    public void testWifiActivityInfo() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> dataList = getGaugeMetricDataList();
+
+        for (Atom atom: dataList) {
+            assertTrue(atom.getWifiActivityEnergyInfo().getTimestampMs() > 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getStackState() >= 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerIdleTimeMs() > 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerTxTimeMs() >= 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerEnergyUsed() >= 0);
+        }
+    }
 }
