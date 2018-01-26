@@ -25,16 +25,16 @@ public class MetricsTests {
     @Test
     public void testSimpleEventCountMetric() {
         StatsLog.write(StatsLog.SCREEN_STATE_CHANGED,
-                StatsLog.SCREEN_STATE_CHANGED__DISPLAY_STATE__STATE_OFF);
+                StatsLog.SCREEN_STATE_CHANGED__STATE__DISPLAY_STATE_OFF);
         StatsLog.write(StatsLog.SCREEN_STATE_CHANGED,
-                StatsLog.SCREEN_STATE_CHANGED__DISPLAY_STATE__STATE_ON);
+                StatsLog.SCREEN_STATE_CHANGED__STATE__DISPLAY_STATE_ON);
     }
 
     @Test
     public void testEventCountWithCondition() {
         StatsLog.write(StatsLog.DEVICE_TEMPERATURE_REPORTED, 25);
         StatsLog.write(StatsLog.SCREEN_STATE_CHANGED,
-                StatsLog.SCREEN_STATE_CHANGED__DISPLAY_STATE__STATE_OFF);
+                StatsLog.SCREEN_STATE_CHANGED__STATE__DISPLAY_STATE_OFF);
         StatsLog.write(StatsLog.DEVICE_TEMPERATURE_REPORTED, 26);
     }
 }

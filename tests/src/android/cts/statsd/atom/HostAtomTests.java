@@ -15,6 +15,10 @@
  */
 package android.cts.statsd.atom;
 
+import android.view.DisplayStateEnum;
+import android.os.BatteryPluggedStateEnum;
+import android.os.BatteryStatusEnum;
+
 import com.android.internal.os.StatsdConfigProto.Alert;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
 import com.android.internal.os.StatsdConfigProto.DurationMetric;
@@ -75,14 +79,14 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> screenOnStates = new HashSet<>(
-                Arrays.asList(ScreenStateChanged.State.STATE_ON_VALUE,
-                        ScreenStateChanged.State.STATE_ON_SUSPEND_VALUE,
-                        ScreenStateChanged.State.STATE_VR_VALUE));
+                Arrays.asList(DisplayStateEnum.DISPLAY_STATE_ON_VALUE,
+                        DisplayStateEnum.DISPLAY_STATE_ON_SUSPEND_VALUE,
+                        DisplayStateEnum.DISPLAY_STATE_VR_VALUE));
         Set<Integer> screenOffStates = new HashSet<>(
-                Arrays.asList(ScreenStateChanged.State.STATE_OFF_VALUE,
-                        ScreenStateChanged.State.STATE_DOZE_VALUE,
-                        ScreenStateChanged.State.STATE_DOZE_SUSPEND_VALUE,
-                        ScreenStateChanged.State.STATE_UNKNOWN_VALUE));
+                Arrays.asList(DisplayStateEnum.DISPLAY_STATE_OFF_VALUE,
+                        DisplayStateEnum.DISPLAY_STATE_DOZE_VALUE,
+                        DisplayStateEnum.DISPLAY_STATE_DOZE_SUSPEND_VALUE,
+                        DisplayStateEnum.DISPLAY_STATE_UNKNOWN_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(screenOnStates, screenOffStates);
@@ -101,7 +105,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getScreenStateChanged().getDisplayState().getNumber());
+                atom -> atom.getScreenStateChanged().getState().getNumber());
     }
 
     public void testChargingStateChangedAtom() throws Exception {
@@ -114,15 +118,15 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.CHARGING_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> batteryUnknownStates = new HashSet<>(
-                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_UNKNOWN_VALUE));
+                Arrays.asList(BatteryStatusEnum.BATTERY_STATUS_UNKNOWN_VALUE));
         Set<Integer> batteryChargingStates = new HashSet<>(
-                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_CHARGING_VALUE));
+                Arrays.asList(BatteryStatusEnum.BATTERY_STATUS_CHARGING_VALUE));
         Set<Integer> batteryDischargingStates = new HashSet<>(
-                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_DISCHARGING_VALUE));
+                Arrays.asList(BatteryStatusEnum.BATTERY_STATUS_DISCHARGING_VALUE));
         Set<Integer> batteryNotChargingStates = new HashSet<>(
-                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_NOT_CHARGING_VALUE));
+                Arrays.asList(BatteryStatusEnum.BATTERY_STATUS_NOT_CHARGING_VALUE));
         Set<Integer> batteryFullStates = new HashSet<>(
-                Arrays.asList(ChargingStateChanged.State.BATTERY_STATUS_FULL_VALUE));
+                Arrays.asList(BatteryStatusEnum.BATTERY_STATUS_FULL_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(batteryUnknownStates, batteryChargingStates,
@@ -152,7 +156,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getChargingStateChanged().getChargingState().getNumber());
+                atom -> atom.getChargingStateChanged().getState().getNumber());
     }
 
     public void testPluggedStateChangedAtom() throws Exception {
@@ -165,13 +169,13 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.PLUGGED_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> unpluggedStates = new HashSet<>(
-                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_NONE_VALUE));
+                Arrays.asList(BatteryPluggedStateEnum.BATTERY_PLUGGED_NONE_VALUE));
         Set<Integer> acStates = new HashSet<>(
-                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_AC_VALUE));
+                Arrays.asList(BatteryPluggedStateEnum.BATTERY_PLUGGED_AC_VALUE));
         Set<Integer> usbStates = new HashSet<>(
-                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_USB_VALUE));
+                Arrays.asList(BatteryPluggedStateEnum.BATTERY_PLUGGED_USB_VALUE));
         Set<Integer> wirelessStates = new HashSet<>(
-                Arrays.asList(PluggedStateChanged.State.BATTERY_PLUGGED_WIRELESS_VALUE));
+                Arrays.asList(BatteryPluggedStateEnum.BATTERY_PLUGGED_WIRELESS_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(acStates, unpluggedStates, usbStates,
@@ -203,7 +207,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getPluggedStateChanged().getPluggedState().getNumber());
+                atom -> atom.getPluggedStateChanged().getState().getNumber());
     }
 
     public void testBatteryLevelChangedAtom() throws Exception {
@@ -498,7 +502,7 @@ public class HostAtomTests extends AtomTestCase {
                         .setValueField(FieldMatcher.newBuilder()
                                 .setField(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                 .addChild(FieldMatcher.newBuilder()
-                                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER)))
+                                        .setField(ScreenStateChanged.STATE_FIELD_NUMBER)))
                         .setBucket(TimeUnit.CTS)
                 )
                 .addAlert(Alert.newBuilder()
@@ -506,7 +510,7 @@ public class HostAtomTests extends AtomTestCase {
                         .setMetricId("METRIC".hashCode())
                         .setNumBuckets(4)
                         .setRefractoryPeriodSecs(20)
-                        .setTriggerIfSumGt(ScreenStateChanged.State.STATE_OFF.getNumber())
+                        .setTriggerIfSumGt(DisplayStateEnum.DISPLAY_STATE_OFF_VALUE)
                 )
                 .addSubscription(Subscription.newBuilder()
                         .setId("AlertSub".hashCode())
@@ -543,7 +547,7 @@ public class HostAtomTests extends AtomTestCase {
                                         .setFields(FieldMatcher.newBuilder()
                                                 .setField(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
                                                 .addChild(FieldMatcher.newBuilder()
-                                                        .setField(ScreenStateChanged.DISPLAY_STATE_FIELD_NUMBER))
+                                                        .setField(ScreenStateChanged.STATE_FIELD_NUMBER))
                                         ))
                         .setBucket(TimeUnit.CTS)
                 )
@@ -552,7 +556,7 @@ public class HostAtomTests extends AtomTestCase {
                         .setMetricId("METRIC".hashCode())
                         .setNumBuckets(1)
                         .setRefractoryPeriodSecs(20)
-                        .setTriggerIfSumGt(ScreenStateChanged.State.STATE_OFF.getNumber())
+                        .setTriggerIfSumGt(DisplayStateEnum.DISPLAY_STATE_OFF_VALUE)
                 )
                 .addSubscription(Subscription.newBuilder()
                         .setId("AlertSub".hashCode())
