@@ -283,6 +283,25 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(a1.getState().getNumber() == stateOff);
     }
 
+    public void testDavey() throws Exception {
+        if (!TESTS_ENABLED) return;
+
+        long MAX_DURATION = 2000;
+        long MIN_DURATION = 750;
+        final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag); // Does not have UID, but needs a device-side compnent.
+
+        runActivity("DaveyActivity");
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertTrue(data.size() == 1);
+        long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMs();
+        assertTrue("Jank duration of " + duration + "ms was less than " + MIN_DURATION + "ms",
+                duration >= MIN_DURATION);
+        assertTrue("Jank duration of " + duration + "ms was longer than " + MAX_DURATION + "ms",
+                duration <= MAX_DURATION);
+    }
+
     public void testScheduledJobState() throws Exception {
         if (!TESTS_ENABLED)
             return;
@@ -501,7 +520,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runVideoPlayerApp();
+        runActivity("VideoPlayerActivity");
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
@@ -509,17 +528,5 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
-    }
-
-    private void runVideoPlayerApp() throws Exception {
-        turnScreenOn();
-        getDevice().executeShellCommand(
-                "am start -n com.android.server.cts.device.statsd/.VideoPlayerActivity");
-
-        Thread.sleep(WAIT_TIME_LONG);
-        getDevice().executeShellCommand(
-                "am force-stop com.android.server.cts.device.statsd");
-
-        Thread.sleep(WAIT_TIME_SHORT);
     }
 }
