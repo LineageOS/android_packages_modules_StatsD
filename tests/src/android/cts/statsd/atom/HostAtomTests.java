@@ -15,9 +15,10 @@
  */
 package android.cts.statsd.atom;
 
-import android.view.DisplayStateEnum;
-import android.os.BatteryPluggedStateEnum;
-import android.os.BatteryStatusEnum;
+import android.os.BatteryPluggedStateEnum; // From os/enums.proto
+import android.os.BatteryStatusEnum; // From os/enums.proto
+import android.server.DeviceIdleModeEnum; // From server/enums.proto
+import android.view.DisplayStateEnum; // From view/enums.proto
 
 import com.android.internal.os.StatsdConfigProto.Alert;
 import com.android.internal.os.StatsdConfigProto.CountMetric;
@@ -318,11 +319,11 @@ public class HostAtomTests extends AtomTestCase {
         final int atomTag = Atom.DEVICE_IDLE_MODE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> dozeOff = new HashSet<>(
-                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_OFF_VALUE));
+                Arrays.asList(DeviceIdleModeEnum.DEVICE_IDLE_MODE_OFF_VALUE));
         Set<Integer> dozeLight = new HashSet<>(
-                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_LIGHT_VALUE));
+                Arrays.asList(DeviceIdleModeEnum.DEVICE_IDLE_MODE_LIGHT_VALUE));
         Set<Integer> dozeDeep = new HashSet<>(
-                Arrays.asList(DeviceIdleModeStateChanged.State.DEVICE_IDLE_MODE_DEEP_VALUE));
+                Arrays.asList(DeviceIdleModeEnum.DEVICE_IDLE_MODE_DEEP_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(dozeLight, dozeDeep, dozeOff);
