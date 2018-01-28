@@ -31,6 +31,7 @@ import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.WifiLockStateChanged;
+import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil.CLog;
@@ -367,7 +368,31 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-            atom -> atom.getWifiLockStateChanged().getState().getNumber());
+                atom -> atom.getWifiLockStateChanged().getState().getNumber());
+    }
+
+    public void testWifiMulticastLock() throws Exception {
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_WIFI, true)) return;
+
+        final int atomTag = Atom.WIFI_MULTICAST_LOCK_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> lockOn = new HashSet<>(
+                Arrays.asList(WifiMulticastLockStateChanged.State.ON_VALUE));
+        Set<Integer> lockOff = new HashSet<>(
+                Arrays.asList(WifiMulticastLockStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
+
+        createAndUploadConfig(atomTag, true);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiMulticastLock");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+                atom -> atom.getWifiMulticastLockStateChanged().getState().getNumber());
     }
 
     public void testWifiScan() throws Exception {
