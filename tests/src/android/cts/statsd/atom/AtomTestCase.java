@@ -157,7 +157,9 @@ public class AtomTestCase extends BaseTestCase {
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData : report.getMetrics(0).getGaugeMetrics().getDataList()) {
-            data.add(gaugeMetricData.getBucketInfo(0).getAtom());
+            for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
+                data.add(atom);
+            }
         }
 
         LogUtil.CLog.d("Get GaugeMetricDataList as following:\n");
