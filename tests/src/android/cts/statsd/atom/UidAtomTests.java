@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import android.os.WakeLockLevelEnum;
+
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
@@ -30,6 +32,7 @@ import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
+import com.android.os.AtomsProto.WakelockStateChanged;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
@@ -229,10 +232,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testFlashlightState() throws Exception {
-        if (!TESTS_ENABLED)
-            return;
-        if (!hasFeature(FEATURE_CAMERA_FLASH, true))
-            return;
+        if (!TESTS_ENABLED) return;
+        if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
 
         final int atomTag = Atom.FLASHLIGHT_STATE_CHANGED_FIELD_NUMBER;
         final String name = "testFlashlight";
@@ -330,7 +331,44 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-            atom -> atom.getSyncStateChanged().getState().getNumber());
+                atom -> atom.getSyncStateChanged().getState().getNumber());
+    }
+
+    public void testWakelockState() throws Exception {
+        if (!TESTS_ENABLED) return;
+
+        final int atomTag = Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> wakelockOn = new HashSet<>(Arrays.asList(
+                WakelockStateChanged.State.ACQUIRE_VALUE,
+                WakelockStateChanged.State.CHANGE_ACQUIRE_VALUE));
+        Set<Integer> wakelockOff = new HashSet<>(Arrays.asList(
+                WakelockStateChanged.State.RELEASE_VALUE,
+                WakelockStateChanged.State.CHANGE_RELEASE_VALUE));
+
+        final String EXPECTED_TAG = "StatsdPartialWakelock";
+        final WakeLockLevelEnum EXPECTED_LEVEL = WakeLockLevelEnum.PARTIAL_WAKE_LOCK;
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(wakelockOn, wakelockOff);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWakelockState");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+            atom -> atom.getWakelockStateChanged().getState().getNumber());
+
+        for (EventMetricData event: data) {
+            String tag = event.getAtom().getWakelockStateChanged().getTag();
+            WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getLevel();
+            assertTrue("Expected tag: " + EXPECTED_TAG + ", but got tag: " + tag,
+                    tag.equals(EXPECTED_TAG));
+            assertTrue("Expected wakelock level: " + EXPECTED_LEVEL  + ", but got level: " + type,
+                    type == EXPECTED_LEVEL);
+        }
     }
 
     public void testWakeupAlarm() throws Exception {
