@@ -49,6 +49,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".DaveyActivity" />
+
         <service android:name=".StatsdAuthenticator"
             android:exported="false">
             <intent-filter>

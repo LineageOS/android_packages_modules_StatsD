@@ -174,4 +174,20 @@ public class DeviceAtomTestCase extends AtomTestCase {
         getDevice().executeShellCommand(String.format(
                 "cmd deviceidle tempwhitelist %s", DEVICE_SIDE_TEST_PACKAGE));
     }
+
+    /**
+     * Runs the specified activity for WAIT_TME_LONG.
+     */
+    protected void runActivity(String activity) throws Exception {
+        turnScreenOn();
+        getDevice().executeShellCommand(
+                "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        getDevice().executeShellCommand(
+                "am force-stop " + DEVICE_SIDE_TEST_PACKAGE);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOff();
+    }
 }
