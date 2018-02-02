@@ -43,8 +43,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class AlertTests {
-    public static final String TAG = "statsd.AlertTests";
+public class SubscriberTests {
+    public static final String TAG = "statsd.SubscriberTests";
 
     private Context mContext;
     private StatsManager mStatsManager;

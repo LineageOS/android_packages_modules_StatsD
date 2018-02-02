@@ -75,10 +75,10 @@
         <service android:name=".StatsdJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
-        <receiver android:name=".AlertTests$BroadcastSubscriberReceiver1"
+        <receiver android:name=".SubscriberTests$BroadcastSubscriberReceiver1"
                   android:exported="false" >
         </receiver>
-        <receiver android:name=".AlertTests$BroadcastSubscriberReceiver2"
+        <receiver android:name=".SubscriberTests$BroadcastSubscriberReceiver2"
                   android:exported="false" >
         </receiver>
     </application>
