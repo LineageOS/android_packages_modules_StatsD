@@ -62,6 +62,10 @@ public class HostAtomTests extends AtomTestCase {
     // For tests that require incidentd. Keep as true until TESTS_ENABLED is permanently enabled.
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
 
+    private static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
+    private static final String FEATURE_WIFI = "android.hardware.wifi";
+    private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -719,6 +723,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testModemActivityInfo() throws Exception {
         if (!TESTS_ENABLED) {return;}
+        if (!hasFeature(FEATURE_TELEPHONY, true)) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
 
@@ -744,6 +749,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testWifiActivityInfo() throws Exception {
         if (!TESTS_ENABLED) {return;}
+        if (!hasFeature(FEATURE_WIFI, true)) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
 
@@ -764,6 +770,32 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue(atom.getWifiActivityEnergyInfo().getControllerTxTimeMs() >= 0);
             assertTrue(atom.getWifiActivityEnergyInfo().getControllerRxTimeMs() >= 0);
             assertTrue(atom.getWifiActivityEnergyInfo().getControllerEnergyUsed() >= 0);
+        }
+    }
+
+    public void testBluetoothActivityInfo() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        if (!hasFeature(FEATURE_BLUETOOTH, true)) return;
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> dataList = getGaugeMetricDataList();
+
+        for (Atom atom: dataList) {
+            assertTrue(atom.getBluetoothActivityInfo().getTimestampMs() > 0);
+            assertTrue(atom.getBluetoothActivityInfo().getBluetoothStackState() >= 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerIdleTimeMs() > 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerTxTimeMs() >= 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getBluetoothActivityInfo().getEnergyUsed() >= 0);
         }
     }
 }
