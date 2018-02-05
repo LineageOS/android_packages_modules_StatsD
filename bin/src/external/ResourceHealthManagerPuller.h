@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,21 @@
 
 #pragma once
 
-#include <sstream>
-#include "HashableDimensionKey.h"
-#include "frameworks/base/cmds/statsd/src/stats_log.pb.h"
-#include "logd/LogReader.h"
-
-#include <unordered_map>
+#include <utils/String16.h>
+#include "StatsPuller.h"
 
 namespace android {
 namespace os {
 namespace statsd {
 
-const HashableDimensionKey DEFAULT_DIMENSION_KEY = HashableDimensionKey();
-const MetricDimensionKey DEFAULT_METRIC_DIMENSION_KEY = MetricDimensionKey();
-
-// Minimum bucket size in seconds
-const long kMinBucketSizeSec = 5 * 60;
-
-typedef std::map<int64_t, std::vector<HashableDimensionKey>> ConditionKey;
-
-typedef std::unordered_map<MetricDimensionKey, int64_t> DimToValMap;
+/**
+ * Reads Ihealth.hal
+ */
+class ResourceHealthManagerPuller : public StatsPuller {
+public:
+    ResourceHealthManagerPuller(int tagId);
+    bool PullInternal(vector<std::shared_ptr<LogEvent>>* data) override;
+};
 
 }  // namespace statsd
 }  // namespace os
