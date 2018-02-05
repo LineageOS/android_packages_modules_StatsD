@@ -17,6 +17,7 @@ package android.cts.statsd.atom;
 
 import android.os.BatteryPluggedStateEnum; // From os/enums.proto
 import android.os.BatteryStatusEnum; // From os/enums.proto
+import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.DeviceIdleModeEnum; // From server/enums.proto
 import android.view.DisplayStateEnum; // From view/enums.proto
 
@@ -36,8 +37,10 @@ import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
 import com.android.os.AtomsProto.CpuTimePerFreq;
 import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
+import com.android.os.AtomsProto.FullBatteryCapacity;
 import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.PluggedStateChanged;
+import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
@@ -579,6 +582,62 @@ public class HostAtomTests extends AtomTestCase {
 
         turnScreenOff();
     }
+
+    @RestrictedBuildTest
+    public void testRemainingBatteryCapacity() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+            .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
+            .addChild(FieldMatcher.newBuilder()
+                .setField(RemainingBatteryCapacity.CHARGE_UAH_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        turnScreenOff();
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getRemainingBatteryCapacity().hasChargeUAh());
+        assertTrue(atom.getRemainingBatteryCapacity().getChargeUAh() > 0);
+    }
+
+    @RestrictedBuildTest
+    public void testFullBatteryCapacity() throws Exception {
+        if (!TESTS_ENABLED) {return;}
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(FullBatteryCapacity.CAPACITY_UAH_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        turnScreenOff();
+
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getFullBatteryCapacity().hasCapacityUAh());
+        assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
+    }
+
 
     public void testKernelWakelock() throws Exception {
         if (!TESTS_ENABLED) {return;}
