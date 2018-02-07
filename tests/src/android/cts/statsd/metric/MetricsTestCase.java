@@ -25,18 +25,6 @@ import com.android.tradefed.device.DeviceNotAvailableException;
 import java.util.List;
 
 public class MetricsTestCase extends DeviceAtomTestCase {
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
-        installTestApp();
-    }
-
-    @Override
-    protected void tearDown() throws Exception {
-        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
-        super.tearDown();
-    }
 
     private static abstract class TestCase {
         private final StatsdConfigProto.StatsdConfig mConfig;
