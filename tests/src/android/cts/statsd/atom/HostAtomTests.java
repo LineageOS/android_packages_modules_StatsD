@@ -701,7 +701,7 @@ public class HostAtomTests extends AtomTestCase {
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
-                        .setField(SubsystemSleepState.NAME_FIELD_NUMBER));
+                        .setField(SubsystemSleepState.SUBSYSTEM_NAME_FIELD_NUMBER));
         addGaugeAtom(config, Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER, dimension);
 
         turnScreenOff();
@@ -715,7 +715,7 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(!atom.getSubsystemSleepState().getName().equals(""));
+            assertTrue(!atom.getSubsystemSleepState().getSubsystemName().equals(""));
             assertTrue(atom.getSubsystemSleepState().getCount() >= 0);
             assertTrue(atom.getSubsystemSleepState().getTimeMs() >= 0);
         }
