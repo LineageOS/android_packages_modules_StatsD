@@ -169,6 +169,15 @@ public class AtomTestCase extends BaseTestCase {
         return data;
     }
 
+    protected StatsLogReport getStatsLogReport() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue(reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+        assertTrue(report.hasUidMap());
+        assertEquals(1, report.getMetricsCount());
+        return report.getMetrics(0);
+    }
+
     protected ConfigMetricsReportList getReportList() throws Exception {
         ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
                 String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, String.valueOf(CONFIG_ID), "--proto"));
