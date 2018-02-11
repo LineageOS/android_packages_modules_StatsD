@@ -82,7 +82,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Setup, make sure the screen is off.
         turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         final int atomTag = Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER;
 

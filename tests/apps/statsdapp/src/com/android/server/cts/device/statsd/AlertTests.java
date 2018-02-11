@@ -132,7 +132,7 @@ public class AlertTests {
             sLatch1 = new CountDownLatch(1);
             sLatch2 = new CountDownLatch(1);
             mStatsManager.removeConfiguration(CONFIG_ID);
-            mStatsManager.addConfiguration(CONFIG_ID, CONFIG.toByteArray(), "", "");
+            mStatsManager.addConfiguration(CONFIG_ID, CONFIG.toByteArray());
 
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_1, mPendingIntent1);
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, mPendingIntent2);
@@ -156,7 +156,7 @@ public class AlertTests {
             sLatch1 = new CountDownLatch(2);
             sLatch2 = new CountDownLatch(2);
             mStatsManager.removeConfiguration(CONFIG_ID);
-            mStatsManager.addConfiguration(CONFIG_ID, CONFIG.toByteArray(), "", "");
+            mStatsManager.addConfiguration(CONFIG_ID, CONFIG.toByteArray());
 
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_1, mPendingIntent1);
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, mPendingIntent2);

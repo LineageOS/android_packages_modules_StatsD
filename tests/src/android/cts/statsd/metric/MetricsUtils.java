@@ -16,22 +16,26 @@
 package android.cts.statsd.metric;
 
 import com.android.internal.os.StatsdConfigProto;
+import com.android.internal.os.StatsdConfigProto.AtomMatcher;
+import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 
 public class MetricsUtils {
     public static final long COUNT_METRIC_ID = 3333;
+    public static final long DURATION_METRIC_ID = 4444;
 
     public static StatsdConfigProto.StatsdConfig.Builder getEmptyConfig() {
         StatsdConfigProto.StatsdConfig.Builder builder =
                 StatsdConfigProto.StatsdConfig.newBuilder();
-        // only accept the log events from this cts to avoid noise.
+        // Only accept the log events from this cts and android system (1000) to avoid noise.
         builder.addAllowedLogSource("com.android.server.cts.device.statsd");
+        builder.addAllowedLogSource("android");
         return builder;
     }
 
-    public static StatsdConfigProto.AtomMatcher.Builder getAtomMatcher(int atomTag) {
-        StatsdConfigProto.AtomMatcher.Builder builder = StatsdConfigProto.AtomMatcher.newBuilder();
-        builder.setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                        .setAtomId(atomTag).build());
+    public static AtomMatcher.Builder getAtomMatcher(int atomId) {
+        AtomMatcher.Builder builder = AtomMatcher.newBuilder();
+        builder.setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                        .setAtomId(atomId).build());
         return builder;
     }
 }
