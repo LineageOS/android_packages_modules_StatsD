@@ -28,6 +28,7 @@ import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.FlashlightStateChanged;
+import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
@@ -257,6 +258,33 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getFlashlightStateChanged().getState().getNumber());
+    }
+
+    public void testForegroundServiceState() throws Exception {
+        if (!TESTS_ENABLED) return;
+
+        final int atomTag = Atom.FOREGROUND_SERVICE_STATE_CHANGED_FIELD_NUMBER;
+        final String name = "testForegroundService";
+
+        Set<Integer> enterForeground = new HashSet<>(
+                Arrays.asList(ForegroundServiceStateChanged.State.ENTER_VALUE));
+        Set<Integer> exitForeground = new HashSet<>(
+                Arrays.asList(ForegroundServiceStateChanged.State.EXIT_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(enterForeground, exitForeground);
+
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+                atom -> atom.getForegroundServiceStateChanged().getState().getNumber());
     }
 
     public void testGpsScan() throws Exception {

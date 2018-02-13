@@ -214,6 +214,16 @@ public class AtomTests {
     }
 
     @Test
+    public void testForegroundService() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        // The service goes into foreground and exits shortly
+        Intent intent = new Intent(context, StatsdCtsForegroundService.class);
+        context.startService(intent);
+        sleep(500);
+        context.stopService(intent);
+    }
+
+    @Test
     public void testGpsScan() {
         Context context = InstrumentationRegistry.getContext();
         final LocationManager locManager = context.getSystemService(LocationManager.class);
