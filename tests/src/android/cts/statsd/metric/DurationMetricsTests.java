@@ -172,19 +172,6 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         }
     }
 
-    private void doAppHookStart(int label) throws Exception {
-        doAppHook(label, AppHook.State.START.ordinal());
-    }
-
-    private void doAppHookStop(int label) throws Exception {
-        doAppHook(label, AppHook.State.STOP.ordinal());
-    }
-
-    private void doAppHook(int label, int state) throws Exception {
-        getDevice().executeShellCommand(String.format(
-                "cmd stats log-app-hook %d %d", label, state));
-    }
-
     private AtomMatcher startAtomMatcher(int id) {
         return AtomMatcher.newBuilder()
                 .setId(id)

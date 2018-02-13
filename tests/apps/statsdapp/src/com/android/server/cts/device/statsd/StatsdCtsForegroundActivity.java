@@ -66,7 +66,7 @@ public class StatsdCtsForegroundActivity extends Activity {
                 doShowApplicationOverlay();
                 break;
             default:
-                Log.e(TAG, "Intent had invalid action");
+                Log.e(TAG, "Intent had invalid action " + action);
                 finish();
         }
     }

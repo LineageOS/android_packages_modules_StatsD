@@ -60,6 +60,6 @@ public class BroadcastSubscriberTests extends DeviceAtomTestCase {
     public void runAlertTest(String methodName) throws Exception {
         if (!TESTS_ENABLED) return;
         CLog.d("\nPerforming device-side test of " + methodName + " for uid " + getUid());
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AlertTests", methodName);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".SubscriberTests", methodName);
     }
 }

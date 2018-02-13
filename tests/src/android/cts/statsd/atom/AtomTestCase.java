@@ -30,6 +30,7 @@ import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.AppHook;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -55,12 +56,12 @@ import java.util.function.Function;
  */
 public class AtomTestCase extends BaseTestCase {
 
-    protected static final String UPDATE_CONFIG_CMD = "cmd stats config update";
-    protected static final String DUMP_REPORT_CMD = "cmd stats dump-report";
-    protected static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
-    protected static final String CONFIG_UID = "1000";
+    public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
+    public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
+    public static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
-    protected static final long CONFIG_ID = "cts_config".hashCode();
+    public static final long CONFIG_ID = "cts_config".hashCode();
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
@@ -115,6 +116,7 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected void uploadConfig(StatsdConfig config) throws Exception {
+        LogUtil.CLog.d("Uploading the following config:\n" + config.toString());
         File configFile = File.createTempFile("statsdconfig", ".config");
         configFile.deleteOnExit();
         Files.write(config.toByteArray(), configFile);
@@ -131,9 +133,10 @@ public class AtomTestCase extends BaseTestCase {
                 String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, String.valueOf(configId)));
     }
 
+    /** Gets the statsd report and sorts it. Note that this also deletes that report from statsd. */
     protected List<EventMetricData> getEventMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue(reportList.getReportsCount() == 1);
+        assertTrue("Expected one report", reportList.getReportsCount() == 1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<EventMetricData> data = new ArrayList<>();
@@ -178,10 +181,19 @@ public class AtomTestCase extends BaseTestCase {
         return report.getMetrics(0);
     }
 
+    /** Gets the statsd report. Note that this also deletes that report from statsd. */
     protected ConfigMetricsReportList getReportList() throws Exception {
-        ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
-                String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, String.valueOf(CONFIG_ID), "--proto"));
-        return reportList;
+        try {
+            ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
+                    String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, String.valueOf(CONFIG_ID),
+                            "--proto"));
+            return reportList;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
+                    + "Perhaps there is not a valid statsd config for the requested "
+                    + "uid=" + CONFIG_UID + ", id=" + CONFIG_ID + ".");
+            throw(e);
+        }
     }
 
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
@@ -383,6 +395,17 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void plugInWireless() throws Exception {
         getDevice().executeShellCommand("cmd battery set wireless 1");
+    }
+
+    public void doAppHookStart(int label) throws Exception {
+        doAppHook(label, AppHook.State.START.ordinal());
+    }
+    public void doAppHookStop(int label) throws Exception {
+        doAppHook(label, AppHook.State.STOP.ordinal());
+    }
+    public void doAppHook(int label, int state) throws Exception {
+        getDevice().executeShellCommand(String.format(
+                "cmd stats log-app-hook %d %d", label, state));
     }
 
     protected void setBatteryLevel(int level) throws Exception {
