@@ -25,7 +25,7 @@ import com.android.internal.os.StatsdConfigProto.Position;
 import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
-import com.android.os.AtomsProto.AppHook;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -37,15 +37,15 @@ import java.util.List;
 
 public class DurationMetricsTests extends DeviceAtomTestCase {
 
-    private static final int APP_HOOK_A_MATCH_START_ID = 0;
-    private static final int APP_HOOK_A_MATCH_STOP_ID = 1;
-    private static final int APP_HOOK_B_MATCH_START_ID = 2;
-    private static final int APP_HOOK_B_MATCH_STOP_ID = 3;
+    private static final int APP_BREADCRUMB_REPORTED_A_MATCH_START_ID = 0;
+    private static final int APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID = 1;
+    private static final int APP_BREADCRUMB_REPORTED_B_MATCH_START_ID = 2;
+    private static final int APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID = 3;
 
     public void testDurationMetric() throws Exception {
         // Add AtomMatcher's.
-        AtomMatcher startAtomMatcher = startAtomMatcher(APP_HOOK_A_MATCH_START_ID);
-        AtomMatcher stopAtomMatcher = stopAtomMatcher(APP_HOOK_A_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcher = startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+        AtomMatcher stopAtomMatcher = stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
 
         StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
         builder.addAtomMatcher(startAtomMatcher);
@@ -53,8 +53,8 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
 
         // Add Predicate's.
         SimplePredicate simplePredicate = SimplePredicate.newBuilder()
-                .setStart(APP_HOOK_A_MATCH_START_ID)
-                .setStop(APP_HOOK_A_MATCH_STOP_ID)
+                .setStart(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID)
+                .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
                 .build();
         Predicate predicate = Predicate.newBuilder()
                 .setId(StringToId("Predicate"))
@@ -72,10 +72,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         // Upload config.
         uploadConfig(builder);
 
-        // Create AppHook Start/Stop events.
-        doAppHookStart(1);
+        // Create AppBreadcrumbReported Start/Stop events.
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(2000);
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
 
         // Wait for the metrics to propagate to statsd.
         Thread.sleep(2000);
@@ -92,10 +92,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
 
     public void testDurationMetricWithDimension() throws Exception {
         // Add AtomMatcher's.
-        AtomMatcher startAtomMatcherA = startAtomMatcher(APP_HOOK_A_MATCH_START_ID);
-        AtomMatcher stopAtomMatcherA = stopAtomMatcher(APP_HOOK_A_MATCH_STOP_ID);
-        AtomMatcher startAtomMatcherB = startAtomMatcher(APP_HOOK_B_MATCH_START_ID);
-        AtomMatcher stopAtomMatcherB = stopAtomMatcher(APP_HOOK_B_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcherA = startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+        AtomMatcher stopAtomMatcherA = stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcherB = startAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
+        AtomMatcher stopAtomMatcherB = stopAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID);
 
         StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
         builder.addAtomMatcher(startAtomMatcherA);
@@ -105,8 +105,8 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
 
         // Add Predicate's.
         SimplePredicate simplePredicateA = SimplePredicate.newBuilder()
-                .setStart(APP_HOOK_A_MATCH_START_ID)
-                .setStop(APP_HOOK_A_MATCH_STOP_ID)
+                .setStart(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID)
+                .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
                 .build();
         Predicate predicateA = Predicate.newBuilder()
                 .setId(StringToId("Predicate_A"))
@@ -115,16 +115,17 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         builder.addPredicate(predicateA);
 
         FieldMatcher.Builder dimensionsBuilder = FieldMatcher.newBuilder()
-                .setField(AppHook.STATE_FIELD_NUMBER);
+                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER);
         dimensionsBuilder.addChild(FieldMatcher.newBuilder()
-                .setField(AppHook.LABEL_FIELD_NUMBER)
+                .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
                 .setPosition(Position.FIRST)
-                .addChild(FieldMatcher.newBuilder().setField(AppHook.LABEL_FIELD_NUMBER)));
+                .addChild(FieldMatcher.newBuilder().setField(
+                        AppBreadcrumbReported.LABEL_FIELD_NUMBER)));
         Predicate predicateB = Predicate.newBuilder()
                 .setId(StringToId("Predicate_B"))
                 .setSimplePredicate(SimplePredicate.newBuilder()
-                        .setStart(APP_HOOK_B_MATCH_START_ID)
-                        .setStop(APP_HOOK_B_MATCH_STOP_ID)
+                        .setStart(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
+                        .setStop(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID)
                         .setDimensions(dimensionsBuilder.build())
                         .build())
                 .build();
@@ -140,21 +141,22 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
                 .setDimensionsInWhat(FieldMatcher.newBuilder()
                         .setField(Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER)
                         .addChild(FieldMatcher.newBuilder()
-                                .setField(AppHook.STATE_FIELD_NUMBER)
+                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
                                 .setPosition(Position.FIRST)
-                                .addChild(FieldMatcher.newBuilder().setField(AppHook.LABEL_FIELD_NUMBER)))));
+                                .addChild(FieldMatcher.newBuilder().setField(
+                                        AppBreadcrumbReported.LABEL_FIELD_NUMBER)))));
 
         // Upload config.
         uploadConfig(builder);
 
         // Trigger events.
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(2000);
-        doAppHookStart(2);
+        doAppBreadcrumbReportedStart(2);
         Thread.sleep(2000);
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
         Thread.sleep(2000);
-        doAppHookStop(2);
+        doAppBreadcrumbReportedStop(2);
 
         // Wait for the metrics to propagate to statsd.
         Thread.sleep(2000);
@@ -176,10 +178,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         return AtomMatcher.newBuilder()
                 .setId(id)
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(Atom.APP_HOOK_FIELD_NUMBER)
+                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                         .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(AppHook.STATE_FIELD_NUMBER)
-                                .setEqInt(AppHook.State.START.ordinal())))
+                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                .setEqInt(AppBreadcrumbReported.State.START.ordinal())))
                 .build();
     }
 
@@ -187,10 +189,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         return AtomMatcher.newBuilder()
                 .setId(id)
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(Atom.APP_HOOK_FIELD_NUMBER)
+                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                         .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(AppHook.STATE_FIELD_NUMBER)
-                                .setEqInt(AppHook.State.STOP.ordinal())))
+                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                .setEqInt(AppBreadcrumbReported.State.STOP.ordinal())))
                 .build();
     }
 
