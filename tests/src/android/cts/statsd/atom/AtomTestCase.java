@@ -143,11 +143,11 @@ public class AtomTestCase extends BaseTestCase {
         for (StatsLogReport metric : report.getMetricsList()) {
             data.addAll(metric.getEventMetrics().getDataList());
         }
-        data.sort(Comparator.comparing(EventMetricData::getTimestampNanos));
+        data.sort(Comparator.comparing(EventMetricData::getElapsedTimestampNanos));
 
         LogUtil.CLog.d("Get EventMetricDataList as following:\n");
         for (EventMetricData d : data) {
-            LogUtil.CLog.d("Atom at " + d.getTimestampNanos() + ":\n" + d.getAtom().toString());
+            LogUtil.CLog.d("Atom at " + d.getElapsedTimestampNanos() + ":\n" + d.getAtom().toString());
         }
         return data;
     }
@@ -518,7 +518,7 @@ public class AtomTestCase extends BaseTestCase {
      */
     public static void assertTimeDiffBetween(EventMetricData d0, EventMetricData d1,
             int minDiffMs, int maxDiffMs) {
-        long diffMs = (d1.getTimestampNanos() - d0.getTimestampNanos()) / 1_000_000;
+        long diffMs = (d1.getElapsedTimestampNanos() - d0.getElapsedTimestampNanos()) / 1_000_000;
         assertTrue("Illegal time difference (" + diffMs + "ms)", minDiffMs <= diffMs);
         assertTrue("Illegal time difference (" + diffMs + "ms)", diffMs <= maxDiffMs);
     }
