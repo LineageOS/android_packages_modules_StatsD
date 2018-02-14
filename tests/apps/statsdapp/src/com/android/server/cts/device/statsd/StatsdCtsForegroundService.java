@@ -37,6 +37,7 @@ public class StatsdCtsForegroundService extends Service {
     private static final String TAG = "SimpleForegroundService";
     private static final String NOTIFICATION_CHANNEL_ID = "Foreground Service";
 
+    // TODO: pass this in from host side.
     public static final int SLEEP_OF_FOREGROUND_SERVICE = 2_000;
 
     private Looper mServiceLooper;
