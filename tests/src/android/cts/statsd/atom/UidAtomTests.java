@@ -78,11 +78,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int field = BleScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = BleScanStateChanged.State.ON_VALUE;
         final int stateOff = BleScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMs = 1_500;
-        final int maxTimeDiffMs = 3_000;
+        final int minTimeDiffMillis = 1_500;
+        final int maxTimeDiffMillis = 3_000;
 
         List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, field,
-                stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, true);
+                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
         BleScanStateChanged a0 = data.get(0).getAtom().getBleScanStateChanged();
         BleScanStateChanged a1 = data.get(1).getAtom().getBleScanStateChanged();
@@ -98,11 +98,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int field = BleUnoptimizedScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = BleUnoptimizedScanStateChanged.State.ON_VALUE;
         final int stateOff = BleUnoptimizedScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMs = 1_500;
-        final int maxTimeDiffMs = 3_000;
+        final int minTimeDiffMillis = 1_500;
+        final int maxTimeDiffMillis = 3_000;
 
         List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, field,
-                stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, true);
+                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
         BleUnoptimizedScanStateChanged a0 = data.get(0).getAtom().getBleUnoptimizedScanStateChanged();
         BleUnoptimizedScanStateChanged a1 = data.get(1).getAtom().getBleUnoptimizedScanStateChanged();
@@ -188,8 +188,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : atomList) {
             if (atom.getCpuTimePerUid().getUid() == uid) {
                 found = true;
-                assertTrue(atom.getCpuTimePerUid().getUserTimeMs() > 0);
-                assertTrue(atom.getCpuTimePerUid().getSysTimeMs() > 0);
+                assertTrue(atom.getCpuTimePerUid().getUserTimeMillis() > 0);
+                assertTrue(atom.getCpuTimePerUid().getSysTimeMillis() > 0);
             }
         }
         assertTrue("found uid " + uid, found);
@@ -226,7 +226,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             if (atom.getCpuTimePerUidFreq().getUid() == uid) {
                 found = true;
                 assertTrue(atom.getCpuTimePerUidFreq().getFreqIdx() >= 0);
-                assertTrue(atom.getCpuTimePerUidFreq().getTimeMs() > 0);
+                assertTrue(atom.getCpuTimePerUidFreq().getTimeMillis() > 0);
             }
         }
         assertTrue("found uid " + uid, found);
@@ -299,11 +299,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int key = GpsScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = GpsScanStateChanged.State.ON_VALUE;
         final int stateOff = GpsScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMs = 500;
-        final int maxTimeDiffMs = 60_000;
+        final int minTimeDiffMillis = 500;
+        final int maxTimeDiffMillis = 60_000;
 
         List<EventMetricData> data = doDeviceMethodOnOff("testGpsScan", atom, key,
-                stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, true);
+                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
         GpsScanStateChanged a0 = data.get(0).getAtom().getGpsScanStateChanged();
         GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
@@ -323,7 +323,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         List<EventMetricData> data = getEventMetricDataList();
         assertTrue(data.size() == 1);
-        long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMs();
+        long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMillis();
         assertTrue("Jank duration of " + duration + "ms was less than " + MIN_DURATION + "ms",
                 duration >= MIN_DURATION);
         assertTrue("Jank duration of " + duration + "ms was longer than " + MAX_DURATION + "ms",
@@ -488,12 +488,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int key = WifiScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = WifiScanStateChanged.State.ON_VALUE;
         final int stateOff = WifiScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMs = 500;
-        final int maxTimeDiffMs = 60_000;
+        final int minTimeDiffMillis = 500;
+        final int maxTimeDiffMillis = 60_000;
         final boolean demandExactlyTwo = false; // Two scans are performed, so up to 4 atoms logged.
 
         List<EventMetricData> data = doDeviceMethodOnOff("testWifiScan", atom, key,
-                stateOn, stateOff, minTimeDiffMs, maxTimeDiffMs, demandExactlyTwo);
+                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, demandExactlyTwo);
 
         assertTrue(data.size() >= 2);
         assertTrue(data.size() <= 4);

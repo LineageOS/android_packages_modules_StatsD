@@ -267,8 +267,8 @@ public class HostAtomTests extends AtomTestCase {
         // Setup: record initial brightness state, set mode to manual and brightness to full.
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
-        int initialTimeout = getScreenTimeoutMs();
-        setScreenTimeoutMs(600000);
+        int initialTimeout = getScreenTimeoutMillis();
+        setScreenTimeoutMillis(600000);
         turnScreenOn();
         setScreenBrightnessMode(true);
         setScreenBrightness(255);
@@ -304,7 +304,7 @@ public class HostAtomTests extends AtomTestCase {
         // Restore initial screen brightness
         setScreenBrightness(initialBrightness);
         setScreenBrightnessMode(isInitialManual);
-        setScreenTimeoutMs(initialTimeout);
+        setScreenTimeoutMillis(initialTimeout);
         turnScreenOff();
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -489,7 +489,7 @@ public class HostAtomTests extends AtomTestCase {
         Atom atom = data.get(0);
         assertTrue(atom.getCpuTimePerFreq().getCluster() >= 0);
         assertTrue(atom.getCpuTimePerFreq().getFreqIndex() >= 0);
-        assertTrue(atom.getCpuTimePerFreq().getTimeMs() > 0);
+        assertTrue(atom.getCpuTimePerFreq().getTimeMillis() > 0);
     }
 
     public void testSubsystemSleepState() throws Exception {
@@ -514,7 +514,7 @@ public class HostAtomTests extends AtomTestCase {
         for (Atom atom: dataList) {
             assertTrue(!atom.getSubsystemSleepState().getSubsystemName().equals(""));
             assertTrue(atom.getSubsystemSleepState().getCount() >= 0);
-            assertTrue(atom.getSubsystemSleepState().getTimeMs() >= 0);
+            assertTrue(atom.getSubsystemSleepState().getTimeMillis() >= 0);
         }
     }
 
@@ -535,11 +535,11 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getModemActivityInfo().getTimestampMs() > 0);
-            assertTrue(atom.getModemActivityInfo().getSleepTimeMs() > 0);
-            assertTrue(atom.getModemActivityInfo().getControllerIdleTimeMs() > 0);
-            assertTrue(atom.getModemActivityInfo().getControllerTxTimePl0Ms() >= 0);
-            assertTrue(atom.getModemActivityInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getModemActivityInfo().getTimestampMillis() > 0);
+            assertTrue(atom.getModemActivityInfo().getSleepTimeMillis() > 0);
+            assertTrue(atom.getModemActivityInfo().getControllerIdleTimeMillis() > 0);
+            assertTrue(atom.getModemActivityInfo().getControllerTxTimePl0Millis() >= 0);
+            assertTrue(atom.getModemActivityInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getModemActivityInfo().getEnergyUsed() >= 0);
         }
     }
@@ -561,11 +561,11 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getWifiActivityEnergyInfo().getTimestampMs() > 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getTimestampMillis() > 0);
             assertTrue(atom.getWifiActivityEnergyInfo().getStackState() >= 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerIdleTimeMs() > 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerTxTimeMs() >= 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerIdleTimeMillis() > 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerTxTimeMillis() >= 0);
+            assertTrue(atom.getWifiActivityEnergyInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getWifiActivityEnergyInfo().getControllerEnergyUsed() >= 0);
         }
     }
@@ -587,11 +587,11 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getBluetoothActivityInfo().getTimestampMs() > 0);
+            assertTrue(atom.getBluetoothActivityInfo().getTimestampMillis() > 0);
             assertTrue(atom.getBluetoothActivityInfo().getBluetoothStackState() >= 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerIdleTimeMs() > 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerTxTimeMs() >= 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMs() >= 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerIdleTimeMillis() > 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerTxTimeMillis() >= 0);
+            assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getBluetoothActivityInfo().getEnergyUsed() >= 0);
         }
     }

@@ -30,7 +30,7 @@ import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.Atom;
-import com.android.os.AtomsProto.AppHook;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -38,6 +38,7 @@ import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.log.LogUtil;
+
 import com.google.common.io.Files;
 
 import java.io.File;
@@ -159,7 +160,8 @@ public class AtomTestCase extends BaseTestCase {
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<Atom> data = new ArrayList<>();
-        for (GaugeMetricData gaugeMetricData : report.getMetrics(0).getGaugeMetrics().getDataList()) {
+        for (GaugeMetricData gaugeMetricData : report.getMetrics(
+                0).getGaugeMetrics().getDataList()) {
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }
@@ -192,7 +194,7 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
                     + "Perhaps there is not a valid statsd config for the requested "
                     + "uid=" + CONFIG_UID + ", id=" + CONFIG_ID + ".");
-            throw(e);
+            throw (e);
         }
     }
 
@@ -207,20 +209,23 @@ public class AtomTestCase extends BaseTestCase {
 
     /**
      * Adds an event to the config for an atom that matches the given key.
-     * @param conf configuration
+     *
+     * @param conf    configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param fvm FieldValueMatcher.Builder for the relevant key
+     * @param fvm     FieldValueMatcher.Builder for the relevant key
      */
-    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag, FieldValueMatcher.Builder fvm)
+    protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag,
+            FieldValueMatcher.Builder fvm)
             throws Exception {
         addAtomEvent(conf, atomTag, Arrays.asList(fvm));
     }
 
     /**
      * Adds an event to the config for an atom that matches the given keys.
-     * @param conf configuration
+     *
+     * @param conf   configuration
      * @param atomId atom tag (from atoms.proto)
-     * @param fvms list of FieldValueMatcher.Builders to attach to the atom. May be null.
+     * @param fvms   list of FieldValueMatcher.Builders to attach to the atom. May be null.
      */
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomId,
             List<FieldValueMatcher.Builder> fvms) throws Exception {
@@ -230,7 +235,7 @@ public class AtomTestCase extends BaseTestCase {
 
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         if (fvms != null) {
-            for (FieldValueMatcher.Builder fvm :fvms) {
+            for (FieldValueMatcher.Builder fvm : fvms) {
                 sam.addFieldValueMatcher(fvm);
             }
         }
@@ -244,13 +249,15 @@ public class AtomTestCase extends BaseTestCase {
 
     /**
      * Adds an atom to a gauge metric of a config
-     * @param conf configuration
-     * @param atomId atom id (from atoms.proto)
+     *
+     * @param conf      configuration
+     * @param atomId    atom id (from atoms.proto)
      * @param dimension dimension is needed for most pulled atoms
      */
-    protected void addGaugeAtom(StatsdConfig.Builder conf, int atomId, @Nullable FieldMatcher.Builder dimension) throws Exception {
+    protected void addGaugeAtom(StatsdConfig.Builder conf, int atomId,
+            @Nullable FieldMatcher.Builder dimension) throws Exception {
         final String atomName = "Atom" + System.nanoTime();
-        final String gaugeName = "Gauge" +  + System.nanoTime();
+        final String gaugeName = "Gauge" + +System.nanoTime();
         final String predicateName = "SCREEN_IS_ON";
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         conf.addAtomMatcher(AtomMatcher.newBuilder()
@@ -303,11 +310,16 @@ public class AtomTestCase extends BaseTestCase {
     /**
      * Asserts that each set of states in stateSets occurs at least once in data.
      * Asserts that the states in data occur in the same order as the sets in stateSets.
-     * @param stateSets A list of set of states, where each set represents an equivalent state of
-     *                  the device for the purpose of CTS.
-     * @param data list of EventMetricData from statsd, produced by getReportMetricListData()
-     * @param wait expected duration (in ms) between state changes; asserts that the actual wait
-     *             time was wait/2 <= actual_wait <= 5*wait. Use 0 to ignore this assertion.
+     *
+     * @param stateSets        A list of set of states, where each set represents an equivalent
+     *                         state of
+     *                         the device for the purpose of CTS.
+     * @param data             list of EventMetricData from statsd, produced by
+     *                         getReportMetricListData()
+     * @param wait             expected duration (in ms) between state changes; asserts that the
+     *                         actual wait
+     *                         time was wait/2 <= actual_wait <= 5*wait. Use 0 to ignore this
+     *                         assertion.
      * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
      */
     public void assertStatesOccurred(List<Set<Integer>> stateSets, List<EventMetricData> data,
@@ -350,6 +362,7 @@ public class AtomTestCase extends BaseTestCase {
      * Removes all elements from data prior to the first occurrence of an element of state. After
      * this method is called, the first element of data (if non-empty) is guaranteed to be an
      * element in state.
+     *
      * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
      */
     public void popUntilFind(List<EventMetricData> data, Set<Integer> state,
@@ -397,15 +410,17 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().executeShellCommand("cmd battery set wireless 1");
     }
 
-    public void doAppHookStart(int label) throws Exception {
-        doAppHook(label, AppHook.State.START.ordinal());
+    public void doAppBreadcrumbReportedStart(int label) throws Exception {
+        doAppBreadcrumbReported(label, AppBreadcrumbReported.State.START.ordinal());
     }
-    public void doAppHookStop(int label) throws Exception {
-        doAppHook(label, AppHook.State.STOP.ordinal());
+
+    public void doAppBreadcrumbReportedStop(int label) throws Exception {
+        doAppBreadcrumbReported(label, AppBreadcrumbReported.State.STOP.ordinal());
     }
-    public void doAppHook(int label, int state) throws Exception {
+
+    public void doAppBreadcrumbReported(int label, int state) throws Exception {
         getDevice().executeShellCommand(String.format(
-                "cmd stats log-app-hook %d %d", label, state));
+                "cmd stats log-app-breadcrumb-reported %d %d", label, state));
     }
 
     protected void setBatteryLevel(int level) throws Exception {
@@ -432,14 +447,15 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void setScreenBrightnessMode(boolean manual) throws Exception {
         getDevice().executeShellCommand(
-                "settings put system screen_brightness_mode " + (manual? 0 : 1));
+                "settings put system screen_brightness_mode " + (manual ? 0 : 1));
     }
 
-    protected int getScreenTimeoutMs() throws Exception {
+    protected int getScreenTimeoutMillis() throws Exception {
         return Integer.parseInt(
                 getDevice().executeShellCommand("settings get system screen_off_timeout").trim());
     }
-    protected void setScreenTimeoutMs(int timeout) throws Exception {
+
+    protected void setScreenTimeoutMillis(int timeout) throws Exception {
         getDevice().executeShellCommand("settings put system screen_off_timeout " + timeout);
     }
 
@@ -450,6 +466,7 @@ public class AtomTestCase extends BaseTestCase {
     protected void enterDozeModeDeep() throws Exception {
         getDevice().executeShellCommand("dumpsys deviceidle force-idle deep");
     }
+
     protected void leaveDozeMode() throws Exception {
         getDevice().executeShellCommand("dumpsys deviceidle unforce");
         getDevice().executeShellCommand("dumpsys deviceidle disable");
@@ -511,8 +528,9 @@ public class AtomTestCase extends BaseTestCase {
 
     /**
      * Asserts that the two events are within the specified range of each other.
-     * @param d0 the event that should occur first
-     * @param d1 the event that should occur second
+     *
+     * @param d0        the event that should occur first
+     * @param d1        the event that should occur second
      * @param minDiffMs d0 should precede d1 by at least this amount
      * @param maxDiffMs d0 should precede d1 by at most this amount
      */

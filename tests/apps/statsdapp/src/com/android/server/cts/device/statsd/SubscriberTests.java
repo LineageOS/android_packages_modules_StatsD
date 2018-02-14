@@ -34,7 +34,7 @@ import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
-import com.android.os.AtomsProto.AppHook;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 
 import java.util.concurrent.CountDownLatch;
@@ -70,10 +70,10 @@ public class SubscriberTests {
             .addAtomMatcher(AtomMatcher.newBuilder()
                     .setId(ATOM_MATCHER_ID)
                     .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                            .setAtomId(Atom.APP_HOOK_FIELD_NUMBER)
+                            .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                             // Event only when the uid is this app's uid.
                             .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                    .setField(AppHook.UID_FIELD_NUMBER)
+                                    .setField(AppBreadcrumbReported.UID_FIELD_NUMBER)
                                     .setEqInt(UID)
                             )
                     )
@@ -84,8 +84,8 @@ public class SubscriberTests {
                     .setBucket(TimeUnit.CTS)
                     // Slice by uid (since that's the typical case)
                     .setDimensionsInWhat(FieldMatcher.newBuilder()
-                        .setField(Atom.APP_HOOK_FIELD_NUMBER)
-                        .addChild(FieldMatcher.newBuilder().setField(AppHook.UID_FIELD_NUMBER))
+                        .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                        .addChild(FieldMatcher.newBuilder().setField(AppBreadcrumbReported.UID_FIELD_NUMBER))
                     )
             )
             .addAlert(Alert.newBuilder()
@@ -137,7 +137,7 @@ public class SubscriberTests {
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_1, mPendingIntent1);
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, mPendingIntent2);
             AtomTests.sleep(SLEEP_TIME_AFTER_SET_SUBSCRIBER_MS);
-            StatsLog.write(StatsLog.APP_HOOK, UID, /* label */ 1, StatsLog.APP_HOOK__STATE__START);
+            StatsLog.write(StatsLog.APP_BREADCRUMB_REPORTED, UID, /* label */ 1, StatsLog.APP_BREADCRUMB_REPORTED__STATE__START);
 
             Assert.assertTrue(waitForLatch(sLatch1, 10_000));
             Assert.assertTrue(waitForLatch(sLatch2, 10_000));
@@ -161,14 +161,14 @@ public class SubscriberTests {
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_1, mPendingIntent1);
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, mPendingIntent2);
             AtomTests.sleep(SLEEP_TIME_AFTER_SET_SUBSCRIBER_MS);
-            StatsLog.write(StatsLog.APP_HOOK, UID, /* label */ 1, StatsLog.APP_HOOK__STATE__START);
+            StatsLog.write(StatsLog.APP_BREADCRUMB_REPORTED, UID, /* label */ 1, StatsLog.APP_BREADCRUMB_REPORTED__STATE__START);
             AtomTests.sleep(SLEEP_TIME_AFTER_SET_SUBSCRIBER_MS);
             // During sleep, both latches count down by 1, as tested in testBroadcastSubscriber.
 
             // Now remove subscriber2 and make sure only subscriber1 receives broadcast.
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, null);
             AtomTests.sleep(SLEEP_TIME_AFTER_SET_SUBSCRIBER_MS);
-            StatsLog.write(StatsLog.APP_HOOK, UID, /* label */ 1, StatsLog.APP_HOOK__STATE__START);
+            StatsLog.write(StatsLog.APP_BREADCRUMB_REPORTED, UID, /* label */ 1, StatsLog.APP_BREADCRUMB_REPORTED__STATE__START);
             Assert.assertTrue(waitForLatch(sLatch1, 10_000));
             Log.d(TAG, "About to wait for a latch, expecting it to not finish");
             Assert.assertFalse(waitForLatch(sLatch2, 2_000)); // should fail
@@ -176,7 +176,7 @@ public class SubscriberTests {
             // Now add subscriber2 back again and make sure it receives this time.
             mStatsManager.setBroadcastSubscriber(CONFIG_ID, SUBSCRIBER_ID_2, mPendingIntent2);
             AtomTests.sleep(SLEEP_TIME_AFTER_SET_SUBSCRIBER_MS);
-            StatsLog.write(StatsLog.APP_HOOK, UID, /* label */ 1, StatsLog.APP_HOOK__STATE__START);
+            StatsLog.write(StatsLog.APP_BREADCRUMB_REPORTED, UID, /* label */ 1, StatsLog.APP_BREADCRUMB_REPORTED__STATE__START);
             Assert.assertTrue(waitForLatch(sLatch2, 10_000));
         } finally {
             mStatsManager.removeConfiguration(CONFIG_ID);
@@ -223,14 +223,14 @@ public class SubscriberTests {
         Assert.assertEquals(METRIC_ID, intentRuleId);
 
         String expectedDimValue = String.format("%d:{%d:%d|}",
-                Atom.APP_HOOK_FIELD_NUMBER, AppHook.UID_FIELD_NUMBER, UID);
+                Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, AppBreadcrumbReported.UID_FIELD_NUMBER, UID);
         Assert.assertEquals(expectedDimValue, intentDimsValueStr);
 
-        Assert.assertEquals(Atom.APP_HOOK_FIELD_NUMBER, intentDimsValue.getField());
+        Assert.assertEquals(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, intentDimsValue.getField());
         List<StatsDimensionsValue> intentTuple = intentDimsValue.getTupleValueList();
         Assert.assertEquals(1, intentTuple.size());
         StatsDimensionsValue intentTupleValue = intentTuple.get(0);
-        Assert.assertEquals(AppHook.UID_FIELD_NUMBER, intentTupleValue.getField());
+        Assert.assertEquals(AppBreadcrumbReported.UID_FIELD_NUMBER, intentTupleValue.getField());
         Assert.assertTrue(intentTupleValue.isValueType(StatsDimensionsValue.INT_VALUE_TYPE));
         Assert.assertEquals(UID, intentTupleValue.getIntValue());
     }
