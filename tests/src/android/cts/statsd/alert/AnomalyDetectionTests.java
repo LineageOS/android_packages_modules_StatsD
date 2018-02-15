@@ -30,7 +30,7 @@ import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.AnomalyDetected;
-import com.android.os.AtomsProto.AppHook;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil.CLog;
@@ -48,14 +48,14 @@ public class AnomalyDetectionTests extends AtomTestCase {
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
 
     // Config constants
-    private static final int APP_HOOK_MATCH_START_ID = 1;
-    private static final int APP_HOOK_MATCH_STOP_ID = 2;
+    private static final int APP_BREADCRUMB_REPORTED_MATCH_START_ID = 1;
+    private static final int APP_BREADCRUMB_REPORTED_MATCH_STOP_ID = 2;
     private static final int METRIC_ID = 8;
     private static final int ALERT_ID = 11;
     private static final int SUBSCRIPTION_ID_INCIDENTD = 41;
     private static final int ANOMALY_DETECT_MATCH_ID = 10;
     private static final int ANOMALY_EVENT_ID = 101;
-    private static final int APP_HOOK_UID = 0;
+    private static final int APP_BREADCRUMB_REPORTED_UID = 0;
     private static final int INCIDENTD_SECTION = -1;
 
     @Override
@@ -72,44 +72,57 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for count works.
     // Also tests that anomaly detection works when spanning multiple buckets.
     public void testCountAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) return;
+        if (!TESTS_ENABLED) {
+            return;
+        }
         StatsdConfig.Builder config = getBaseConfig(10, // num buckets
-                                                    20, // refractory period (seconds)
-                                                    2) // threshold: > 2 counts
+                20, // refractory period (seconds)
+                2) // threshold: > 2 counts
                 .addCountMetric(CountMetric.newBuilder()
                         .setId(METRIC_ID)
-                        .setWhat(APP_HOOK_MATCH_START_ID)
+                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
                         .setBucket(TimeUnit.CTS) // 1 second
                         // Slice by label
                         .setDimensionsInWhat(FieldMatcher.newBuilder()
-                                .setField(Atom.APP_HOOK_FIELD_NUMBER)
+                                .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                 .addChild(FieldMatcher.newBuilder()
-                                        .setField(AppHook.LABEL_FIELD_NUMBER)
+                                        .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
                                 )
                         )
                 );
         uploadConfig(config);
 
         String markTime = getCurrentLogcatDate();
-        doAppHookStart(6); // count(label=6) -> 1 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(
+                6); // count(label=6) -> 1 (not an anomaly, since not "greater than 2")
         Thread.sleep(500);
-        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertFalse("Incident", didIncidentdFireSince(markTime));
+        }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppHookStart(6); // count(label=6) -> 2 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(
+                6); // count(label=6) -> 2 (not an anomaly, since not "greater than 2")
         Thread.sleep(500);
-        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertFalse("Incident", didIncidentdFireSince(markTime));
+        }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppHookStart(12); // count(label=12) -> 1 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(
+                12); // count(label=12) -> 1 (not an anomaly, since not "greater than 2")
         Thread.sleep(1000);
-        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertFalse("Incident", didIncidentdFireSince(markTime));
+        }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppHookStart(6); // count(label=6) -> 3 (anomaly, since "greater than 2"!)
+        doAppBreadcrumbReportedStart(6); // count(label=6) -> 3 (anomaly, since "greater than 2"!)
         Thread.sleep(1000);
 
-        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertTrue("No incident", didIncidentdFireSince(markTime));
+        }
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected 1 anomaly", 1, data.size());
         AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
@@ -119,25 +132,29 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for duration works.
     // Also tests that refractory periods in anomaly detection work.
     public void testDurationAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) return;
-        final int APP_HOOK_IS_ON_PREDICATE = 1423;
+        if (!TESTS_ENABLED) {
+            return;
+        }
+        final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(17, // num buckets
-                              17, // refractory period (seconds)
-                              10_000_000_000L) // threshold: > 10 seconds in nanoseconds
-                .addDurationMetric(DurationMetric.newBuilder()
-                        .setId(METRIC_ID)
-                        .setWhat(APP_HOOK_IS_ON_PREDICATE) // the Predicate added below
-                        .setAggregationType(DurationMetric.AggregationType.SUM)
-                        .setBucket(TimeUnit.CTS) // 1 second
-                )
-                .addPredicate(StatsdConfigProto.Predicate.newBuilder()
-                        .setId(APP_HOOK_IS_ON_PREDICATE)
-                        .setSimplePredicate(StatsdConfigProto.SimplePredicate.newBuilder()
-                                .setStart(APP_HOOK_MATCH_START_ID)
-                                .setStop(APP_HOOK_MATCH_STOP_ID)
+                        17, // refractory period (seconds)
+                        10_000_000_000L) // threshold: > 10 seconds in nanoseconds
+                        .addDurationMetric(DurationMetric.newBuilder()
+                                .setId(METRIC_ID)
+                                .setWhat(
+                                        APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // the Predicate
+                                // added below
+                                .setAggregationType(DurationMetric.AggregationType.SUM)
+                                .setBucket(TimeUnit.CTS) // 1 second
                         )
-                );
+                        .addPredicate(StatsdConfigProto.Predicate.newBuilder()
+                                .setId(APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE)
+                                .setSimplePredicate(StatsdConfigProto.SimplePredicate.newBuilder()
+                                        .setStart(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
+                                        .setStop(APP_BREADCRUMB_REPORTED_MATCH_STOP_ID)
+                                )
+                        );
         uploadConfig(config);
 
         // Since timing is crucial and checking logcat for incidentd is slow, we don't test for it.
@@ -148,16 +165,16 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
         // Test that alarm doesn't fire early.
         String markTime = getCurrentLogcatDate();
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(6_000);
         assertEquals("Premature anomaly,", 0, getEventMetricDataList().size());
 
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
         Thread.sleep(4_000);
         assertEquals("Premature anomaly,", 0, getEventMetricDataList().size());
 
         // Test that alarm does fire when it is supposed to (after 4s, plus up to 5s alarm delay).
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(9_000);
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected an anomaly,", 1, data.size());
@@ -165,46 +182,52 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
         // Now test that the refractory period is obeyed.
         markTime = getCurrentLogcatDate();
-        doAppHookStop(1);
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStop(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(3_000);
         // NB: the previous getEventMetricDataList also removes the report, so it is back to 0.
         assertEquals("Expected only 1 anomaly,", 0, getEventMetricDataList().size());
 
         // Test that detection works again after refractory period finishes.
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
         Thread.sleep(8_000);
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(10_000);
         // We can do an incidentd test now that all the timing issues are done.
-        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertTrue("No incident", didIncidentdFireSince(markTime));
+        }
         data = getEventMetricDataList();
         assertEquals("Expected another anomaly,", 1, data.size());
         assertEquals(ALERT_ID, data.get(0).getAtom().getAnomalyDetected().getAlertId());
 
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
         turnScreenOff();
     }
 
     // Tests that anomaly detection for duration works even when the alarm fires too late.
     public void testDurationAnomalyDetectionForLateAlarms() throws Exception {
-        if (!TESTS_ENABLED) return;
-        final int APP_HOOK_IS_ON_PREDICATE = 1423;
+        if (!TESTS_ENABLED) {
+            return;
+        }
+        final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(50, // num buckets
                         0, // refractory period (seconds)
                         6_000_000_000L) // threshold: > 6 seconds in nanoseconds
                         .addDurationMetric(DurationMetric.newBuilder()
                                 .setId(METRIC_ID)
-                                .setWhat(APP_HOOK_IS_ON_PREDICATE) // the Predicate added below
+                                .setWhat(
+                                        APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // the Predicate
+                                // added below
                                 .setAggregationType(DurationMetric.AggregationType.SUM)
                                 .setBucket(TimeUnit.CTS) // 1 second
                         )
                         .addPredicate(StatsdConfigProto.Predicate.newBuilder()
-                                .setId(APP_HOOK_IS_ON_PREDICATE)
+                                .setId(APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE)
                                 .setSimplePredicate(StatsdConfigProto.SimplePredicate.newBuilder()
-                                        .setStart(APP_HOOK_MATCH_START_ID)
-                                        .setStop(APP_HOOK_MATCH_STOP_ID)
+                                        .setStart(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
+                                        .setStop(APP_BREADCRUMB_REPORTED_MATCH_STOP_ID)
                                 )
                         );
         uploadConfig(config);
@@ -213,9 +236,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // This assumes (as per CTS requirements) that screen Stay Awake is on.
         turnScreenOn();
 
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(5_000);
-        doAppHookStop(1);
+        doAppBreadcrumbReportedStop(1);
         Thread.sleep(2_000);
         assertEquals("Premature anomaly,", 0, getEventMetricDataList().size());
 
@@ -223,9 +246,10 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // The anomaly occurs in 1s, but alarms won't fire that quickly.
         // It is likely that the alarm will only fire after this period is already over, but the
         // anomaly should nonetheless be detected when the event stops.
-        doAppHookStart(1);
+        doAppBreadcrumbReportedStart(1);
         Thread.sleep(2_000);
-        doAppHookStop(1);  // Anomaly should be detected here if the alarm didn't fire yet.
+        doAppBreadcrumbReportedStop(
+                1);  // Anomaly should be detected here if the alarm didn't fire yet.
         Thread.sleep(200);
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected an anomaly,", 1, data.size());
@@ -236,34 +260,40 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for value works.
     public void testValueAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) return;
+        if (!TESTS_ENABLED) {
+            return;
+        }
         StatsdConfig.Builder config = getBaseConfig(4, // num buckets
-                                                    0, // refactory period (seconds)
-                                                    6) // threshold: value > 6
+                0, // refactory period (seconds)
+                6) // threshold: value > 6
                 .addValueMetric(ValueMetric.newBuilder()
                         .setId(METRIC_ID)
-                        .setWhat(APP_HOOK_MATCH_START_ID)
+                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
                         .setBucket(TimeUnit.ONE_MINUTE)
                         // Get the label field's value:
                         .setValueField(FieldMatcher.newBuilder()
-                                .setField(Atom.APP_HOOK_FIELD_NUMBER)
+                                .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                 .addChild(FieldMatcher.newBuilder()
-                                        .setField(AppHook.LABEL_FIELD_NUMBER))
+                                        .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER))
                         )
 
                 );
         uploadConfig(config);
 
         String markTime = getCurrentLogcatDate();
-        doAppHookStart(6); // value = 6, which is NOT > trigger
+        doAppBreadcrumbReportedStart(6); // value = 6, which is NOT > trigger
         Thread.sleep(2000);
-        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertFalse("Incident", didIncidentdFireSince(markTime));
+        }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppHookStart(14); // value = 14 > trigger
+        doAppBreadcrumbReportedStart(14); // value = 14 > trigger
         Thread.sleep(2000);
 
-        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) {
+            assertTrue("No incident", didIncidentdFireSince(markTime));
+        }
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected 1 anomaly", 1, data.size());
         AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
@@ -277,26 +307,27 @@ public class AnomalyDetectionTests extends AtomTestCase {
 //        StatsdConfig.Builder config = getBaseConfig(1, 20, 6)
 //                .addGaugeMetric(GaugeMetric.newBuilder()
 //                        .setId(METRIC_ID)
-//                        .setWhat(APP_HOOK_MATCH_START_ID)
+//                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
 //                        .setBucket(TimeUnit.ONE_MINUTE)
 //                        // Get the label field's value into the gauge:
 //                        .setGaugeFieldsFilter(
 //                                FieldFilter.newBuilder().setFields(FieldMatcher.newBuilder()
-//                                        .setField(Atom.APP_HOOK_FIELD_NUMBER)
+//                                        .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
 //                                        .addChild(FieldMatcher.newBuilder()
-//                                                .setField(AppHook.LABEL_FIELD_NUMBER))
+//                                                .setField(AppBreadcrumbReported
+// .LABEL_FIELD_NUMBER))
 //                                )
 //                        )
 //                );
 //        uploadConfig(config);
 //
 //        String markTime = getCurrentLogcatDate();
-//        doAppHookStart(6); // gauge = 6, which is NOT > trigger
+//        doAppBreadcrumbReportedStart(6); // gauge = 6, which is NOT > trigger
 //        Thread.sleep(2000);
 //        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
 //        assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 //
-//        doAppHookStart(14); // gauge = 6+1 > trigger
+//        doAppBreadcrumbReportedStart(14); // gauge = 6+1 > trigger
 //        Thread.sleep(2000);
 //
 //        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
@@ -307,33 +338,41 @@ public class AnomalyDetectionTests extends AtomTestCase {
 //    }
 
     private static final StatsdConfig.Builder getBaseConfig(int numBuckets,
-                                                            int refractorySecs,
-                                                            long triggerIfSumGt) {
+            int refractorySecs,
+            long triggerIfSumGt) {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 // Items of relevance for detecting the anomaly:
                 .addAtomMatcher(StatsdConfigProto.AtomMatcher.newBuilder()
-                        .setId(APP_HOOK_MATCH_START_ID)
+                        .setId(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
                         .setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.APP_HOOK_FIELD_NUMBER)
+                                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                 // Event only when the uid is this app's uid.
-                                .addFieldValueMatcher(createFvm(AppHook.UID_FIELD_NUMBER)
-                                        .setEqInt(APP_HOOK_UID)
+                                .addFieldValueMatcher(
+                                        createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
+                                                .setEqInt(APP_BREADCRUMB_REPORTED_UID)
                                 )
-                                .addFieldValueMatcher(createFvm(AppHook.STATE_FIELD_NUMBER)
-                                        .setEqInt(AppHook.State.START.ordinal()) // START
+                                .addFieldValueMatcher(
+                                        createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                                .setEqInt(
+                                                        AppBreadcrumbReported.State.START.ordinal())
+                                        // START
                                 )
                         )
                 )
                 .addAtomMatcher(StatsdConfigProto.AtomMatcher.newBuilder()
-                        .setId(APP_HOOK_MATCH_STOP_ID)
+                        .setId(APP_BREADCRUMB_REPORTED_MATCH_STOP_ID)
                         .setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.APP_HOOK_FIELD_NUMBER)
+                                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                 // Event only when the uid is this app's uid.
-                                .addFieldValueMatcher(createFvm(AppHook.UID_FIELD_NUMBER)
-                                        .setEqInt(APP_HOOK_UID)
+                                .addFieldValueMatcher(
+                                        createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
+                                                .setEqInt(APP_BREADCRUMB_REPORTED_UID)
                                 )
-                                .addFieldValueMatcher(createFvm(AppHook.STATE_FIELD_NUMBER)
-                                        .setEqInt(AppHook.State.STOP.ordinal()) // STOP
+                                .addFieldValueMatcher(
+                                        createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                                .setEqInt(
+                                                        AppBreadcrumbReported.State.STOP.ordinal())
+                                        // STOP
                                 )
                         )
                 )
@@ -353,7 +392,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
                 )
                 // We want to trigger anomalies on METRIC_ID, but don't want the actual data.
                 .addNoReportMetric(METRIC_ID)
-                .addAllowedLogSource("AID_ROOT") // needed for adb cmd AppHook
+                .addAllowedLogSource("AID_ROOT") // needed for adb cmd AppBreadcrumbReported
                 .addAllowedLogSource("AID_STATSD") // needed for AnomalyDetected
                 // No need in this test for .addAllowedLogSource("AID_SYSTEM")
 
@@ -373,8 +412,8 @@ public class AnomalyDetectionTests extends AtomTestCase {
                         )
                 )
                 .addEventMetric(StatsdConfigProto.EventMetric.newBuilder()
-                    .setId(ANOMALY_EVENT_ID)
-                    .setWhat(ANOMALY_DETECT_MATCH_ID)
+                        .setId(ANOMALY_EVENT_ID)
+                        .setWhat(ANOMALY_DETECT_MATCH_ID)
                 );
     }
 }
