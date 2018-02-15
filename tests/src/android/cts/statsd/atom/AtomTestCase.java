@@ -160,8 +160,8 @@ public class AtomTestCase extends BaseTestCase {
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<Atom> data = new ArrayList<>();
-        for (GaugeMetricData gaugeMetricData : report.getMetrics(
-                0).getGaugeMetrics().getDataList()) {
+        for (GaugeMetricData gaugeMetricData :
+                report.getMetrics(0).getGaugeMetrics().getDataList()) {
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }
@@ -257,7 +257,7 @@ public class AtomTestCase extends BaseTestCase {
     protected void addGaugeAtom(StatsdConfig.Builder conf, int atomId,
             @Nullable FieldMatcher.Builder dimension) throws Exception {
         final String atomName = "Atom" + System.nanoTime();
-        final String gaugeName = "Gauge" + +System.nanoTime();
+        final String gaugeName = "Gauge" + System.nanoTime();
         final String predicateName = "SCREEN_IS_ON";
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         conf.addAtomMatcher(AtomMatcher.newBuilder()
@@ -312,8 +312,7 @@ public class AtomTestCase extends BaseTestCase {
      * Asserts that the states in data occur in the same order as the sets in stateSets.
      *
      * @param stateSets        A list of set of states, where each set represents an equivalent
-     *                         state of
-     *                         the device for the purpose of CTS.
+     *                         state of the device for the purpose of CTS.
      * @param data             list of EventMetricData from statsd, produced by
      *                         getReportMetricListData()
      * @param wait             expected duration (in ms) between state changes; asserts that the

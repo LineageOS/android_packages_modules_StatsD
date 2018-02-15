@@ -75,9 +75,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
         if (!TESTS_ENABLED) {
             return;
         }
-        StatsdConfig.Builder config = getBaseConfig(10, // num buckets
-                20, // refractory period (seconds)
-                2) // threshold: > 2 counts
+        StatsdConfig.Builder config = getBaseConfig(10, 20, 2 /* threshold: > 2 counts */)
                 .addCountMetric(CountMetric.newBuilder()
                         .setId(METRIC_ID)
                         .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
@@ -93,24 +91,24 @@ public class AnomalyDetectionTests extends AtomTestCase {
         uploadConfig(config);
 
         String markTime = getCurrentLogcatDate();
-        doAppBreadcrumbReportedStart(
-                6); // count(label=6) -> 1 (not an anomaly, since not "greater than 2")
+        // count(label=6) -> 1 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(6);
         Thread.sleep(500);
         if (INCIDENTD_TESTS_ENABLED) {
             assertFalse("Incident", didIncidentdFireSince(markTime));
         }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppBreadcrumbReportedStart(
-                6); // count(label=6) -> 2 (not an anomaly, since not "greater than 2")
+        // count(label=6) -> 2 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(6);
         Thread.sleep(500);
         if (INCIDENTD_TESTS_ENABLED) {
             assertFalse("Incident", didIncidentdFireSince(markTime));
         }
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
 
-        doAppBreadcrumbReportedStart(
-                12); // count(label=12) -> 1 (not an anomaly, since not "greater than 2")
+        // count(label=12) -> 1 (not an anomaly, since not "greater than 2")
+        doAppBreadcrumbReportedStart(12);
         Thread.sleep(1000);
         if (INCIDENTD_TESTS_ENABLED) {
             assertFalse("Incident", didIncidentdFireSince(markTime));
@@ -137,14 +135,10 @@ public class AnomalyDetectionTests extends AtomTestCase {
         }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
-                getBaseConfig(17, // num buckets
-                        17, // refractory period (seconds)
-                        10_000_000_000L) // threshold: > 10 seconds in nanoseconds
+                getBaseConfig(17, 17, 10_000_000_000L  /*threshold: > 10 seconds in nanoseconds*/)
                         .addDurationMetric(DurationMetric.newBuilder()
                                 .setId(METRIC_ID)
-                                .setWhat(
-                                        APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // the Predicate
-                                // added below
+                                .setWhat(APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // predicate below
                                 .setAggregationType(DurationMetric.AggregationType.SUM)
                                 .setBucket(TimeUnit.CTS) // 1 second
                         )
@@ -212,14 +206,11 @@ public class AnomalyDetectionTests extends AtomTestCase {
         }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
-                getBaseConfig(50, // num buckets
-                        0, // refractory period (seconds)
-                        6_000_000_000L) // threshold: > 6 seconds in nanoseconds
+                getBaseConfig(50, 0, 6_000_000_000L /* threshold: > 6 seconds in nanoseconds */)
                         .addDurationMetric(DurationMetric.newBuilder()
                                 .setId(METRIC_ID)
                                 .setWhat(
-                                        APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // the Predicate
-                                // added below
+                                        APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE) // Predicate below.
                                 .setAggregationType(DurationMetric.AggregationType.SUM)
                                 .setBucket(TimeUnit.CTS) // 1 second
                         )
@@ -248,8 +239,8 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // anomaly should nonetheless be detected when the event stops.
         doAppBreadcrumbReportedStart(1);
         Thread.sleep(2_000);
-        doAppBreadcrumbReportedStop(
-                1);  // Anomaly should be detected here if the alarm didn't fire yet.
+        // Anomaly should be detected here if the alarm didn't fire yet.
+        doAppBreadcrumbReportedStop(1);
         Thread.sleep(200);
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected an anomaly,", 1, data.size());
@@ -263,9 +254,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
         if (!TESTS_ENABLED) {
             return;
         }
-        StatsdConfig.Builder config = getBaseConfig(4, // num buckets
-                0, // refactory period (seconds)
-                6) // threshold: value > 6
+        StatsdConfig.Builder config = getBaseConfig(4, 0, 6 /* threshold: value > 6 */)
                 .addValueMetric(ValueMetric.newBuilder()
                         .setId(METRIC_ID)
                         .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
@@ -355,7 +344,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
                                         createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
                                                 .setEqInt(
                                                         AppBreadcrumbReported.State.START.ordinal())
-                                        // START
                                 )
                         )
                 )
@@ -372,7 +360,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
                                         createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
                                                 .setEqInt(
                                                         AppBreadcrumbReported.State.STOP.ordinal())
-                                        // STOP
                                 )
                         )
                 )
