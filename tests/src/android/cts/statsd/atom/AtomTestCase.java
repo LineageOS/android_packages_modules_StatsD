@@ -37,6 +37,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.log.LogUtil;
 
 import com.google.common.io.Files;
@@ -121,17 +122,17 @@ public class AtomTestCase extends BaseTestCase {
         File configFile = File.createTempFile("statsdconfig", ".config");
         configFile.deleteOnExit();
         Files.write(config.toByteArray(), configFile);
-        String remotePath = "/data/" + configFile.getName();
+        String remotePath = "/data/local/tmp/" + configFile.getName();
         getDevice().pushFile(configFile, remotePath);
         getDevice().executeShellCommand(
-                String.join(" ", "cat", remotePath, "|", UPDATE_CONFIG_CMD, CONFIG_UID,
+                String.join(" ", "cat", remotePath, "|", UPDATE_CONFIG_CMD,
                         String.valueOf(CONFIG_ID)));
         getDevice().executeShellCommand("rm " + remotePath);
     }
 
     protected void removeConfig(long configId) throws Exception {
         getDevice().executeShellCommand(
-                String.join(" ", REMOVE_CONFIG_CMD, CONFIG_UID, String.valueOf(configId)));
+                String.join(" ", REMOVE_CONFIG_CMD, String.valueOf(configId)));
     }
 
     /** Gets the statsd report and sorts it. Note that this also deletes that report from statsd. */
@@ -187,7 +188,7 @@ public class AtomTestCase extends BaseTestCase {
     protected ConfigMetricsReportList getReportList() throws Exception {
         try {
             ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
-                    String.join(" ", DUMP_REPORT_CMD, CONFIG_UID, String.valueOf(CONFIG_ID),
+                    String.join(" ", DUMP_REPORT_CMD, String.valueOf(CONFIG_ID),
                             "--proto"));
             return reportList;
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -381,6 +382,23 @@ public class AtomTestCase extends BaseTestCase {
         data.subList(0, firstStateIdx).clear();
     }
 
+    /** Returns the UID of the host, which should always either be SHELL (2000) or ROOT (0). */
+    protected int getHostUid() throws DeviceNotAvailableException {
+        String strUid = "";
+        try {
+            strUid = getDevice().executeShellCommand("id -u");
+            return Integer.parseInt(strUid.trim());
+        } catch (NumberFormatException e) {
+            LogUtil.CLog.e("Failed to get host's uid via shell command. Found " + strUid);
+            // Fall back to alternative method...
+            if (getDevice().isAdbRoot()) {
+                return 0; // ROOT
+            } else {
+                return 2000; // SHELL
+            }
+        }
+    }
+
     protected void turnScreenOn() throws Exception {
         getDevice().executeShellCommand("input keyevent KEYCODE_WAKEUP");
         getDevice().executeShellCommand("wm dismiss-keyguard");
@@ -420,7 +438,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public void doAppBreadcrumbReported(int label, int state) throws Exception {
         getDevice().executeShellCommand(String.format(
-                "cmd stats log-app-breadcrumb-reported %d %d", label, state));
+                "cmd stats log-app-breadcrumb %d %d", label, state));
     }
 
     protected void setBatteryLevel(int level) throws Exception {
