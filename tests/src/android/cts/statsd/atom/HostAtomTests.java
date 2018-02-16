@@ -17,6 +17,7 @@ package android.cts.statsd.atom;
 
 import android.os.BatteryPluggedStateEnum; // From os/enums.proto
 import android.os.BatteryStatusEnum; // From os/enums.proto
+import android.os.TemperatureTypeEnum; // From os/enums.proto
 import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.DeviceIdleModeEnum; // From server/enums.proto
 import android.view.DisplayStateEnum; // From view/enums.proto
@@ -43,6 +44,7 @@ import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SubsystemSleepState;
+import com.android.os.AtomsProto.Temperature;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil.CLog;
 
@@ -436,6 +438,44 @@ public class HostAtomTests extends AtomTestCase {
         Atom atom = data.get(0);
         assertTrue(atom.getFullBatteryCapacity().hasCapacityUAh());
         assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
+    }
+
+    @RestrictedBuildTest
+    public void testTemperature() throws Exception {
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.TEMPERATURE_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(Temperature.SENSOR_LOCATION_FIELD_NUMBER))
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(Temperature.SENSOR_NAME_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.TEMPERATURE_FIELD_NUMBER, dimension);
+
+        turnScreenOff();
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        turnScreenOff();
+
+        assertTrue(data.size() >= TemperatureTypeEnum.values().length - 1);
+        for (int i = 0; i < data.size(); i++) {
+            Temperature temp = data.get(i).getTemperature();
+            assertTrue("Temperature atom " + i + " has no type",
+                    temp.hasSensorLocation());
+            assertTrue("Temperature reported atom " + i + " has no temperature",
+                    temp.hasTemperatureC());
+            assertTrue("Temperature reported atom " + i + " has an unreasonably low temperature:" +
+                    + temp.getTemperatureC(), temp.getTemperatureC() > 0.0);
+            assertTrue("Temperature reported atom " + i + " has an unreasonably high temperature:" +
+                    + temp.getTemperatureC(), temp.getTemperatureC() < 80.0);
+
+        }
     }
 
     public void testKernelWakelock() throws Exception {
