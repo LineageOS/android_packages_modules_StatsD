@@ -36,8 +36,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.ProcStateAtomTests";
 
-    private static final boolean TESTS_ENABLED = false;
-
     private static final String DEVICE_SIDE_BG_SERVICE_COMPONENT
             = "com.android.server.cts.device.statsd/.StatsdCtsBackgroundService";
     private static final String DEVICE_SIDE_FG_ACTIVITY_COMPONENT
@@ -108,13 +106,9 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        if (!TESTS_ENABLED) {
-            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
-        }
     }
 
     public void testForegroundService() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_FOREGROUND_SERVICE_VALUE));
         Set<Integer> offStates = complement(onStates);
@@ -133,7 +127,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     }
 
     public void testForeground() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE));
         // There are no offStates, since the app remains in foreground until killed.
@@ -155,7 +148,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBackground() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = BG_STATES;
         Set<Integer> offStates = complement(onStates);
 
@@ -173,7 +165,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     }
 
     public void testTop() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_TOP_VALUE));
         Set<Integer> offStates = complement(onStates);
@@ -193,7 +184,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     }
 
     public void testTopSleeping() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_TOP_SLEEPING_VALUE));
         Set<Integer> offStates = complement(onStates);
@@ -216,7 +206,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCached() throws Exception {
-        if (!TESTS_ENABLED) return;
         Set<Integer> onStates = CACHED_STATES;
         Set<Integer> offStates = complement(onStates);
 

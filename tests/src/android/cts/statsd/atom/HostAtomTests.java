@@ -58,8 +58,6 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.HostAtomTests";
 
-    private static final boolean TESTS_ENABLED = false;
-
     private static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
@@ -67,14 +65,9 @@ public class HostAtomTests extends AtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        if (!TESTS_ENABLED) {
-            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
-        }
     }
 
     public void testScreenStateChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, make sure the screen is off.
         turnScreenOff();
         Thread.sleep(WAIT_TIME_LONG);
@@ -112,8 +105,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testChargingStateChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, set charging state to full.
         setChargingState(5);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -163,8 +154,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testPluggedStateChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, unplug device.
         unplugDevice();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -214,8 +203,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBatteryLevelChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, set battery level to full.
         setBatteryLevel(100);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -260,8 +247,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testScreenBrightnessChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup: record initial brightness state, set mode to manual and brightness to full.
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
@@ -312,8 +297,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testDeviceIdleModeStateChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, leave doze mode.
         leaveDozeMode();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -350,8 +333,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBatterySaverModeStateChangedAtom() throws Exception {
-        if (!TESTS_ENABLED) {return;}
-
         // Setup, turn off battery saver.
         turnBatterySaverOff();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -385,7 +366,6 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testRemainingBatteryCapacity() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
             .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
@@ -412,7 +392,6 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testFullBatteryCapacity() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
@@ -439,7 +418,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testKernelWakelock() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
@@ -466,7 +444,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testCpuTimePerFreq() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
@@ -491,7 +468,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testSubsystemSleepState() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
@@ -517,7 +493,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testModemActivityInfo() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         if (!hasFeature(FEATURE_TELEPHONY, true)) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
@@ -543,7 +518,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testWifiActivityInfo() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         if (!hasFeature(FEATURE_WIFI, true)) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
@@ -569,7 +543,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBluetoothActivityInfo() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         if (!hasFeature(FEATURE_BLUETOOTH, true)) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
