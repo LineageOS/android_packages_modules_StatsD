@@ -30,7 +30,7 @@ import java.util.List;
  */
 public class DeviceAtomTestCase extends AtomTestCase {
 
-    protected static final String DEVICE_SIDE_TEST_APK = "CtsStatsdAtomsApp.apk";
+    protected static final String DEVICE_SIDE_TEST_APK = "CtsStatsdApp.apk";
     protected static final String DEVICE_SIDE_TEST_PACKAGE
             = "com.android.server.cts.device.statsd";
 
