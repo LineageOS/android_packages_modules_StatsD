@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import static org.junit.Assert.assertTrue;
+
 import android.os.WakeLockLevelEnum;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
@@ -31,6 +33,7 @@ import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
+import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
@@ -44,6 +47,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 
 /**
  * Statsd atom tests that are done via app, for atoms that report a uid.
@@ -319,7 +323,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag); // Does not have UID, but needs a device-side compnent.
 
-        runActivity("DaveyActivity");
+        runActivity("DaveyActivity", null, null);
 
         List<EventMetricData> data = getEventMetricDataList();
         assertTrue(data.size() == 1);
@@ -548,7 +552,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("VideoPlayerActivity");
+        runActivity("VideoPlayerActivity", "action", "action.play_video");
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
@@ -556,5 +560,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
+    }
+
+    public void testPictureInPictureState() throws Exception {
+        if (!TESTS_ENABLED) return;
+        final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> entered = new HashSet<>(
+                Arrays.asList(PictureInPictureStateChanged.State.ENTERED_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(entered);
+
+        createAndUploadConfig(atomTag, false);
+
+        runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
     }
 }
