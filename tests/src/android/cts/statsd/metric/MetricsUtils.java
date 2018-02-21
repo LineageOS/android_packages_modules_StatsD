@@ -22,6 +22,7 @@ import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 public class MetricsUtils {
     public static final long COUNT_METRIC_ID = 3333;
     public static final long DURATION_METRIC_ID = 4444;
+    public static final long GAUGE_METRIC_ID = 5555;
 
     public static StatsdConfigProto.StatsdConfig.Builder getEmptyConfig() {
         StatsdConfigProto.StatsdConfig.Builder builder =
