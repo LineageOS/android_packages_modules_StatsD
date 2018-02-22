@@ -44,8 +44,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
 
     public void testDurationMetric() throws Exception {
         // Add AtomMatcher's.
-        AtomMatcher startAtomMatcher = startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
-        AtomMatcher stopAtomMatcher = stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcher =
+            MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+        AtomMatcher stopAtomMatcher =
+            MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
 
         StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
         builder.addAtomMatcher(startAtomMatcher);
@@ -57,15 +59,16 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
                 .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
                 .build();
         Predicate predicate = Predicate.newBuilder()
-                .setId(StringToId("Predicate"))
-                .setSimplePredicate(simplePredicate)
-                .build();
+                                  .setId(MetricsUtils.StringToId("Predicate"))
+                                  .setSimplePredicate(simplePredicate)
+                                  .build();
         builder.addPredicate(predicate);
 
         // Add DurationMetric.
-        builder.addDurationMetric(StatsdConfigProto.DurationMetric.newBuilder()
+        builder.addDurationMetric(
+            StatsdConfigProto.DurationMetric.newBuilder()
                 .setId(MetricsUtils.DURATION_METRIC_ID)
-                .setWhat(StringToId("Predicate"))
+                .setWhat(predicate.getId())
                 .setAggregationType(StatsdConfigProto.DurationMetric.AggregationType.SUM)
                 .setBucket(StatsdConfigProto.TimeUnit.CTS));
 
@@ -92,10 +95,14 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
 
     public void testDurationMetricWithDimension() throws Exception {
         // Add AtomMatcher's.
-        AtomMatcher startAtomMatcherA = startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
-        AtomMatcher stopAtomMatcherA = stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
-        AtomMatcher startAtomMatcherB = startAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
-        AtomMatcher stopAtomMatcherB = stopAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcherA =
+            MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+        AtomMatcher stopAtomMatcherA =
+            MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
+        AtomMatcher startAtomMatcherB =
+            MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
+        AtomMatcher stopAtomMatcherB =
+            MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID);
 
         StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
         builder.addAtomMatcher(startAtomMatcherA);
@@ -109,9 +116,9 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
                 .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
                 .build();
         Predicate predicateA = Predicate.newBuilder()
-                .setId(StringToId("Predicate_A"))
-                .setSimplePredicate(simplePredicateA)
-                .build();
+                                   .setId(MetricsUtils.StringToId("Predicate_A"))
+                                   .setSimplePredicate(simplePredicateA)
+                                   .build();
         builder.addPredicate(predicateA);
 
         FieldMatcher.Builder dimensionsBuilder = FieldMatcher.newBuilder()
@@ -121,30 +128,33 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
                 .setPosition(Position.FIRST)
                 .addChild(FieldMatcher.newBuilder().setField(
                         AppBreadcrumbReported.LABEL_FIELD_NUMBER)));
-        Predicate predicateB = Predicate.newBuilder()
-                .setId(StringToId("Predicate_B"))
+        Predicate predicateB =
+            Predicate.newBuilder()
+                .setId(MetricsUtils.StringToId("Predicate_B"))
                 .setSimplePredicate(SimplePredicate.newBuilder()
-                        .setStart(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
-                        .setStop(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID)
-                        .setDimensions(dimensionsBuilder.build())
-                        .build())
+                                        .setStart(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
+                                        .setStop(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID)
+                                        .setDimensions(dimensionsBuilder.build())
+                                        .build())
                 .build();
         builder.addPredicate(predicateB);
 
         // Add DurationMetric.
-        builder.addDurationMetric(StatsdConfigProto.DurationMetric.newBuilder()
+        builder.addDurationMetric(
+            StatsdConfigProto.DurationMetric.newBuilder()
                 .setId(MetricsUtils.DURATION_METRIC_ID)
-                .setWhat(StringToId("Predicate_B"))
-                .setCondition(StringToId("Predicate_A"))
+                .setWhat(predicateB.getId())
+                .setCondition(predicateA.getId())
                 .setAggregationType(StatsdConfigProto.DurationMetric.AggregationType.SUM)
                 .setBucket(StatsdConfigProto.TimeUnit.CTS)
-                .setDimensionsInWhat(FieldMatcher.newBuilder()
+                .setDimensionsInWhat(
+                    FieldMatcher.newBuilder()
                         .setField(Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER)
                         .addChild(FieldMatcher.newBuilder()
-                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                .setPosition(Position.FIRST)
-                                .addChild(FieldMatcher.newBuilder().setField(
-                                        AppBreadcrumbReported.LABEL_FIELD_NUMBER)))));
+                                      .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                      .setPosition(Position.FIRST)
+                                      .addChild(FieldMatcher.newBuilder().setField(
+                                          AppBreadcrumbReported.LABEL_FIELD_NUMBER)))));
 
         // Upload config.
         uploadConfig(builder);
@@ -172,31 +182,5 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
             assertTrue(bucketInfo.getDurationNanos() > 0);
             assertTrue(bucketInfo.getDurationNanos() < 1e10);
         }
-    }
-
-    private AtomMatcher startAtomMatcher(int id) {
-        return AtomMatcher.newBuilder()
-                .setId(id)
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                        .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                .setEqInt(AppBreadcrumbReported.State.START.ordinal())))
-                .build();
-    }
-
-    private AtomMatcher stopAtomMatcher(int id) {
-        return AtomMatcher.newBuilder()
-                .setId(id)
-                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                        .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                .setEqInt(AppBreadcrumbReported.State.STOP.ordinal())))
-                .build();
-    }
-
-    private long StringToId(String str) {
-        return str.hashCode();
     }
 }
