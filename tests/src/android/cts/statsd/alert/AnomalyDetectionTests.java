@@ -47,6 +47,8 @@ public class AnomalyDetectionTests extends AtomTestCase {
     private static final boolean TESTS_ENABLED = false;
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
 
+    private static final int WAIT_AFTER_BREADCRUMB_MS = 2000;
+
     // Config constants
     private static final int APP_BREADCRUMB_REPORTED_MATCH_START_ID = 1;
     private static final int APP_BREADCRUMB_REPORTED_MATCH_STOP_ID = 2;
@@ -109,7 +111,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
         if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
 
         doAppBreadcrumbReportedStart(6); // count(label=6) -> 3 (anomaly, since "greater than 2"!)
-        Thread.sleep(1000);
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
 
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected 1 anomaly", 1, data.size());
@@ -260,12 +262,12 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
         String markTime = getCurrentLogcatDate();
         doAppBreadcrumbReportedStart(6); // value = 6, which is NOT > trigger
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
         assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
         if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
 
         doAppBreadcrumbReportedStart(14); // value = 14 > trigger
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
 
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected 1 anomaly", 1, data.size());
@@ -274,42 +276,40 @@ public class AnomalyDetectionTests extends AtomTestCase {
         if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
     }
 
-    // TODO: Removed until b/73091354 is solved, since it keeps crashing statsd. Update CTS later.
     // Tests that anomaly detection for gauge works.
-//    public void testGaugeAnomalyDetection() throws Exception {
-//        if (!TESTS_ENABLED) return;
-//        StatsdConfig.Builder config = getBaseConfig(1, 20, 6)
-//                .addGaugeMetric(GaugeMetric.newBuilder()
-//                        .setId(METRIC_ID)
-//                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
-//                        .setBucket(TimeUnit.ONE_MINUTE)
-//                        // Get the label field's value into the gauge:
-//                        .setGaugeFieldsFilter(
-//                                FieldFilter.newBuilder().setFields(FieldMatcher.newBuilder()
-//                                        .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-//                                        .addChild(FieldMatcher.newBuilder()
-//                                                .setField(AppBreadcrumbReported
-// .LABEL_FIELD_NUMBER))
-//                                )
-//                        )
-//                );
-//        uploadConfig(config);
-//
-//        String markTime = getCurrentLogcatDate();
-//        doAppBreadcrumbReportedStart(6); // gauge = 6, which is NOT > trigger
-//        Thread.sleep(2000);
-//        assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
-//        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
-//
-//        doAppBreadcrumbReportedStart(14); // gauge = 6+1 > trigger
-//        Thread.sleep(2000);
-//
-//        List<EventMetricData> data = getEventMetricDataList();
-//        assertEquals("Expected 1 anomaly", 1, data.size());
-//        AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
-//        assertEquals("Wrong alert_id", ALERT_ID, a.getAlertId());
-//        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
-//    }
+    public void testGaugeAnomalyDetection() throws Exception {
+        StatsdConfig.Builder config = getBaseConfig(1, 20, 6 /* threshold: value > 6 */)
+                .addGaugeMetric(GaugeMetric.newBuilder()
+                        .setId(METRIC_ID)
+                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
+                        .setBucket(TimeUnit.CTS)
+                        // Get the label field's value into the gauge:
+                        .setGaugeFieldsFilter(
+                                FieldFilter.newBuilder().setFields(FieldMatcher.newBuilder()
+                                        .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                                        .addChild(FieldMatcher.newBuilder()
+                                                .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER))
+                                )
+                        )
+                );
+        uploadConfig(config);
+
+        String markTime = getCurrentLogcatDate();
+        doAppBreadcrumbReportedStart(6); // gauge = 6, which is NOT > trigger
+        Thread.sleep(Math.max(WAIT_AFTER_BREADCRUMB_MS, 1_100)); // Must be >1s to push next bucket.
+        assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
+        if (INCIDENTD_TESTS_ENABLED) assertFalse("Incident", didIncidentdFireSince(markTime));
+
+        // We waited for >1s above, so we are now in the next bucket (which is essential).
+        doAppBreadcrumbReportedStart(14); // gauge = 14 > trigger
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertEquals("Expected 1 anomaly", 1, data.size());
+        AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
+        assertEquals("Wrong alert_id", ALERT_ID, a.getAlertId());
+        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+    }
 
     private final StatsdConfig.Builder getBaseConfig(int numBuckets,
                                                      int refractorySecs,
