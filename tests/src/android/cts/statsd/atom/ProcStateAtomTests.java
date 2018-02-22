@@ -143,7 +143,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
-        assertScreenOn();
         executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
         final int waitTime = 2 * EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
@@ -184,7 +183,6 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
-        assertScreenOn();
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
@@ -205,11 +203,9 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
-        assertScreenOn();
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         // ASAP, turn off the screen to make proc state -> top_sleeping.
         turnScreenOff();
-        assertScreenOff();
         final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
 
