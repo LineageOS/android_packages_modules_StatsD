@@ -16,7 +16,7 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_PACKAGE_NAME := CtsStatsdAtomsApp
+LOCAL_PACKAGE_NAME := CtsStatsdApp
 
 # don't include this package in any target
 LOCAL_MODULE_TAGS := optional

@@ -504,45 +504,6 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().rebootUntilOnline();
     }
 
-    protected void assertScreenOff() throws Exception {
-        final long deadLine = System.currentTimeMillis() + SCREEN_STATE_CHANGE_TIMEOUT;
-        boolean screenAwake = true;
-        do {
-            final String dumpsysPower = getDevice().executeShellCommand("dumpsys power").trim();
-            for (String line : dumpsysPower.split("\n")) {
-                if (line.contains("Display Power")) {
-                    screenAwake = line.trim().endsWith("ON");
-                    break;
-                }
-            }
-            Thread.sleep(SCREEN_STATE_POLLING_INTERVAL);
-        } while (screenAwake && System.currentTimeMillis() < deadLine);
-        assertFalse("Screen could not be turned off", screenAwake);
-    }
-
-    protected void assertScreenOn() throws Exception {
-        // this also checks that the keyguard is dismissed
-        final long deadLine = System.currentTimeMillis() + SCREEN_STATE_CHANGE_TIMEOUT;
-        boolean screenAwake;
-        do {
-            final String dumpsysWindowPolicy =
-                    getDevice().executeShellCommand("dumpsys window policy").trim();
-            boolean keyguardStateLines = false;
-            screenAwake = true;
-            for (String line : dumpsysWindowPolicy.split("\n")) {
-                if (line.contains("KeyguardServiceDelegate")) {
-                    keyguardStateLines = true;
-                } else if (keyguardStateLines && line.contains("showing=")) {
-                    screenAwake &= line.trim().endsWith("false");
-                } else if (keyguardStateLines && line.contains("screenState=")) {
-                    screenAwake &= line.trim().endsWith("SCREEN_STATE_ON");
-                }
-            }
-            Thread.sleep(SCREEN_STATE_POLLING_INTERVAL);
-        } while (!screenAwake && System.currentTimeMillis() < deadLine);
-        assertTrue("Screen could not be turned on", screenAwake);
-    }
-
     /**
      * Asserts that the two events are within the specified range of each other.
      *
