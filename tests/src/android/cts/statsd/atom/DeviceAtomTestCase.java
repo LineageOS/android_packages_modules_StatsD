@@ -164,6 +164,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
      */
     protected void installTestApp() throws Exception {
         installPackage(DEVICE_SIDE_TEST_APK, true);
+        LogUtil.CLog.i("Installing device-side test app with uid " + getUid());
         allowBackgroundServices();
     }
 
