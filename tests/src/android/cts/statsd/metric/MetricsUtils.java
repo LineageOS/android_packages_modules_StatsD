@@ -17,12 +17,16 @@ package android.cts.statsd.metric;
 
 import com.android.internal.os.StatsdConfigProto;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
+import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
+import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 
 public class MetricsUtils {
     public static final long COUNT_METRIC_ID = 3333;
     public static final long DURATION_METRIC_ID = 4444;
     public static final long GAUGE_METRIC_ID = 5555;
+    public static final long VALUE_METRIC_ID = 6666;
 
     public static StatsdConfigProto.StatsdConfig.Builder getEmptyConfig() {
         StatsdConfigProto.StatsdConfig.Builder builder =
@@ -38,5 +42,41 @@ public class MetricsUtils {
         builder.setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                         .setAtomId(atomId).build());
         return builder;
+    }
+
+    public static AtomMatcher startAtomMatcher(int id) {
+      return AtomMatcher.newBuilder()
+          .setId(id)
+          .setSimpleAtomMatcher(
+              SimpleAtomMatcher.newBuilder()
+                  .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                  .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                            .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                            .setEqInt(AppBreadcrumbReported.State.START.ordinal())))
+          .build();
+    }
+
+    public static AtomMatcher stopAtomMatcher(int id) {
+      return AtomMatcher.newBuilder()
+          .setId(id)
+          .setSimpleAtomMatcher(
+              SimpleAtomMatcher.newBuilder()
+                  .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                  .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                            .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                            .setEqInt(AppBreadcrumbReported.State.STOP.ordinal())))
+          .build();
+    }
+
+    public static AtomMatcher simpleAtomMatcher(int id) {
+      return AtomMatcher.newBuilder()
+          .setId(id)
+          .setSimpleAtomMatcher(
+              SimpleAtomMatcher.newBuilder().setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER))
+          .build();
+    }
+
+    public static long StringToId(String str) {
+      return str.hashCode();
     }
 }
