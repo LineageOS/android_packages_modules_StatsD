@@ -144,14 +144,13 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
 
         turnScreenOn();
         executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
-        final int waitTime = 2 * EXTRA_WAIT_TIME_MS;
+        final int waitTime = EXTRA_WAIT_TIME_MS + 5_000; // Overlay may need to sit there a while.
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
+        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.
         assertStatesOccurred(stateSet, data, 0, PROC_STATE_FUNCTION);
-
-        turnScreenOff();
     }
 
     public void testBackground() throws Exception {
@@ -186,6 +185,7 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
+        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.

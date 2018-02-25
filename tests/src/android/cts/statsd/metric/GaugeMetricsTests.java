@@ -38,9 +38,12 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
 
   public void testGaugeMetric() throws Exception {
     // Add AtomMatcher's.
-    AtomMatcher startAtomMatcher = startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
-    AtomMatcher stopAtomMatcher = stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
-    AtomMatcher atomMatcher = simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
+    AtomMatcher startAtomMatcher =
+        MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+    AtomMatcher stopAtomMatcher =
+        MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
+    AtomMatcher atomMatcher =
+        MetricsUtils.simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
 
     StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
     builder.addAtomMatcher(startAtomMatcher);
@@ -53,7 +56,7 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
                                           .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
                                           .build();
     Predicate predicate = Predicate.newBuilder()
-                              .setId(StringToId("Predicate"))
+                              .setId(MetricsUtils.StringToId("Predicate"))
                               .setSimplePredicate(simplePredicate)
                               .build();
     builder.addPredicate(predicate);
@@ -132,41 +135,5 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
     assertEquals(
         data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getState(),
         AppBreadcrumbReported.State.STOP);
-  }
-
-  private AtomMatcher startAtomMatcher(int id) {
-    return AtomMatcher.newBuilder()
-        .setId(id)
-        .setSimpleAtomMatcher(
-            SimpleAtomMatcher.newBuilder()
-                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                          .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                          .setEqInt(AppBreadcrumbReported.State.START.ordinal())))
-        .build();
-  }
-
-  private AtomMatcher stopAtomMatcher(int id) {
-    return AtomMatcher.newBuilder()
-        .setId(id)
-        .setSimpleAtomMatcher(
-            SimpleAtomMatcher.newBuilder()
-                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                          .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                          .setEqInt(AppBreadcrumbReported.State.STOP.ordinal())))
-        .build();
-  }
-
-  private AtomMatcher simpleAtomMatcher(int id) {
-    return AtomMatcher.newBuilder()
-        .setId(id)
-        .setSimpleAtomMatcher(
-            SimpleAtomMatcher.newBuilder().setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER))
-        .build();
-  }
-
-  private long StringToId(String str) {
-    return str.hashCode();
   }
 }

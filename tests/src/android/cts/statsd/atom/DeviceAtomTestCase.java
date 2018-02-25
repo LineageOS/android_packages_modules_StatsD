@@ -164,6 +164,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
      */
     protected void installTestApp() throws Exception {
         installPackage(DEVICE_SIDE_TEST_APK, true);
+        LogUtil.CLog.i("Installing device-side test app with uid " + getUid());
         allowBackgroundServices();
     }
 
@@ -178,10 +179,21 @@ public class DeviceAtomTestCase extends AtomTestCase {
     /**
      * Runs the specified activity for WAIT_TME_LONG.
      */
-    protected void runActivity(String activity) throws Exception {
+    protected void runActivity(String activity, String actionKey, String actionValue)
+            throws Exception {
+        String intentString = null;
+        if (actionKey != null && actionValue != null) {
+            intentString = actionKey + " " + actionValue;
+        }
         turnScreenOn();
-        getDevice().executeShellCommand(
-                "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity);
+        if (intentString == null) {
+            getDevice().executeShellCommand(
+                    "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity);
+        } else {
+            getDevice().executeShellCommand(
+                    "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity + " -e " +
+                            intentString);
+        }
 
         Thread.sleep(WAIT_TIME_LONG);
         getDevice().executeShellCommand(

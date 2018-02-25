@@ -17,6 +17,7 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_PACKAGE_NAME := CtsStatsdApp
+LOCAL_PRIVATE_PLATFORM_APIS := true
 
 # don't include this package in any target
 LOCAL_MODULE_TAGS := optional
