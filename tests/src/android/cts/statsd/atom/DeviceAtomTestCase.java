@@ -177,15 +177,22 @@ public class DeviceAtomTestCase extends AtomTestCase {
     }
 
     /**
-     * Runs the specified activity for WAIT_TME_LONG.
+     * Runs the specified activity.
      */
     protected void runActivity(String activity, String actionKey, String actionValue)
             throws Exception {
+        runActivity(activity, actionKey, actionValue, WAIT_TIME_LONG);
+    }
+
+    /**
+     * Runs the specified activity.
+     */
+    protected void runActivity(String activity, String actionKey, String actionValue,
+            long waitTime) throws Exception {
         String intentString = null;
         if (actionKey != null && actionValue != null) {
             intentString = actionKey + " " + actionValue;
         }
-        turnScreenOn();
         if (intentString == null) {
             getDevice().executeShellCommand(
                     "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity);
@@ -195,11 +202,10 @@ public class DeviceAtomTestCase extends AtomTestCase {
                             intentString);
         }
 
-        Thread.sleep(WAIT_TIME_LONG);
+        Thread.sleep(waitTime);
         getDevice().executeShellCommand(
                 "am force-stop " + DEVICE_SIDE_TEST_PACKAGE);
 
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOff();
     }
 }
