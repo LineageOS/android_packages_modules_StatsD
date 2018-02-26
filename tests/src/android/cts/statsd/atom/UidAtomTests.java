@@ -21,6 +21,7 @@ import android.os.WakeLockLevelEnum;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.os.AtomsProto.AppStartChanged;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
@@ -41,7 +42,6 @@ import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -69,6 +69,29 @@ public class UidAtomTests extends DeviceAtomTestCase {
     protected void setUp() throws Exception {
         super.setUp();
     }
+
+    public void testAppStartChanged() throws Exception {
+        final int atomTag = Atom.APP_START_CHANGED_FIELD_NUMBER;
+        final String name = "testAppStart";
+
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        AppStartChanged atom = data.get(0).getAtom().getAppStartChanged();
+        assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
+        assertEquals(AppStartChanged.TransitionType.WARM, atom.getType());
+        assertEquals("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity",
+                atom.getActivityName());
+        assertFalse(atom.getIsInstantApp());
+        assertTrue(atom.getActivityStartMillis() > 0);
+        assertTrue(atom.getTransitionDelayMillis() > 0);
+    }
+
     public void testBleScan() throws Exception {
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
@@ -169,9 +192,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
         turnScreenOn();
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
 
         List<Atom> atomList = getGaugeMetricDataList();
 
