@@ -321,7 +321,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag); // Does not have UID, but needs a device-side compnent.
+        createAndUploadConfig(atomTag, false); // UID is logged without attribution node
 
         runActivity("DaveyActivity", null, null);
 
