@@ -108,8 +108,8 @@ public class MetricsTestCase extends DeviceAtomTestCase {
         long whatMatcherId = 3;
         long conditionId = 4;
 
-        StatsdConfigProto.AtomMatcher temperatureMatcher =
-                MetricsUtils.getAtomMatcher(Atom.DEVICE_TEMPERATURE_REPORTED_FIELD_NUMBER)
+        StatsdConfigProto.AtomMatcher plugMatcher =
+                MetricsUtils.getAtomMatcher(Atom.PLUGGED_STATE_CHANGED_FIELD_NUMBER)
                         .setId(whatMatcherId).build();
 
         StatsdConfigProto.AtomMatcher predicateStartMatcher =
@@ -147,7 +147,7 @@ public class MetricsTestCase extends DeviceAtomTestCase {
                         .setBucket(StatsdConfigProto.TimeUnit.CTS)
                         .setWhat(whatMatcherId)
                         .setCondition(conditionId))
-                .addAtomMatcher(temperatureMatcher)
+                .addAtomMatcher(plugMatcher)
                 .addAtomMatcher(predicateStartMatcher)
                 .addAtomMatcher(predicateEndMatcher)
                 .addPredicate(p);
