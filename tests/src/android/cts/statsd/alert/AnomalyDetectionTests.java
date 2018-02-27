@@ -44,7 +44,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.AnomalyDetectionTests";
 
-    private static final boolean TESTS_ENABLED = false;
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
 
     private static final int WAIT_AFTER_BREADCRUMB_MS = 2000;
@@ -62,9 +61,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        if (!TESTS_ENABLED) {
-            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
-        }
         if (!INCIDENTD_TESTS_ENABLED) {
             CLog.w(TAG, TAG + " anomaly tests are disabled by a flag. Change flag to true to run");
         }
@@ -73,9 +69,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for count works.
     // Also tests that anomaly detection works when spanning multiple buckets.
     public void testCountAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) {
-            return;
-        }
         StatsdConfig.Builder config = getBaseConfig(10, 20, 2 /* threshold: > 2 counts */)
                 .addCountMetric(CountMetric.newBuilder()
                         .setId(METRIC_ID)
@@ -123,9 +116,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for duration works.
     // Also tests that refractory periods in anomaly detection work.
     public void testDurationAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) {
-            return;
-        }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(17, 17, 10_000_000_000L  /*threshold: > 10 seconds in nanoseconds*/)
@@ -192,9 +182,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for duration works even when the alarm fires too late.
     public void testDurationAnomalyDetectionForLateAlarms() throws Exception {
-        if (!TESTS_ENABLED) {
-            return;
-        }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(50, 0, 6_000_000_000L /* threshold: > 6 seconds in nanoseconds */)
@@ -242,9 +229,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for value works.
     public void testValueAnomalyDetection() throws Exception {
-        if (!TESTS_ENABLED) {
-            return;
-        }
         StatsdConfig.Builder config = getBaseConfig(4, 0, 6 /* threshold: value > 6 */)
                 .addValueMetric(ValueMetric.newBuilder()
                         .setId(METRIC_ID)

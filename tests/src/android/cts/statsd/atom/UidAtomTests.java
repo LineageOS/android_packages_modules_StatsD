@@ -56,8 +56,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.UidAtomTests";
 
-    private static final boolean TESTS_ENABLED = false;
-
     // These constants are those in PackageManager.
     private static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
     private static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
@@ -70,12 +68,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        if (!TESTS_ENABLED) {
-            CLog.w(TAG, TAG + " tests are disabled by a flag. Change flag to true to run.");
-        }
     }
     public void testBleScan() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -95,7 +89,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleUnoptimizedScan() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_UNOPTIMIZED_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -122,7 +115,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleScanResult() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
         turnScreenOn(); // BLE results are not given unless screen is on. TODO: make more robust.
 
@@ -141,7 +133,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCameraState() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_CAMERA, true) && !hasFeature(FEATURE_CAMERA_FRONT, true)) return;
 
         final int atomTag = Atom.CAMERA_STATE_CHANGED_FIELD_NUMBER;
@@ -163,7 +154,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUid() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
@@ -200,7 +190,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUidFreq() throws Exception {
-        if (!TESTS_ENABLED) {return;}
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
@@ -237,7 +226,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testFlashlightState() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
 
         final int atomTag = Atom.FLASHLIGHT_STATE_CHANGED_FIELD_NUMBER;
@@ -265,8 +253,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testForegroundServiceState() throws Exception {
-        if (!TESTS_ENABLED) return;
-
         final int atomTag = Atom.FOREGROUND_SERVICE_STATE_CHANGED_FIELD_NUMBER;
         final String name = "testForegroundService";
 
@@ -292,7 +278,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testGpsScan() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_LOCATION_GPS, true)) return;
         // Whitelist this app against background location request throttling
         getDevice().executeShellCommand(String.format(
@@ -316,8 +301,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDavey() throws Exception {
-        if (!TESTS_ENABLED) return;
-
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
@@ -335,9 +318,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testScheduledJobState() throws Exception {
-        if (!TESTS_ENABLED)
-            return;
-
         String expectedName = "com.android.server.cts.device.statsd/.StatsdJobService";
         final int atomTag = Atom.SCHEDULED_JOB_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> jobSchedule = new HashSet<>(
@@ -365,8 +345,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testSyncState() throws Exception {
-        if (!TESTS_ENABLED) return;
-
         final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
         Set<Integer> syncOff = new HashSet<>(Arrays.asList(SyncStateChanged.State.OFF_VALUE));
@@ -386,8 +364,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakelockState() throws Exception {
-        if (!TESTS_ENABLED) return;
-
         final int atomTag = Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> wakelockOn = new HashSet<>(Arrays.asList(
                 WakelockStateChanged.State.ACQUIRE_VALUE,
@@ -423,8 +399,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakeupAlarm() throws Exception {
-        if (!TESTS_ENABLED) return;
-
         final int atomTag = Atom.WAKEUP_ALARM_OCCURRED_FIELD_NUMBER;
 
         StatsdConfig.Builder config = createConfigBuilder();
@@ -439,7 +413,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiLock() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
@@ -461,7 +434,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiMulticastLock() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atomTag = Atom.WIFI_MULTICAST_LOCK_STATE_CHANGED_FIELD_NUMBER;
@@ -485,7 +457,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiScan() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atom = Atom.WIFI_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -508,7 +479,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAudioState() throws Exception {
-        if (!TESTS_ENABLED) return;
         if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
 
         final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
@@ -538,7 +508,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
-        if (!TESTS_ENABLED) return;
         final int atomTag = Atom.MEDIA_CODEC_ACTIVITY_CHANGED_FIELD_NUMBER;
 
         Set<Integer> onState = new HashSet<>(
@@ -563,7 +532,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPictureInPictureState() throws Exception {
-        if (!TESTS_ENABLED) return;
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
