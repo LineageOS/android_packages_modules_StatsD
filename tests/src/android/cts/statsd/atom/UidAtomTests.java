@@ -33,6 +33,7 @@ import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.MediaCodecActivityChanged;
+import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
@@ -41,7 +42,6 @@ import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -501,9 +501,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        // Sorted list of events in order in which they occurred.
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, 200,
+        // AudioStateChanged timestamp is fuzzed to 5min buckets
+        assertStatesOccurred(stateSet, data, 0,
                 atom -> atom.getAudioStateChanged().getState().getNumber());
     }
 
@@ -518,6 +517,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
 
+        turnScreenOn();
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -526,6 +526,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
+        turnScreenOff();
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
@@ -540,6 +541,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(entered);
 
+        turnScreenOn();
         createAndUploadConfig(atomTag, false);
 
         runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
@@ -547,8 +549,35 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
+        turnScreenOff();
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
+    }
+
+    public void testOverlayState() throws Exception {
+        final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> entered = new HashSet<>(
+                Arrays.asList(OverlayStateChanged.State.ENTERED_VALUE));
+        Set<Integer> exited = new HashSet<>(
+                Arrays.asList(OverlayStateChanged.State.EXITED_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(entered, exited);
+
+        createAndUploadConfig(atomTag, false);
+
+        runActivity("StatsdCtsForegroundActivity", "action", "action.show_application_overlay",
+                3_000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        // The overlay box should appear about 2sec after the app start, we wait 3sec in total
+        // before force-stop it. So the duration is about 1 sec
+        assertStatesOccurred(stateSet, data, 1_000,
+                atom -> atom.getOverlayStateChanged().getState().getNumber());
     }
 }
