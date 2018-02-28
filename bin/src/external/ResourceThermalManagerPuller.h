@@ -16,18 +16,21 @@
 
 #pragma once
 
-#include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"  // Alert, IncidentdDetails
+#include <utils/String16.h>
+#include "StatsPuller.h"
 
 namespace android {
 namespace os {
 namespace statsd {
 
 /**
- * Calls incidentd to trigger an incident report and put in dropbox for uploading.
+ * Reads IThermal.hal
  */
-bool GenerateIncidentReport(const IncidentdDetails& config, const int64_t& rule_id,
-                            const ConfigKey& configKey);
+class ResourceThermalManagerPuller : public StatsPuller {
+public:
+    ResourceThermalManagerPuller();
+    bool PullInternal(vector<std::shared_ptr<LogEvent>>* data) override;
+};
 
 }  // namespace statsd
 }  // namespace os
