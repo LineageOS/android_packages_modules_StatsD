@@ -38,6 +38,7 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_END_IMMEDIATELY = "action.end_immediately";
     public static final String ACTION_SLEEP_WHILE_TOP = "action.sleep_top";
     public static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
+    public static final String ACTION_CRASH = "action.crash";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
     public static final int SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY = 2_000;
@@ -64,6 +65,9 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_SHOW_APPLICATION_OVERLAY:
                 doShowApplicationOverlay();
+                break;
+            case ACTION_CRASH:
+                doCrash();
                 break;
             default:
                 Log.e(TAG, "Intent had invalid action " + action);
@@ -115,5 +119,9 @@ public class StatsdCtsForegroundActivity extends Activity {
         // The overlay continues long after the finish. The following is just to end the activity.
         AtomTests.sleep(SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY);
         finish();
+    }
+
+    private void doCrash() {
+        Log.e(TAG, "About to crash the app with 1/0 " + (long)1/0);
     }
 }

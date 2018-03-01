@@ -16,6 +16,8 @@
 package android.cts.statsd.atom;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 
 import android.os.WakeLockLevelEnum;
 
@@ -30,6 +32,7 @@ import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
+import com.android.os.AtomsProto.DropboxErrorChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
@@ -73,19 +76,17 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testAppStartChanged() throws Exception {
         final int atomTag = Atom.APP_START_CHANGED_FIELD_NUMBER;
-        final String name = "testAppStart";
 
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+        runActivity("StatsdCtsForegroundActivity", "action", "action.sleep_top");
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         AppStartChanged atom = data.get(0).getAtom().getAppStartChanged();
         assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
-        assertEquals(AppStartChanged.TransitionType.WARM, atom.getType());
         assertEquals("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity",
                 atom.getActivityName());
         assertFalse(atom.getIsInstantApp());
@@ -600,5 +601,21 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // before force-stop it. So the duration is about 1 sec
         assertStatesOccurred(stateSet, data, 1_000,
                 atom -> atom.getOverlayStateChanged().getState().getNumber());
+    }
+
+    public void testDropboxErrorChanged() throws Exception {
+        final int atomTag = Atom.DROPBOX_ERROR_CHANGED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runActivity("StatsdCtsForegroundActivity", "action", "action.crash");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        DropboxErrorChanged atom = data.get(0).getAtom().getDropboxErrorChanged();
+        assertTrue(atom.getIsInstantApp() == 0);
+        assertEquals("data_app_crash", atom.getTag());
     }
 }
