@@ -66,16 +66,6 @@ public class AtomTests {
     private static final String TAG = AtomTests.class.getSimpleName();
 
     @Test
-    public void testAppStart() throws Exception {
-        Context context = InstrumentationRegistry.getContext();
-        Intent intent = new Intent(context, StatsdCtsForegroundActivity.class);
-        intent.putExtra(StatsdCtsForegroundActivity.KEY_ACTION,
-                StatsdCtsForegroundActivity.ACTION_SLEEP_WHILE_TOP);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        context.startActivity(intent);
-    }
-
-    @Test
     public void testAudioState() {
         // TODO: This should surely be getTargetContext(), here and everywhere, but test first.
         Context context = InstrumentationRegistry.getContext();
