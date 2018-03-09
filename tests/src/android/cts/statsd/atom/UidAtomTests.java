@@ -212,8 +212,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUidFreq() throws Exception {
-        // TODO: pending resolution on b/72505991 and b/74127576
-        if (1==1) return;
         StatsdConfig.Builder config = getPulledAndAnomalyConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
@@ -229,9 +227,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
         turnScreenOn();
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
 
         List<Atom> atomList = getGaugeMetricDataList();
 
