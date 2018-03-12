@@ -65,6 +65,8 @@ public class SubscriberTests {
     public static final int SUBSCRIPTION_ID_2 = 2;
     public static final int SUBSCRIBER_ID_1 = 1;
     public static final int SUBSCRIBER_ID_2 = 2;
+    public static final String COOKIE_1_A = "COOKIE_1_A";
+    public static final String COOKIE_1_B = "COOKIE_1_B";
 
     private static final StatsdConfig CONFIG = StatsdConfig.newBuilder().setId(CONFIG_ID)
             .addAtomMatcher(AtomMatcher.newBuilder()
@@ -101,7 +103,10 @@ public class SubscriberTests {
                     .setRuleType(Subscription.RuleType.ALERT)
                     .setRuleId(ALERT_ID)
                     .setBroadcastSubscriberDetails(BroadcastSubscriberDetails.newBuilder()
-                            .setSubscriberId(SUBSCRIBER_ID_1))
+                            .setSubscriberId(SUBSCRIBER_ID_1)
+                            .addCookie(COOKIE_1_A)
+                            .addCookie(COOKIE_1_B)
+                    )
             )
             .addSubscription(Subscription.newBuilder()
                     .setId(SUBSCRIPTION_ID_2)
@@ -209,6 +214,8 @@ public class SubscriberTests {
         long intentConfigKey = intent.getLongExtra(StatsManager.EXTRA_STATS_CONFIG_KEY, -1);
         long intentSubscrId = intent.getLongExtra(StatsManager.EXTRA_STATS_SUBSCRIPTION_ID, -1);
         long intentRuleId = intent.getLongExtra(StatsManager.EXTRA_STATS_SUBSCRIPTION_RULE_ID, -1);
+        List<String> intentBroadcastCookies = intent.getStringArrayListExtra(
+                StatsManager.EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES);
         StatsDimensionsValue intentDimsValue =
                 intent.getParcelableExtra(StatsManager.EXTRA_STATS_DIMENSIONS_VALUE);
         String intentDimsValueStr =
@@ -219,6 +226,7 @@ public class SubscriberTests {
                 + ", ConfigKey=" + intentConfigKey
                 + ", SubscriptionId=" + intentSubscrId
                 + ", RuleId=" + intentRuleId
+                + ", ExtraInts=" + intentBroadcastCookies.toString()
                 + ", DimensionsValue=" + intentDimsValueStr
                 + "}");
 
@@ -226,6 +234,14 @@ public class SubscriberTests {
         Assert.assertEquals(CONFIG_ID, intentConfigKey);
         Assert.assertEquals(subscriptionId, intentSubscrId);
         Assert.assertEquals(METRIC_ID, intentRuleId);
+
+        if (intentSubscrId == SUBSCRIBER_ID_1) {
+            Assert.assertEquals(2, intentBroadcastCookies.size());
+            Assert.assertTrue(intentBroadcastCookies.contains(COOKIE_1_A));
+            Assert.assertTrue(intentBroadcastCookies.contains(COOKIE_1_B));
+        } else {
+            Assert.assertEquals(0, intentBroadcastCookies.size());
+        }
 
         String expectedDimValue = String.format("%d:{%d:%d|}",
                 Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, AppBreadcrumbReported.UID_FIELD_NUMBER,
