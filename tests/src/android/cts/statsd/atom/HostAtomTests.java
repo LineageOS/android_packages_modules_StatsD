@@ -550,10 +550,6 @@ public class HostAtomTests extends AtomTestCase {
         for (Atom atom: dataList) {
             assertTrue(atom.getModemActivityInfo().getTimestampMillis() > 0);
             assertTrue(atom.getModemActivityInfo().getSleepTimeMillis() > 0);
-            assertTrue(atom.getModemActivityInfo().getControllerIdleTimeMillis() > 0);
-            assertTrue(atom.getModemActivityInfo().getControllerTxTimePl0Millis() >= 0);
-            assertTrue(atom.getModemActivityInfo().getControllerRxTimeMillis() >= 0);
-            assertTrue(atom.getModemActivityInfo().getEnergyUsed() >= 0);
         }
     }
 
