@@ -76,7 +76,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testAppStartChanged() throws Exception {
         final int atomTag = Atom.APP_START_CHANGED_FIELD_NUMBER;
-
+        turnScreenOn();
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -84,6 +84,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
+
+        turnScreenOff();
 
         AppStartChanged atom = data.get(0).getAtom().getAppStartChanged();
         assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
@@ -583,6 +585,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     public void testOverlayState() throws Exception {
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
+        turnScreenOn();
         Set<Integer> entered = new HashSet<>(
                 Arrays.asList(OverlayStateChanged.State.ENTERED_VALUE));
         Set<Integer> exited = new HashSet<>(
@@ -599,10 +602,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
+        turnScreenOff();
         // Assert that the events happened in the expected order.
-        // The overlay box should appear about 2sec after the app start, we wait 3sec in total
-        // before force-stop it. So the duration is about 1 sec
-        assertStatesOccurred(stateSet, data, 1_000,
+        // The overlay box should appear about 2sec after the app start
+        assertStatesOccurred(stateSet, data, 0,
                 atom -> atom.getOverlayStateChanged().getState().getNumber());
     }
 
