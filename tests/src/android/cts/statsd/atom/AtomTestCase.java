@@ -104,7 +104,9 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID);
+        return StatsdConfig.newBuilder().setId(CONFIG_ID)
+                .addAllowedLogSource("AID_SYSTEM")
+                .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {
@@ -537,7 +539,9 @@ public class AtomTestCase extends BaseTestCase {
      * Remove this config when that happens.
      */
     protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID);
+        return StatsdConfig.newBuilder().setId(CONFIG_ID)
+                .addAllowedLogSource("AID_SYSTEM")
+                .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
     }
 
     /**
