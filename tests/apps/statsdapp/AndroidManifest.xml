@@ -78,13 +78,6 @@
 
         <service android:name=".StatsdJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
-
-        <receiver android:name=".SubscriberTests$BroadcastSubscriberReceiver1"
-                  android:exported="false" >
-        </receiver>
-        <receiver android:name=".SubscriberTests$BroadcastSubscriberReceiver2"
-                  android:exported="false" >
-        </receiver>
     </application>
 
     <instrumentation android:name="android.support.test.runner.AndroidJUnitRunner"
