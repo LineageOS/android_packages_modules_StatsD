@@ -469,15 +469,6 @@ public class AtomTestCase extends BaseTestCase {
                 "settings put system screen_brightness_mode " + (manual ? 0 : 1));
     }
 
-    protected int getScreenTimeoutMillis() throws Exception {
-        return Integer.parseInt(
-                getDevice().executeShellCommand("settings get system screen_off_timeout").trim());
-    }
-
-    protected void setScreenTimeoutMillis(int timeout) throws Exception {
-        getDevice().executeShellCommand("settings put system screen_off_timeout " + timeout);
-    }
-
     protected void enterDozeModeLight() throws Exception {
         getDevice().executeShellCommand("dumpsys deviceidle force-idle light");
     }

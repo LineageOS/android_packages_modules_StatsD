@@ -252,8 +252,6 @@ public class HostAtomTests extends AtomTestCase {
         // Setup: record initial brightness state, set mode to manual and brightness to full.
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
-        int initialTimeout = getScreenTimeoutMillis();
-        setScreenTimeoutMillis(600000);
         turnScreenOn();
         setScreenBrightnessMode(true);
         setScreenBrightness(255);
@@ -289,7 +287,6 @@ public class HostAtomTests extends AtomTestCase {
         // Restore initial screen brightness
         setScreenBrightness(initialBrightness);
         setScreenBrightnessMode(isInitialManual);
-        setScreenTimeoutMillis(initialTimeout);
         turnScreenOff();
         Thread.sleep(WAIT_TIME_SHORT);
 
