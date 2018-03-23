@@ -360,6 +360,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(jobSchedule, jobOn, jobOff);
 
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        allowImmediateSyncs();
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testScheduledJob");
 
         // Sorted list of events in order in which they occurred.
@@ -382,6 +383,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(syncOn, syncOff, syncOn, syncOff);
 
         createAndUploadConfig(atomTag, true);
+        allowImmediateSyncs();
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSyncState");
 
         // Sorted list of events in order in which they occurred.
