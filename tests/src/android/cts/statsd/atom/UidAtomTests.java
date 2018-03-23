@@ -333,7 +333,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false); // UID is logged without attribution node
 
+        turnScreenOn();
         runActivity("DaveyActivity", null, null);
+        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         assertTrue(data.size() == 1);

@@ -283,6 +283,9 @@ public class AtomTests {
         // Wait for the first (automatic) sync to finish
         waitForReceiver(context, 120_000, latch, null);
 
+        //Sleep for 500ms, since we assert each start/stop to be ~500ms apart.
+        sleep(500);
+
         // Request and wait for the second sync to finish
         latch = StatsdSyncAdapter.resetCountDownLatch();
         StatsdSyncAdapter.requestSync(account);
