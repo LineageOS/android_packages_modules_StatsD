@@ -302,6 +302,7 @@ public class AtomTestCase extends BaseTestCase {
                 .setId(gaugeName.hashCode())
                 .setWhat(atomName.hashCode())
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
+                .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
                 .setBucket(TimeUnit.CTS)
                 .setCondition(predicateName.hashCode());
         if (dimension != null) {
