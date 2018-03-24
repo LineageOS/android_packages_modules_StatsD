@@ -32,6 +32,7 @@ import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
+import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.DropboxErrorChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
@@ -252,6 +253,41 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("found uid " + uid, found);
     }
 
+    public void testCpuActiveTime() throws Exception {
+        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                .setField(Atom.CPU_ACTIVE_TIME_FIELD_NUMBER)
+                .addChild(FieldMatcher.newBuilder()
+                        .setField(CpuActiveTime.UID_FIELD_NUMBER));
+        addGaugeAtom(config, Atom.CPU_ACTIVE_TIME_FIELD_NUMBER, dimension);
+
+        uploadConfig(config);
+
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_SHORT);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<Atom> atomList = getGaugeMetricDataList();
+        turnScreenOff();
+
+        boolean found = false;
+        int uid = getUid();
+        long timeSpent = 0;
+        for (Atom atom : atomList) {
+            if (atom.getCpuActiveTime().getUid() == uid) {
+                found = true;
+                timeSpent += atom.getCpuActiveTime().getTimeMillis();
+            }
+        }
+        assertTrue(timeSpent > 0);
+        assertTrue("found uid " + uid, found);
+    }
+
     public void testFlashlightState() throws Exception {
         if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
 
@@ -360,6 +396,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(jobSchedule, jobOn, jobOff);
 
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        allowImmediateSyncs();
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testScheduledJob");
 
         // Sorted list of events in order in which they occurred.
@@ -382,6 +419,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(syncOn, syncOff, syncOn, syncOff);
 
         createAndUploadConfig(atomTag, true);
+        allowImmediateSyncs();
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSyncState");
 
         // Sorted list of events in order in which they occurred.
