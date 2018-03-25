@@ -302,6 +302,7 @@ public class AtomTestCase extends BaseTestCase {
                 .setId(gaugeName.hashCode())
                 .setWhat(atomName.hashCode())
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
+                .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
                 .setBucket(TimeUnit.CTS)
                 .setCondition(predicateName.hashCode());
         if (dimension != null) {
@@ -467,15 +468,6 @@ public class AtomTestCase extends BaseTestCase {
     protected void setScreenBrightnessMode(boolean manual) throws Exception {
         getDevice().executeShellCommand(
                 "settings put system screen_brightness_mode " + (manual ? 0 : 1));
-    }
-
-    protected int getScreenTimeoutMillis() throws Exception {
-        return Integer.parseInt(
-                getDevice().executeShellCommand("settings get system screen_off_timeout").trim());
-    }
-
-    protected void setScreenTimeoutMillis(int timeout) throws Exception {
-        getDevice().executeShellCommand("settings put system screen_off_timeout " + timeout);
     }
 
     protected void enterDozeModeLight() throws Exception {
