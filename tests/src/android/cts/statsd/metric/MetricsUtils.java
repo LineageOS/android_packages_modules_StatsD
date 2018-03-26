@@ -28,15 +28,6 @@ public class MetricsUtils {
     public static final long GAUGE_METRIC_ID = 5555;
     public static final long VALUE_METRIC_ID = 6666;
 
-    public static StatsdConfigProto.StatsdConfig.Builder getEmptyConfig() {
-        StatsdConfigProto.StatsdConfig.Builder builder =
-                StatsdConfigProto.StatsdConfig.newBuilder();
-        // Only accept the log events from this cts and android system (1000) to avoid noise.
-        builder.addAllowedLogSource("com.android.server.cts.device.statsd");
-        builder.addAllowedLogSource("android");
-        return builder;
-    }
-
     public static AtomMatcher.Builder getAtomMatcher(int atomId) {
         AtomMatcher.Builder builder = AtomMatcher.newBuilder();
         builder.setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
