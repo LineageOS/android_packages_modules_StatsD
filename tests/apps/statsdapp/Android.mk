@@ -42,10 +42,4 @@ LOCAL_STATIC_JAVA_LIBRARIES := \
 # tag this module as a cts test artifact
 LOCAL_COMPATIBILITY_SUITE := cts vts general-tests
 
-# Exclude GlobalSettingsProto from being instrumented during the coverage build
-# because instrumentation pushes us over the method size limit. Protos aren't
-# generally interesting classes to measure so this is safe to exclude.
-# TODO(kwekua): Remove this line after refactoring the class into smaller protos.
-LOCAL_JACK_COVERAGE_EXCLUDE_FILTER := android.providers.settings.GlobalSettingsProto*
-
 include $(BUILD_CTS_PACKAGE)
