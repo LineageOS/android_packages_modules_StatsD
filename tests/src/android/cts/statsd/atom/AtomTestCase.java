@@ -106,6 +106,7 @@ public class AtomTestCase extends BaseTestCase {
     protected static StatsdConfig.Builder createConfigBuilder() {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 .addAllowedLogSource("AID_SYSTEM")
+                .addAllowedLogSource("AID_BLUETOOTH")
                 .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
     }
 
@@ -526,11 +527,10 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     /**
-     * TODO: Anomaly detection will be moved to general statsd device-side tests.
-     * Pulled atoms also should have a better way of constructing the config.
+     * Pulled atoms should have a better way of constructing the config.
      * Remove this config when that happens.
      */
-    protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
+    protected StatsdConfig.Builder getPulledConfig() {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 .addAllowedLogSource("AID_SYSTEM")
                 .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
