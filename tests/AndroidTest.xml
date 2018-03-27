@@ -19,4 +19,7 @@
     <test class="com.android.compatibility.common.tradefed.testtype.JarHostTest" >
         <option name="jar" value="CtsStatsdHostTestCases.jar" />
     </test>
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="setprop persist.traced.enable 1" />
+    </target_preparer>
 </configuration>

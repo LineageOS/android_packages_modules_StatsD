@@ -25,6 +25,7 @@ import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
+import com.android.internal.os.StatsdConfigProto.PerfettoDetails;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
@@ -45,6 +46,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
     private static final String TAG = "Statsd.AnomalyDetectionTests";
 
     private static final boolean INCIDENTD_TESTS_ENABLED = true;
+    private static final boolean PERFETTO_TESTS_ENABLED = true;
 
     private static final int WAIT_AFTER_BREADCRUMB_MS = 2000;
 
@@ -54,6 +56,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
     private static final int METRIC_ID = 8;
     private static final int ALERT_ID = 11;
     private static final int SUBSCRIPTION_ID_INCIDENTD = 41;
+    private static final int SUBSCRIPTION_ID_PERFETTO = 42;
     private static final int ANOMALY_DETECT_MATCH_ID = 10;
     private static final int ANOMALY_EVENT_ID = 101;
     private static final int INCIDENTD_SECTION = -1;
@@ -258,6 +261,47 @@ public class AnomalyDetectionTests extends AtomTestCase {
         AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
         assertEquals("Wrong alert_id", ALERT_ID, a.getAlertId());
         if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+    }
+
+    // Test that anomaly detection integrates with perfetto properly.
+    public void testPerfetto() throws Exception {
+        StatsdConfig.Builder config = getBaseConfig(4, 0, 6 /* threshold: value > 6 */)
+                .addSubscription(Subscription.newBuilder()
+                        .setId(SUBSCRIPTION_ID_PERFETTO)
+                        .setRuleType(Subscription.RuleType.ALERT)
+                        .setRuleId(ALERT_ID)
+                        .setPerfettoDetails(PerfettoDetails.newBuilder()
+                                .setTraceConfig(createPerfettoTraceConfig())
+                        )
+                )
+                .addValueMetric(ValueMetric.newBuilder()
+                        .setId(METRIC_ID)
+                        .setWhat(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
+                        .setBucket(TimeUnit.ONE_MINUTE)
+                        // Get the label field's value:
+                        .setValueField(FieldMatcher.newBuilder()
+                                .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                                .addChild(FieldMatcher.newBuilder()
+                                        .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER))
+                        )
+
+                );
+        uploadConfig(config);
+
+        String markTime = getCurrentLogcatDate();
+        doAppBreadcrumbReportedStart(6); // value = 6, which is NOT > trigger
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
+        assertEquals("Premature anomaly", 0, getEventMetricDataList().size());
+        if (PERFETTO_TESTS_ENABLED) assertFalse("Pefetto", didPerfettoStartSince(markTime));
+
+        doAppBreadcrumbReportedStart(14); // value = 14 > trigger
+        Thread.sleep(WAIT_AFTER_BREADCRUMB_MS);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertEquals("Expected 1 anomaly", 1, data.size());
+        AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
+        assertEquals("Wrong alert_id", ALERT_ID, a.getAlertId());
+        if (PERFETTO_TESTS_ENABLED) assertTrue("No perfetto", didPerfettoStartSince(markTime));
     }
 
     // Tests that anomaly detection for gauge works.
