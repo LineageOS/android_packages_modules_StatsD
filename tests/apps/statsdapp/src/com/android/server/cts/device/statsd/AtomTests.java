@@ -76,7 +76,7 @@ public class AtomTests {
     }
 
     @Test
-    public void testBleScanOptimized() {
+    public void testBleScanOpportunistic() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_OPPORTUNISTIC).build();
         performBleScan(scanSettings, false);

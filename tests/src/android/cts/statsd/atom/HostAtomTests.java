@@ -365,7 +365,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testRemainingBatteryCapacity() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
             .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
             .addChild(FieldMatcher.newBuilder()
@@ -391,7 +391,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testFullBatteryCapacity() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -418,7 +418,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testTemperature() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.TEMPERATURE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -455,7 +455,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testKernelWakelock() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -481,7 +481,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testCpuTimePerFreq() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -505,7 +505,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testSubsystemSleepState() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -531,7 +531,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testModemActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_TELEPHONY, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
@@ -552,7 +552,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testWifiActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
@@ -577,7 +577,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testBluetoothActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_BLUETOOTH, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
