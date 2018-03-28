@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import android.os.BatteryStatsProto;
+import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
 
 import com.android.annotations.Nullable;
@@ -29,8 +31,8 @@ import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
-import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
+import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -60,6 +62,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     public static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
@@ -197,6 +200,19 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
                     + "Perhaps there is not a valid statsd config for the requested "
                     + "uid=" + CONFIG_UID + ", id=" + CONFIG_ID + ".");
+            throw (e);
+        }
+    }
+
+    protected BatteryStatsProto getBatteryStatsProto() throws Exception {
+        try {
+            BatteryStatsProto batteryStatsProto = getDump(BatteryStatsServiceDumpProto.parser(),
+                    String.join(" ", DUMP_BATTERYSTATS_CMD,
+                            "--proto")).getBatterystats();
+            LogUtil.CLog.d("Got batterystats:\n " + batteryStatsProto.toString());
+            return batteryStatsProto;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump batterystats proto");
             throw (e);
         }
     }
