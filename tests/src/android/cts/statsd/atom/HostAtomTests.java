@@ -445,11 +445,11 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue("Temperature atom " + i + " has no type",
                     temp.hasSensorLocation());
             assertTrue("Temperature reported atom " + i + " has no temperature",
-                    temp.hasTemperatureC());
+                    temp.hasTemperatureDC());
             assertTrue("Temperature reported atom " + i + " has an unreasonably low temperature:" +
-                    + temp.getTemperatureC(), temp.getTemperatureC() > 0.0);
+                    + temp.getTemperatureDC(), temp.getTemperatureDC() > 0);
             assertTrue("Temperature reported atom " + i + " has an unreasonably high temperature:" +
-                    + temp.getTemperatureC(), temp.getTemperatureC() < 80.0);
+                    + temp.getTemperatureDC(), temp.getTemperatureDC() < 800);
 
         }
     }
