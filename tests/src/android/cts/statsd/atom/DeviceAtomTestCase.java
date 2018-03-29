@@ -214,4 +214,8 @@ public class DeviceAtomTestCase extends AtomTestCase {
 
         Thread.sleep(WAIT_TIME_SHORT);
     }
+
+    protected void resetBatteryStats() throws Exception {
+        getDevice().executeShellCommand("dumpsys batterystats --reset");
+    }
 }
