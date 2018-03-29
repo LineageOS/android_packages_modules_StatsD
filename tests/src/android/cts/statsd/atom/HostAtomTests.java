@@ -33,6 +33,7 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
@@ -598,5 +599,20 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getBluetoothActivityInfo().getEnergyUsed() >= 0);
         }
+    }
+
+    // Explicitly tests if the adb command to log a breadcrumb is working.
+    public void testBreadcrumbAdb() throws Exception {
+        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        doAppBreadcrumbReportedStart(1);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
     }
 }
