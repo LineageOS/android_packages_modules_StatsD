@@ -76,7 +76,7 @@ public class MetricsTestCase extends DeviceAtomTestCase {
 
     public void testSimpleEventCountMetric() throws DeviceNotAvailableException {
         long matcherId = 1;
-        StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
                 .setId(MetricsUtils.COUNT_METRIC_ID)
                 .setBucket(StatsdConfigProto.TimeUnit.CTS)
@@ -141,7 +141,7 @@ public class MetricsTestCase extends DeviceAtomTestCase {
                 .setId(conditionId)
                 .build();
 
-        StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig()
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder()
                 .addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
                         .setId(MetricsUtils.COUNT_METRIC_ID)
                         .setBucket(StatsdConfigProto.TimeUnit.CTS)
