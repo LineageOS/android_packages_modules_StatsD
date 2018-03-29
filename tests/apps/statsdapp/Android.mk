@@ -34,7 +34,7 @@ LOCAL_PRIVILEGED_MODULE := true
 LOCAL_STATIC_JAVA_LIBRARIES := \
     ctstestrunner \
     compatibility-device-util \
-    android-support-v4 \
+    androidx.legacy_legacy-support-v4 \
     legacy-android-test \
     android-support-test \
     statsdprotolite
