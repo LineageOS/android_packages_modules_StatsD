@@ -24,6 +24,7 @@ import android.os.WakeLockLevelEnum;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppStartChanged;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
@@ -672,5 +673,26 @@ public class UidAtomTests extends DeviceAtomTestCase {
         DropboxErrorChanged atom = data.get(0).getAtom().getDropboxErrorChanged();
         assertTrue(atom.getIsInstantApp() == 0);
         assertEquals("data_app_crash", atom.getTag());
+    }
+
+    public void testBreadcrumb() throws Exception {
+        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testAppBreadcrumbReported");
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertEquals(3, data.size());
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+        atom = data.get(1).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.STOP_VALUE);
+        atom = data.get(2).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.UNSPECIFIED_VALUE);
     }
 }
