@@ -33,6 +33,7 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.Subscription;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.internal.os.StatsdConfigProto.ValueMetric;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.ChargingStateChanged;
@@ -365,7 +366,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testRemainingBatteryCapacity() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
             .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
             .addChild(FieldMatcher.newBuilder()
@@ -391,7 +392,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testFullBatteryCapacity() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -418,7 +419,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testTemperature() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.TEMPERATURE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -445,17 +446,17 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue("Temperature atom " + i + " has no type",
                     temp.hasSensorLocation());
             assertTrue("Temperature reported atom " + i + " has no temperature",
-                    temp.hasTemperatureC());
+                    temp.hasTemperatureDC());
             assertTrue("Temperature reported atom " + i + " has an unreasonably low temperature:" +
-                    + temp.getTemperatureC(), temp.getTemperatureC() > 0.0);
+                    + temp.getTemperatureDC(), temp.getTemperatureDC() > 0);
             assertTrue("Temperature reported atom " + i + " has an unreasonably high temperature:" +
-                    + temp.getTemperatureC(), temp.getTemperatureC() < 80.0);
+                    + temp.getTemperatureDC(), temp.getTemperatureDC() < 800);
 
         }
     }
 
     public void testKernelWakelock() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -481,7 +482,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testCpuTimePerFreq() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -505,7 +506,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testSubsystemSleepState() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -531,7 +532,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testModemActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_TELEPHONY, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
@@ -552,7 +553,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testWifiActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
@@ -577,7 +578,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testBluetoothActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_BLUETOOTH, true)) return;
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
@@ -598,5 +599,20 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getBluetoothActivityInfo().getEnergyUsed() >= 0);
         }
+    }
+
+    // Explicitly tests if the adb command to log a breadcrumb is working.
+    public void testBreadcrumbAdb() throws Exception {
+        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        doAppBreadcrumbReportedStart(1);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
     }
 }

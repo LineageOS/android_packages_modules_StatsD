@@ -45,7 +45,7 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
     AtomMatcher atomMatcher =
         MetricsUtils.simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
 
-    StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
+    StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
     builder.addAtomMatcher(startAtomMatcher);
     builder.addAtomMatcher(stopAtomMatcher);
     builder.addAtomMatcher(atomMatcher);

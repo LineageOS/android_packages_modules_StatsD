@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import android.os.BatteryStatsProto;
+import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
 
 import com.android.annotations.Nullable;
@@ -29,8 +31,8 @@ import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
-import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
+import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -52,6 +54,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
+import perfetto.protos.PerfettoConfig.DataSourceConfig;
+import perfetto.protos.PerfettoConfig.TraceConfig;
+import perfetto.protos.PerfettoConfig.TraceConfig.BufferConfig;
+import perfetto.protos.PerfettoConfig.TraceConfig.DataSource;
+
 /**
  * Base class for testing Statsd atoms.
  * Validates reporting of statsd logging based on different events
@@ -60,6 +67,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     public static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
@@ -103,9 +111,24 @@ public class AtomTestCase extends BaseTestCase {
         return log.contains(INCIDENTD_STARTED_STRING);
     }
 
+    /**
+     * Determines whether logcat indicates that perfetto fired since the given device date.
+     */
+    protected boolean didPerfettoStartSince(String date) throws Exception {
+        final String PERFETTO_TAG = "perfetto";
+        final String PERFETTO_STARTED_STRING = "Enabled tracing";
+        final String PERFETTO_STARTED_REGEX = ".*" + PERFETTO_STARTED_STRING + ".*";
+        // TODO: Do something more robust than this in case of delayed logging.
+        Thread.sleep(1000);
+        String log = getLogcatSince(date, String.format(
+                "-s %s -e %s", PERFETTO_TAG, PERFETTO_STARTED_REGEX));
+        return log.contains(PERFETTO_STARTED_STRING);
+    }
+
     protected static StatsdConfig.Builder createConfigBuilder() {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 .addAllowedLogSource("AID_SYSTEM")
+                .addAllowedLogSource("AID_BLUETOOTH")
                 .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
     }
 
@@ -201,9 +224,35 @@ public class AtomTestCase extends BaseTestCase {
         }
     }
 
+    protected BatteryStatsProto getBatteryStatsProto() throws Exception {
+        try {
+            BatteryStatsProto batteryStatsProto = getDump(BatteryStatsServiceDumpProto.parser(),
+                    String.join(" ", DUMP_BATTERYSTATS_CMD,
+                            "--proto")).getBatterystats();
+            LogUtil.CLog.d("Got batterystats:\n " + batteryStatsProto.toString());
+            return batteryStatsProto;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump batterystats proto");
+            throw (e);
+        }
+    }
+
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
     protected static FieldValueMatcher.Builder createFvm(int field) {
         return FieldValueMatcher.newBuilder().setField(field);
+    }
+
+    protected static TraceConfig createPerfettoTraceConfig() {
+        return TraceConfig.newBuilder()
+            .addBuffers(BufferConfig.newBuilder().setSizeKb(32))
+            .addDataSources(DataSource.newBuilder()
+                .setConfig(DataSourceConfig.newBuilder()
+                    .setName("linux.ftrace")
+                    .setTargetBuffer(0)
+                    .build()
+                )
+            )
+            .build();
     }
 
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
@@ -526,11 +575,10 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     /**
-     * TODO: Anomaly detection will be moved to general statsd device-side tests.
-     * Pulled atoms also should have a better way of constructing the config.
+     * Pulled atoms should have a better way of constructing the config.
      * Remove this config when that happens.
      */
-    protected StatsdConfig.Builder getPulledAndAnomalyConfig() {
+    protected StatsdConfig.Builder getPulledConfig() {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 .addAllowedLogSource("AID_SYSTEM")
                 .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);

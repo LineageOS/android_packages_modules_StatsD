@@ -24,11 +24,11 @@ import android.os.WakeLockLevelEnum;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppStartChanged;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
-import com.android.os.AtomsProto.BleUnoptimizedScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
@@ -119,27 +119,42 @@ public class UidAtomTests extends DeviceAtomTestCase {
     public void testBleUnoptimizedScan() throws Exception {
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
-        final int atom = Atom.BLE_UNOPTIMIZED_SCAN_STATE_CHANGED_FIELD_NUMBER;
-        final int field = BleUnoptimizedScanStateChanged.STATE_FIELD_NUMBER;
-        final int stateOn = BleUnoptimizedScanStateChanged.State.ON_VALUE;
-        final int stateOff = BleUnoptimizedScanStateChanged.State.OFF_VALUE;
+        final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
+        final int field = BleScanStateChanged.STATE_FIELD_NUMBER;
+        final int stateOn = BleScanStateChanged.State.ON_VALUE;
+        final int stateOff = BleScanStateChanged.State.OFF_VALUE;
         final int minTimeDiffMillis = 1_500;
         final int maxTimeDiffMillis = 3_000;
 
         List<EventMetricData> data = doDeviceMethodOnOff("testBleScanUnoptimized", atom, field,
                 stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
-        BleUnoptimizedScanStateChanged a0 = data.get(0).getAtom().getBleUnoptimizedScanStateChanged();
-        BleUnoptimizedScanStateChanged a1 = data.get(1).getAtom().getBleUnoptimizedScanStateChanged();
+        BleScanStateChanged a0 = data.get(0).getAtom().getBleScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
+        assertFalse(a0.getIsFiltered());
+        assertFalse(a0.getIsFirstMatch());
+        assertFalse(a0.getIsOpportunistic());
+        BleScanStateChanged a1 = data.get(1).getAtom().getBleScanStateChanged();
         assertTrue(a1.getState().getNumber() == stateOff);
+        assertFalse(a1.getIsFiltered());
+        assertFalse(a1.getIsFirstMatch());
+        assertFalse(a1.getIsOpportunistic());
 
-        // Now repeat the test for optimized scanning and make sure no atoms are reported.
-        StatsdConfig.Builder conf = createConfigBuilder();
-        addAtomEvent(conf, atom, createFvm(field).setEqInt(stateOn));
-        addAtomEvent(conf, atom, createFvm(field).setEqInt(stateOff));
-        data = doDeviceMethod("testBleScanOptimized", conf);
-        assertTrue(data.isEmpty());
+
+        // Now repeat the test for opportunistic scanning and make sure it is reported correctly.
+        data = doDeviceMethodOnOff("testBleScanOpportunistic", atom, field,
+                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
+
+        a0 = data.get(0).getAtom().getBleScanStateChanged();
+        assertTrue(a0.getState().getNumber() == stateOn);
+        assertFalse(a0.getIsFiltered());
+        assertFalse(a0.getIsFirstMatch());
+        assertTrue(a0.getIsOpportunistic());  // This scan is opportunistic.
+        a1 = data.get(1).getAtom().getBleScanStateChanged();
+        assertTrue(a1.getState().getNumber() == stateOff);
+        assertFalse(a1.getIsFiltered());
+        assertFalse(a1.getIsFirstMatch());
+        assertTrue(a1.getIsOpportunistic());
     }
 
     public void testBleScanResult() throws Exception {
@@ -182,7 +197,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUid() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -215,7 +230,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUidFreq() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -249,7 +264,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuActiveTime() throws Exception {
-        StatsdConfig.Builder config = getPulledAndAnomalyConfig();
+        StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_ACTIVE_TIME_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
@@ -658,5 +673,26 @@ public class UidAtomTests extends DeviceAtomTestCase {
         DropboxErrorChanged atom = data.get(0).getAtom().getDropboxErrorChanged();
         assertTrue(atom.getIsInstantApp() == 0);
         assertEquals("data_app_crash", atom.getTag());
+    }
+
+    public void testBreadcrumb() throws Exception {
+        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testAppBreadcrumbReported");
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertEquals(3, data.size());
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+        atom = data.get(1).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.STOP_VALUE);
+        atom = data.get(2).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.UNSPECIFIED_VALUE);
     }
 }

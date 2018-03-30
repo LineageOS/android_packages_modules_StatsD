@@ -52,6 +52,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.support.test.InstrumentationRegistry;
 import android.util.Log;
+import android.util.StatsLog;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -76,7 +77,16 @@ public class AtomTests {
     }
 
     @Test
-    public void testBleScanOptimized() {
+    public void testAppBreadcrumbReported() {
+        StatsLog.logStart(1);
+        sleep(1_000);
+        StatsLog.logStop(1);
+        sleep(1_000);
+        StatsLog.logEvent(1);
+    }
+
+    @Test
+    public void testBleScanOpportunistic() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_OPPORTUNISTIC).build();
         performBleScan(scanSettings, false);
