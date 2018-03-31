@@ -554,7 +554,7 @@ public class HostAtomTests extends AtomTestCase {
     public void testWifiActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.WIFI_ACTIVITY_ENERGY_INFO_FIELD_NUMBER, null);
+        addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         turnScreenOff();
 
@@ -567,12 +567,12 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getWifiActivityEnergyInfo().getTimestampMillis() > 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getStackState() >= 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerIdleTimeMillis() > 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerTxTimeMillis() >= 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerRxTimeMillis() >= 0);
-            assertTrue(atom.getWifiActivityEnergyInfo().getControllerEnergyUsed() >= 0);
+            assertTrue(atom.getWifiActivityInfo().getTimestampMillis() > 0);
+            assertTrue(atom.getWifiActivityInfo().getStackState() >= 0);
+            assertTrue(atom.getWifiActivityInfo().getControllerIdleTimeMillis() > 0);
+            assertTrue(atom.getWifiActivityInfo().getControllerTxTimeMillis() >= 0);
+            assertTrue(atom.getWifiActivityInfo().getControllerRxTimeMillis() >= 0);
+            assertTrue(atom.getWifiActivityInfo().getControllerEnergyUsed() >= 0);
         }
     }
 
