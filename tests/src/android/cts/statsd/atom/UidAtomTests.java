@@ -15,29 +15,29 @@
  */
 package android.cts.statsd.atom;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import android.os.WakeLockLevelEnum;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.os.AtomsProto.AppStartChanged;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
+import com.android.os.AtomsProto.AppCrashOccurred;
+import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
+import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.CpuTimePerUidFreq;
-import com.android.os.AtomsProto.CpuActiveTime;
-import com.android.os.AtomsProto.DropboxErrorChanged;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
-import com.android.os.AtomsProto.MediaCodecActivityChanged;
+import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
@@ -52,7 +52,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-
 
 /**
  * Statsd atom tests that are done via app, for atoms that report a uid.
@@ -75,9 +74,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         super.setUp();
     }
 
-    public void testAppStartChanged() throws Exception {
-        final int atomTag = Atom.APP_START_CHANGED_FIELD_NUMBER;
+    public void testAppStartOccurred() throws Exception {
+        final int atomTag = Atom.APP_START_OCCURRED_FIELD_NUMBER;
         turnScreenOn();
+
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -87,8 +87,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         turnScreenOff();
-
-        AppStartChanged atom = data.get(0).getAtom().getAppStartChanged();
+        AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
         assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
         assertEquals("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity",
                 atom.getActivityName());
@@ -162,7 +161,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         turnScreenOn(); // BLE results are not given unless screen is on. TODO: make more robust.
 
         final int atom = Atom.BLE_SCAN_RESULT_RECEIVED_FIELD_NUMBER;
-        final int field = BleScanResultReceived.NUM_OF_RESULTS_FIELD_NUMBER;
+        final int field = BleScanResultReceived.NUM_RESULTS_FIELD_NUMBER;
 
         StatsdConfig.Builder conf = createConfigBuilder();
         addAtomEvent(conf, atom, createFvm(field).setGteInt(0));
@@ -170,7 +169,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         assertTrue(data.size() >= 1);
         BleScanResultReceived a0 = data.get(0).getAtom().getBleScanResultReceived();
-        assertTrue(a0.getNumOfResults() >= 1);
+        assertTrue(a0.getNumResults() >= 1);
 
         turnScreenOff();
     }
@@ -416,7 +415,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getScheduledJobStateChanged().getState().getNumber());
 
         for (EventMetricData e : data) {
-            assertTrue(e.getAtom().getScheduledJobStateChanged().getName().equals(expectedName));
+            assertTrue(e.getAtom().getScheduledJobStateChanged().getJobName().equals(expectedName));
         }
     }
 
@@ -584,12 +583,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
-        final int atomTag = Atom.MEDIA_CODEC_ACTIVITY_CHANGED_FIELD_NUMBER;
+        final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> onState = new HashSet<>(
-                Arrays.asList(MediaCodecActivityChanged.State.ON_VALUE));
+                Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
         Set<Integer> offState = new HashSet<>(
-                Arrays.asList(MediaCodecActivityChanged.State.OFF_VALUE));
+                Arrays.asList(MediaCodecStateChanged.State.OFF_VALUE));
 
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
@@ -606,7 +605,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         turnScreenOff();
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getMediaCodecActivityChanged().getState().getNumber());
+                atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
     public void testPictureInPictureState() throws Exception {
@@ -659,8 +658,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getOverlayStateChanged().getState().getNumber());
     }
 
-    public void testDropboxErrorChanged() throws Exception {
-        final int atomTag = Atom.DROPBOX_ERROR_CHANGED_FIELD_NUMBER;
+    public void testAppCrashOccurred() throws Exception {
+        final int atomTag = Atom.APP_CRASH_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -670,9 +669,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        DropboxErrorChanged atom = data.get(0).getAtom().getDropboxErrorChanged();
-        assertTrue(atom.getIsInstantApp() == 0);
-        assertEquals("data_app_crash", atom.getTag());
+        AppCrashOccurred atom = data.get(0).getAtom().getAppCrashOccurred();
+        assertEquals("crash", atom.getEventType());
     }
 
     public void testBreadcrumb() throws Exception {
