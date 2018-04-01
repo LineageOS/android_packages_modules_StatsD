@@ -49,7 +49,7 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         AtomMatcher stopAtomMatcher =
             MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
 
-        StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addAtomMatcher(startAtomMatcher);
         builder.addAtomMatcher(stopAtomMatcher);
 
@@ -104,7 +104,7 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         AtomMatcher stopAtomMatcherB =
             MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_STOP_ID);
 
-        StatsdConfigProto.StatsdConfig.Builder builder = MetricsUtils.getEmptyConfig();
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addAtomMatcher(startAtomMatcherA);
         builder.addAtomMatcher(stopAtomMatcherA);
         builder.addAtomMatcher(startAtomMatcherB);
