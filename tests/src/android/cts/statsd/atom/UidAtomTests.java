@@ -671,6 +671,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         AppCrashOccurred atom = data.get(0).getAtom().getAppCrashOccurred();
         assertEquals("crash", atom.getEventType());
+        assertEquals(AppCrashOccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
+        assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
+                atom.getForegroundState().getNumber());
+        assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
     }
 
     public void testBreadcrumb() throws Exception {

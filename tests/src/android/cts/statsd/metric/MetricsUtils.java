@@ -31,7 +31,7 @@ public class MetricsUtils {
     public static AtomMatcher.Builder getAtomMatcher(int atomId) {
         AtomMatcher.Builder builder = AtomMatcher.newBuilder();
         builder.setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(atomId).build());
+                        .setAtomId(atomId));
         return builder;
     }
 
@@ -57,6 +57,17 @@ public class MetricsUtils {
                                             .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
                                             .setEqInt(AppBreadcrumbReported.State.STOP.ordinal())))
           .build();
+    }
+
+    public static AtomMatcher unspecifiedAtomMatcher(int id) {
+        return AtomMatcher.newBuilder()
+                .setId(id)
+                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                        .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                .setEqInt(AppBreadcrumbReported.State.UNSPECIFIED.ordinal())))
+                .build();
     }
 
     public static AtomMatcher simpleAtomMatcher(int id) {
