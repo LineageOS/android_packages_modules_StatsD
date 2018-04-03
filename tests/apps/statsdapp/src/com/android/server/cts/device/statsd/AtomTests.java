@@ -334,6 +334,17 @@ public class AtomTests {
     }
 
     @Test
+    public void testWakelockLoad() {
+        final int NUM_THREADS = 16;
+        CountDownLatch latch = new CountDownLatch(NUM_THREADS);
+        for (int i = 0; i < NUM_THREADS; i++) {
+            Thread t = new Thread(new WakelockLoadTestRunnable("StatsdPartialWakelock" + i, latch));
+            t.start();
+        }
+        waitForReceiver(null, 120_000, latch, null);
+    }
+
+    @Test
     public void testWakeupAlarm() {
         Context context = InstrumentationRegistry.getContext();
         String name = "android.cts.statsd.testWakeupAlarm";
