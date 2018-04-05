@@ -21,8 +21,13 @@ import com.android.internal.os.StatsdConfigProto;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.StatsLog;
+import com.android.os.StatsLog.ConfigMetricsReport;
+import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.StatsLog.CountBucketInfo;
+import com.android.os.StatsLog.CountMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.device.DeviceNotAvailableException;
+import com.android.tradefed.log.LogUtil;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,7 +58,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         assertTrue(countData.getDataCount() > 0);
         assertEquals(2, countData.getData(0).getBucketInfo(0).getCount());
     }
-
     public void testEventCountWithCondition() throws Exception {
         int startMatcherId = 1;
         int endMatcherId = 2;
@@ -109,5 +113,61 @@ public class CountMetricsTests extends DeviceAtomTestCase {
 
         assertTrue(countData.getDataCount() > 0);
         assertEquals(1, countData.getData(0).getBucketInfo(0).getCount());
+    }
+
+    public void testPartialBucketCountMetric() throws Exception {
+        int matcherId = 1;
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+        builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
+                .setId(MetricsUtils.COUNT_METRIC_ID)
+                .setBucket(StatsdConfigProto.TimeUnit.ONE_DAY)  // Should ensure partial bucket.
+                .setWhat(matcherId))
+                .addAtomMatcher(MetricsUtils.simpleAtomMatcher(matcherId));
+        uploadConfig(builder);
+
+        doAppBreadcrumbReportedStart(0);
+
+        builder.getCountMetricBuilder(0).setBucket(StatsdConfigProto.TimeUnit.CTS);
+        uploadConfig(builder);  // The count metric had a partial bucket.
+        doAppBreadcrumbReportedStart(0);
+        Thread.sleep(10);
+        doAppBreadcrumbReportedStart(0);
+        Thread.sleep(WAIT_TIME_LONG); // Finish the current bucket.
+
+        ConfigMetricsReportList reports = getReportList();
+        LogUtil.CLog.d("Got following report list: " + reports.toString());
+
+        assertEquals("Expected 2 reports, got " + reports.getReportsCount(),
+                2, reports.getReportsCount());
+        boolean inOrder = reports.getReports(0).getCurrentReportWallClockNanos() <
+                reports.getReports(1).getCurrentReportWallClockNanos();
+
+        // Only 1 metric, so there should only be 1 StatsLogReport.
+        for (ConfigMetricsReport report : reports.getReportsList()) {
+            assertEquals("Expected 1 StatsLogReport in each ConfigMetricsReport",
+                    1, report.getMetricsCount());
+            assertEquals("Expected 1 CountMetricData in each report",
+                    1, report.getMetrics(0).getCountMetrics().getDataCount());
+        }
+        CountMetricData data1 =
+                reports.getReports(inOrder? 0 : 1).getMetrics(0).getCountMetrics().getData(0);
+        CountMetricData data2 =
+                reports.getReports(inOrder? 1 : 0).getMetrics(0).getCountMetrics().getData(0);
+        // Data1 should have only 1 bucket, and it should be a partial bucket.
+        // The count should be 1.
+        assertEquals("First report should only have 1 bucket", 1, data1.getBucketInfoCount());
+        CountBucketInfo bucketInfo = data1.getBucketInfo(0);
+        assertEquals("First report should have a count of 1", 1, bucketInfo.getCount());
+        assertTrue("First report's bucket should be less than 1 day",
+                bucketInfo.getEndBucketElapsedNanos() <
+                (bucketInfo.getStartBucketElapsedNanos() + 1_000_000_000L * 60L * 60L * 24L));
+
+        //Second report should have a count of 2.
+        assertTrue("Second report should have at most 2 buckets", data2.getBucketInfoCount() < 3);
+        int totalCount = 0;
+        for (CountBucketInfo bucket : data2.getBucketInfoList()) {
+            totalCount += bucket.getCount();
+        }
+        assertEquals("Second report should have a count of 2", 2, totalCount);
     }
 }
