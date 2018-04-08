@@ -90,6 +90,7 @@ public class AtomTestCase extends BaseTestCase {
 
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
+        getReportList(); // Clears data.
     }
 
     @Override
