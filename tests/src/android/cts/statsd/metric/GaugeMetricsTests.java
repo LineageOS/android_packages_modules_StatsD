@@ -116,19 +116,19 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
     int bucketCount = gaugeData.getData(0).getBucketInfoCount();
     GaugeMetricData data = gaugeData.getData(0);
     assertTrue(bucketCount > 2);
-    assertTrue(data.getBucketInfo(0).hasStartBucketNanos());
-    assertTrue(data.getBucketInfo(0).hasEndBucketNanos());
+    assertTrue(data.getBucketInfo(0).hasStartBucketElapsedNanos());
+    assertTrue(data.getBucketInfo(0).hasEndBucketElapsedNanos());
     assertEquals(data.getBucketInfo(0).getAtomCount(), 1);
     assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getLabel(), 0);
     assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getState(),
         AppBreadcrumbReported.State.START);
 
-    assertTrue(data.getBucketInfo(1).hasStartBucketNanos());
-    assertTrue(data.getBucketInfo(1).hasEndBucketNanos());
+    assertTrue(data.getBucketInfo(1).hasStartBucketElapsedNanos());
+    assertTrue(data.getBucketInfo(1).hasEndBucketElapsedNanos());
     assertEquals(data.getBucketInfo(1).getAtomCount(), 1);
 
-    assertTrue(data.getBucketInfo(bucketCount - 1).hasStartBucketNanos());
-    assertTrue(data.getBucketInfo(bucketCount - 1).hasEndBucketNanos());
+    assertTrue(data.getBucketInfo(bucketCount - 1).hasStartBucketElapsedNanos());
+    assertTrue(data.getBucketInfo(bucketCount - 1).hasEndBucketElapsedNanos());
     assertEquals(data.getBucketInfo(bucketCount - 1).getAtomCount(), 1);
     assertEquals(
         data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getLabel(), 2);
