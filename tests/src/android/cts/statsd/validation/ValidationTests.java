@@ -47,7 +47,7 @@ import com.android.os.StatsLog.DimensionsValue;
 import com.android.os.StatsLog.DurationBucketInfo;
 import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.StatsLogReport;
-import com.android.tradefed.log.LogUtil;
+import com.android.tradefed.log.LogUtil.CLog;
 
 
 
@@ -68,6 +68,12 @@ public class ValidationTests extends DeviceAtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        resetBatteryStatus(); // Undo any unplugDevice().
+        super.tearDown();
     }
 
     public void testPartialWakelock() throws Exception {
@@ -97,8 +103,6 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
 
-        resetBatteryStatus();
-
         //=================== verify that statsd is correct ===============//
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
@@ -115,33 +119,21 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         //=================== verify that batterystats is correct ===============//
         int uid = getUid();
-        boolean foundUid = false;
-        assertTrue(batterystatsProto.getUidsList().size() > 0);
-        for (UidProto uidProto : batterystatsProto.getUidsList()) {
-            if (uidProto.getUid() == uid) {
-                foundUid = true;
-                assertTrue(uidProto.getWakelocksList().size() > 0);
-                boolean foundWakelock = false;
-                for (Wakelock wl : uidProto.getWakelocksList()) {
-                    if (wl.getName().equals(EXPECTED_TAG)) {
-                        foundWakelock = true;
-                        assertTrue(wl.hasPartial());
-                        assertTrue(wl.getPartial().getDurationMs() > 0);
-                        assertTrue(wl.getPartial().getCount() == 1);
-                        assertTrue(wl.getPartial().getMaxDurationMs() >= 500);
-                        assertTrue(wl.getPartial().getMaxDurationMs() < 700);
-                        assertTrue(wl.getPartial().getTotalDurationMs() >= 500);
-                        assertTrue(wl.getPartial().getTotalDurationMs() < 700);
-                    }
-                }
-                assertTrue(foundWakelock);
-            }
-        }
-        assertTrue(foundUid);
+        android.os.TimerProto wl =
+                getBatteryStatsPartialWakelock(batterystatsProto, uid, EXPECTED_TAG);
+
+        assertNotNull(wl);
+        assertTrue(wl.getDurationMs() > 0);
+        assertTrue(wl.getCount() == 1);
+        assertTrue(wl.getMaxDurationMs() >= 500);
+        assertTrue(wl.getMaxDurationMs() < 700);
+        assertTrue(wl.getTotalDurationMs() >= 500);
+        assertTrue(wl.getTotalDurationMs() < 700);
     }
 
     @RestrictedBuildTest
     public void testPartialWakelockDuration() throws Exception {
+        turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);
         Thread.sleep(WAIT_TIME_SHORT);
         resetBatteryStats();
@@ -154,72 +146,48 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         final String EXPECTED_TAG = "StatsdPartialWakelock";
         final int EXPECTED_UID = getUid();
-        final int MIN_DURATION = 500;
+        final int MIN_DURATION = 350;
         final int MAX_DURATION = 700;
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
-        resetBatteryStatus();
-
         HashMap<Integer, HashMap<String, Long>> statsdWakelockData = getStatsdWakelockData();
 
-        //=================== verify that batterystats is correct ===============//
-        boolean foundWakelockBs = false;
-        for (UidProto uidProto : batterystatsProto.getUidsList()) {
-            int uid = uidProto.getUid();
-            for (Wakelock wl : uidProto.getWakelocksList()) {
-                if (wl.hasPartial()) {
-                    String tag = wl.getName();
-                    long bsDurationMs = wl.getPartial().getTotalDurationMs();
-                    // If batterystats and statsd both have the wakelock,
-                    // make sure they have reasonable durations.
-                    if (statsdWakelockData.containsKey(uid) &&
-                            statsdWakelockData.get(uid).containsKey(tag)) {
-                        long statsdDurationNs = statsdWakelockData.get(uid).get(tag);
-                        long statsdDurationMs = statsdDurationNs / 1_000_000;
-                        long difference = Math.abs(statsdDurationMs - bsDurationMs);
-                        assertTrue("Unusually large difference in wakelock duration for uid: " + uid
-                                + " and tag: " + tag + ". Statsd had duration " +
-                                statsdDurationMs + " and batterystats had duration " + bsDurationMs,
-                                difference <= Math.max(bsDurationMs / 10, 1000L));
-                        if (difference > Math.max(bsDurationMs/10, 10L)) {
-                            LogUtil.CLog.w("Unusually large difference in wakelock duration for "
-                                    + "uid: " + uid + " and tag: " + tag +
-                                    ". Statsd had duration " + statsdDurationMs +
-                                    " and batterystats had duration " + bsDurationMs);
-                        }
-                    }
-                    if (uid == EXPECTED_UID && tag.equals(EXPECTED_TAG)) {
-                        foundWakelockBs = true;
-                        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
-                                + EXPECTED_TAG + "was too short. Expected " + MIN_DURATION +
-                                ", received " + bsDurationMs, bsDurationMs >= MIN_DURATION);
-                        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
-                                + EXPECTED_TAG + "was too long. Expected " + MAX_DURATION +
-                                ", received " + bsDurationMs, bsDurationMs <= MAX_DURATION);
-                    }
+        // Get the batterystats wakelock time and make sure it's reasonable.
+        android.os.TimerProto bsWakelock =
+                getBatteryStatsPartialWakelock(batterystatsProto, EXPECTED_UID, EXPECTED_TAG);
+        assertNotNull("Could not find any partial wakelocks with uid " + EXPECTED_UID +
+                " and tag " + EXPECTED_TAG + " in BatteryStats", bsWakelock);
+        long bsDurationMs = bsWakelock.getTotalDurationMs();
+        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
+                + EXPECTED_TAG + "was too short. Expected " + MIN_DURATION +
+                ", received " + bsDurationMs, bsDurationMs >= MIN_DURATION);
+        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
+                + EXPECTED_TAG + "was too long. Expected " + MAX_DURATION +
+                ", received " + bsDurationMs, bsDurationMs <= MAX_DURATION);
 
-                }
-            }
-        }
-        assertTrue("Did not find wakelock with uid " + EXPECTED_UID + " and tag " + EXPECTED_TAG +
-                "in batterystats", foundWakelockBs);
-
-        // Assert that the statsd CTS wakelock appears in statsd and is correct.
+        // Get the statsd wakelock time and make sure it's reasonable.
         assertTrue("Could not find any wakelocks with uid " + EXPECTED_UID + " in statsd",
                 statsdWakelockData.containsKey(EXPECTED_UID));
         assertTrue("Did not find any wakelocks with tag " + EXPECTED_TAG + "in statsd",
                 statsdWakelockData.get(EXPECTED_UID).containsKey(EXPECTED_TAG));
         long statsdDurationMs = statsdWakelockData.get(EXPECTED_UID).get(EXPECTED_TAG) / 1_000_000;
         assertTrue("Wakelock in statsd with uid " + EXPECTED_UID + " and tag " + EXPECTED_TAG +
-                "was too short. Expected " + MIN_DURATION + ", received " + statsdDurationMs,
+                    "was too short. Expected " + MIN_DURATION + ", received " + statsdDurationMs,
                 statsdDurationMs >= MIN_DURATION);
         assertTrue("Wakelock in statsd with uid " + EXPECTED_UID + " and tag " + EXPECTED_TAG +
-                "was too long. Expected " + MAX_DURATION + ", received " + statsdDurationMs,
+                    "was too long. Expected " + MAX_DURATION + ", received " + statsdDurationMs,
                 statsdDurationMs <= MAX_DURATION);
+
+        // Compare batterystats with statsd.
+        long difference = Math.abs(statsdDurationMs - bsDurationMs);
+        assertTrue("For uid=" + EXPECTED_UID + " tag=" + EXPECTED_TAG + " had " +
+                        "BatteryStats=" + bsDurationMs + "ms but statsd=" + statsdDurationMs + "ms",
+                difference <= Math.max(bsDurationMs / 10, 10L));
     }
 
     public void testPartialWakelockLoad() throws Exception {
         if (!ENABLE_LOAD_TEST) return;
+        turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);
         Thread.sleep(WAIT_TIME_SHORT);
         resetBatteryStats();
@@ -240,7 +208,6 @@ public class ValidationTests extends DeviceAtomTestCase {
 
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
-        resetBatteryStatus();
         HashMap<Integer, HashMap<String, Long>> statsdWakelockData = getStatsdWakelockData();
 
         // Verify batterystats output is reasonable.
@@ -248,7 +215,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         for (UidProto uidProto : batterystatsProto.getUidsList()) {
             if (uidProto.getUid() == EXPECTED_UID) {
                 foundUid = true;
-                LogUtil.CLog.d("Battery stats has the following wakelocks: \n" +
+                CLog.d("Battery stats has the following wakelocks: \n" +
                         uidProto.getWakelocksList());
                 assertTrue("UidProto has size "  + uidProto.getWakelocksList().size() +
                         " wakelocks in it. Expected " + NUM_THREADS + " wakelocks.",
@@ -335,8 +302,36 @@ public class ValidationTests extends DeviceAtomTestCase {
                 statsdWakelockData.put(uid, tagToDuration);
             }
         }
-        LogUtil.CLog.d("follow: statsdwakelockdata is: " + statsdWakelockData);
+        CLog.d("follow: statsdwakelockdata is: " + statsdWakelockData);
         return statsdWakelockData;
+    }
+
+    private android.os.TimerProto getBatteryStatsPartialWakelock(BatteryStatsProto proto,
+            long uid, String tag) {
+        if (proto.getUidsList().size() < 1) {
+            CLog.w("Batterystats proto contains no uids");
+            return null;
+        }
+        boolean hadUid = false;
+        for (UidProto uidProto : proto.getUidsList()) {
+            if (uidProto.getUid() == uid) {
+                hadUid = true;
+                for (Wakelock wl : uidProto.getWakelocksList()) {
+                    if (tag.equals(wl.getName())) {
+                        if (wl.hasPartial()) {
+                            return wl.getPartial();
+                        }
+                        CLog.w("Batterystats had wakelock for uid (" + uid + ") "
+                                + "with tag (" + tag + ") "
+                                + "but it didn't have a partial wakelock");
+                    }
+                }
+                CLog.w("Batterystats didn't have a partial wakelock for uid " + uid
+                        + " with tag " + tag);
+            }
+        }
+        if (!hadUid) CLog.w("Batterystats didn't have uid " + uid);
+        return null;
     }
 
     public void uploadWakelockDurationBatteryStatsConfig(TimeUnit bucketsize) throws Exception {
