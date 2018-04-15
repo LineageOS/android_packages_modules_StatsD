@@ -19,7 +19,6 @@ import android.app.ProcessStateEnum; // From enums.proto for atoms.proto's UidPr
 
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -56,6 +55,8 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
     public static final int SLEEP_OF_FOREGROUND_SERVICE = 2_000;
 
     private static final int WAIT_TIME_FOR_CONFIG_UPDATE_MS = 200;
+    // ActivityManager can take a while to register screen state changes, mandating an extra delay.
+    private static final int WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS = 1_000;
     private static final int EXTRA_WAIT_TIME_MS = 1_000; // as buffer when proc state changing.
     private static final int STATSD_REPORT_WAIT_TIME_MS = 500; // make sure statsd finishes log.
 
@@ -133,9 +134,10 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates); // state sets, in order
         createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
-        Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
+        Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
+
         executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
         final int waitTime = EXTRA_WAIT_TIME_MS + 5_000; // Overlay may need to sit there a while.
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
@@ -170,9 +172,10 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
         createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
-        Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
+        Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
+
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
@@ -190,9 +193,10 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
         createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  //False: does not use attribution.
-        Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         turnScreenOn();
+        Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
+
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         // ASAP, turn off the screen to make proc state -> top_sleeping.
         turnScreenOff();
@@ -200,7 +204,9 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
 
         List<EventMetricData> data = getEventMetricDataList();
-        popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.
+        popUntilFind(data, new HashSet<>(Arrays.asList(ProcessStateEnum.PROCESS_STATE_TOP_VALUE)),
+                PROC_STATE_FUNCTION); // clear out anything prior to it entering TOP.
+        popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out TOP itself.
         // Don't check the wait time, since it's up to the system how long top sleeping persists.
         assertStatesOccurred(stateSet, data, 0, PROC_STATE_FUNCTION);
     }
