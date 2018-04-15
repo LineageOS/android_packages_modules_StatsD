@@ -146,16 +146,16 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // Test that alarm doesn't fire early.
         String markTime = getCurrentLogcatDate();
         doAppBreadcrumbReportedStart(1);
-        Thread.sleep(6_000);
+        Thread.sleep(6_000);  // Recorded duration at end: 6s
         assertEquals("Premature anomaly,", 0, getEventMetricDataList().size());
 
         doAppBreadcrumbReportedStop(1);
-        Thread.sleep(4_000);
+        Thread.sleep(4_000);  // Recorded duration at end: 6s
         assertEquals("Premature anomaly,", 0, getEventMetricDataList().size());
 
         // Test that alarm does fire when it is supposed to (after 4s, plus up to 5s alarm delay).
         doAppBreadcrumbReportedStart(1);
-        Thread.sleep(9_000);
+        Thread.sleep(9_000);  // Recorded duration at end: 13s
         List<EventMetricData> data = getEventMetricDataList();
         assertEquals("Expected an anomaly,", 1, data.size());
         assertEquals(ALERT_ID, data.get(0).getAtom().getAnomalyDetected().getAlertId());
@@ -164,15 +164,15 @@ public class AnomalyDetectionTests extends AtomTestCase {
         markTime = getCurrentLogcatDate();
         doAppBreadcrumbReportedStop(1);
         doAppBreadcrumbReportedStart(1);
-        Thread.sleep(3_000);
-        // NB: the previous getEventMetricDataList also removes the report, so it is back to 0.
+        Thread.sleep(3_000);  // Recorded duration at end: 13s
+        // NB: the previous getEventMetricDataList also removes the report, so size is back to 0.
         assertEquals("Expected only 1 anomaly,", 0, getEventMetricDataList().size());
 
         // Test that detection works again after refractory period finishes.
         doAppBreadcrumbReportedStop(1);
-        Thread.sleep(8_000);
+        Thread.sleep(8_000);  // Recorded duration at end: 9s
         doAppBreadcrumbReportedStart(1);
-        Thread.sleep(10_000);
+        Thread.sleep(15_000);  // Recorded duration at end: 15s
         // We can do an incidentd test now that all the timing issues are done.
         data = getEventMetricDataList();
         assertEquals("Expected another anomaly,", 1, data.size());
@@ -219,12 +219,17 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // It is likely that the alarm will only fire after this period is already over, but the
         // anomaly should nonetheless be detected when the event stops.
         doAppBreadcrumbReportedStart(1);
-        Thread.sleep(2_000);
+        Thread.sleep(1_200);
         // Anomaly should be detected here if the alarm didn't fire yet.
         doAppBreadcrumbReportedStop(1);
         Thread.sleep(200);
         List<EventMetricData> data = getEventMetricDataList();
-        assertEquals("Expected an anomaly,", 1, data.size());
+        if (data.size() == 2) {
+            // Although we expect that the alarm won't fire, we certainly cannot demand that.
+            CLog.w(TAG, "The anomaly was detected twice. Presumably the alarm did manage to fire.");
+        }
+        assertTrue("Expected 1 (or possibly 2) anomalies, instead of " + data.size(),
+                1 == data.size() || 2 == data.size());
         assertEquals(ALERT_ID, data.get(0).getAtom().getAnomalyDetected().getAlertId());
 
         turnScreenOff();
