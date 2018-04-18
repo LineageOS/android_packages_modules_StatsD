@@ -534,6 +534,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testWifiScan() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        turnScreenOn();
 
         final int atom = Atom.WIFI_SCAN_STATE_CHANGED_FIELD_NUMBER;
         final int key = WifiScanStateChanged.STATE_FIELD_NUMBER;
@@ -552,6 +553,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+
+        turnScreenOff();
     }
 
     public void testAudioState() throws Exception {
