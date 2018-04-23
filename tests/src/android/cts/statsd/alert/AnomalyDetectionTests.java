@@ -270,6 +270,11 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Test that anomaly detection integrates with perfetto properly.
     public void testPerfetto() throws Exception {
+        String chars = getDevice().getProperty("ro.build.characteristics");
+        if (chars.contains("watch")) {
+                return;
+        }
+
         StatsdConfig.Builder config = getBaseConfig(4, 0, 6 /* threshold: value > 6 */)
                 .addSubscription(Subscription.newBuilder()
                         .setId(SUBSCRIPTION_ID_PERFETTO)
