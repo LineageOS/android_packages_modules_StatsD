@@ -20,6 +20,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import android.os.WakeLockLevelEnum;
+import android.platform.test.annotations.RestrictedBuildTest;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
@@ -228,6 +229,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("found uid " + uid, found);
     }
 
+    @RestrictedBuildTest
     public void testCpuTimePerUidFreq() throws Exception {
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
