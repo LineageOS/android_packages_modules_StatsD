@@ -24,6 +24,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.UidMapping;
 import com.android.os.StatsLog.UidMapping.PackageInfoSnapshot;
+import com.android.tradefed.log.LogUtil;
 
 import java.util.List;
 
@@ -48,9 +49,10 @@ public class UidMapTests extends DeviceAtomTestCase {
         }
     }
 
-    private boolean hasMatchingChange(UidMapping uidmap, boolean expectDeletion) {
+    private boolean hasMatchingChange(UidMapping uidmap, int uid, boolean expectDeletion) {
+        LogUtil.CLog.d("The uid we are looking for is " + uid);
         for (UidMapping.Change change : uidmap.getChangesList()) {
-            if (change.getApp().equals(DEVICE_SIDE_TEST_PACKAGE)) {
+            if (change.getAppHash() == DEVICE_SIDE_TEST_PKG_HASH && change.getUid() == uid) {
                 if (change.getDeletion() == expectDeletion) {
                     return true;
                 }
@@ -69,12 +71,16 @@ public class UidMapTests extends DeviceAtomTestCase {
         final String result = getDevice().installPackage(
                 buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), false, true);
 
+        Thread.sleep(WAIT_TIME_SHORT);
+
         ConfigMetricsReportList reports = getReportList();
         assertTrue(reports.getReportsCount() > 0);
 
         boolean found = false;
+        int uid = getUid();
         for (ConfigMetricsReport report : reports.getReportsList()) {
-            if (hasMatchingChange(report.getUidMap(), false)) {
+            LogUtil.CLog.d("Got the following report: \n" + report.toString());
+            if (hasMatchingChange(report.getUidMap(), uid, false)) {
                 found = true;
             }
         }
@@ -89,12 +95,16 @@ public class UidMapTests extends DeviceAtomTestCase {
         // Now enable re-installation.
         getDevice().installPackage(buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), true, true);
 
+        Thread.sleep(WAIT_TIME_SHORT);
+
         ConfigMetricsReportList reports = getReportList();
         assertTrue(reports.getReportsCount() > 0);
 
         boolean found = false;
+        int uid = getUid();
         for (ConfigMetricsReport report : reports.getReportsList()) {
-            if (hasMatchingChange(report.getUidMap(), false)) {
+            LogUtil.CLog.d("Got the following report: \n" + report.toString());
+            if (hasMatchingChange(report.getUidMap(), uid, false)) {
                 found = true;
             }
         }
@@ -105,14 +115,18 @@ public class UidMapTests extends DeviceAtomTestCase {
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
         getDevice().installPackage(buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), true, true);
         uploadConfig(createConfigBuilder().build());
+        int uid = getUid();
         getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
+
+        Thread.sleep(WAIT_TIME_SHORT);
 
         ConfigMetricsReportList reports = getReportList();
         assertTrue(reports.getReportsCount() > 0);
 
         boolean found = false;
         for (ConfigMetricsReport report : reports.getReportsList()) {
-            if (hasMatchingChange(report.getUidMap(), true)) {
+            LogUtil.CLog.d("Got the following report: \n" + report.toString());
+            if (hasMatchingChange(report.getUidMap(), uid, true)) {
                 found = true;
             }
         }
