@@ -29,6 +29,7 @@ import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.tradefed.log.LogUtil;
 
 public class GaugeMetricsTests extends DeviceAtomTestCase {
 
@@ -108,6 +109,7 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
     Thread.sleep(2000);
 
     StatsLogReport metricReport = getStatsLogReport();
+    LogUtil.CLog.d("Got the following gauge metric data: " + metricReport.toString());
     assertEquals(MetricsUtils.GAUGE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasGaugeMetrics());
     StatsLogReport.GaugeMetricDataWrapper gaugeData = metricReport.getGaugeMetrics();
@@ -116,19 +118,16 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
     int bucketCount = gaugeData.getData(0).getBucketInfoCount();
     GaugeMetricData data = gaugeData.getData(0);
     assertTrue(bucketCount > 2);
-    assertTrue(data.getBucketInfo(0).hasStartBucketElapsedNanos());
-    assertTrue(data.getBucketInfo(0).hasEndBucketElapsedNanos());
+    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(0));
     assertEquals(data.getBucketInfo(0).getAtomCount(), 1);
     assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getLabel(), 0);
     assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getState(),
         AppBreadcrumbReported.State.START);
 
-    assertTrue(data.getBucketInfo(1).hasStartBucketElapsedNanos());
-    assertTrue(data.getBucketInfo(1).hasEndBucketElapsedNanos());
+    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(1));
     assertEquals(data.getBucketInfo(1).getAtomCount(), 1);
 
-    assertTrue(data.getBucketInfo(bucketCount - 1).hasStartBucketElapsedNanos());
-    assertTrue(data.getBucketInfo(bucketCount - 1).hasEndBucketElapsedNanos());
+    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(bucketCount-1));
     assertEquals(data.getBucketInfo(bucketCount - 1).getAtomCount(), 1);
     assertEquals(
         data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getLabel(), 2);
