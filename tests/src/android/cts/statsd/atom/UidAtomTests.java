@@ -69,6 +69,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA = "android.hardware.camera";
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
+    private static final String FEATURE_WATCH = "android.hardware.type.watch";
 
     private static final boolean DAVEY_ENABLED = false;
 
@@ -591,6 +592,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> onState = new HashSet<>(
@@ -617,6 +619,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPictureInPictureState() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
