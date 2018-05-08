@@ -21,6 +21,11 @@ import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
+import com.google.protobuf.Message;
+import com.google.protobuf.Descriptors.Descriptor;
+import com.google.protobuf.Descriptors.FieldDescriptor;
+
+import static org.junit.Assert.assertTrue;
 
 public class MetricsUtils {
     public static final long COUNT_METRIC_ID = 3333;
@@ -80,5 +85,21 @@ public class MetricsUtils {
 
     public static long StringToId(String str) {
       return str.hashCode();
+    }
+
+    public static void assertBucketTimePresent(Message bucketInfo) {
+        Descriptor descriptor = bucketInfo.getDescriptorForType();
+        boolean found = false;
+        FieldDescriptor bucketNum = descriptor.findFieldByName("bucket_num");
+        FieldDescriptor startMillis = descriptor.findFieldByName("start_bucket_elapsed_millis");
+        FieldDescriptor endMillis = descriptor.findFieldByName("end_bucket_elapsed_millis");
+        if (bucketNum != null && bucketInfo.hasField(bucketNum)) {
+            found = true;
+        } else if (startMillis != null && bucketInfo.hasField(startMillis) &&
+                   endMillis != null && bucketInfo.hasField(endMillis)) {
+            found = true;
+        }
+        assertTrue("Bucket info did not have either bucket num or start and end elapsed millis",
+                found);
     }
 }

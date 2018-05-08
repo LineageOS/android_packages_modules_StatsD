@@ -70,6 +70,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
 
+    private static final boolean DAVEY_ENABLED = false;
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -375,6 +377,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDavey() throws Exception {
+        if (!DAVEY_ENABLED ) return;
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
@@ -680,26 +683,5 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
                 atom.getForegroundState().getNumber());
         assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
-    }
-
-    public void testBreadcrumb() throws Exception {
-        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag, false);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testAppBreadcrumbReported");
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        List<EventMetricData> data = getEventMetricDataList();
-        assertEquals(3, data.size());
-        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
-        atom = data.get(1).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.STOP_VALUE);
-        atom = data.get(2).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.UNSPECIFIED_VALUE);
     }
 }
