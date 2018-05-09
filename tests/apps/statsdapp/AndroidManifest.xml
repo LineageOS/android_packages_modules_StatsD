@@ -31,6 +31,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.DUMP" /> <!-- must be granted via pm grant -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.CONFIGURE_DISPLAY_BRIGHTNESS" />
 
     <application android:label="@string/app_name">
         <uses-library android:name="android.test.runner" />

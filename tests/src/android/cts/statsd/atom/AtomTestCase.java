@@ -434,6 +434,29 @@ public class AtomTestCase extends BaseTestCase {
         data.subList(0, firstStateIdx).clear();
     }
 
+    /**
+     * Removes all elements from data after to the last occurrence of an element of state. After
+     * this method is called, the last element of data (if non-empty) is guaranteed to be an
+     * element in state.
+     *
+     * @param getStateFromAtom expression that takes in an Atom and returns the state it contains
+     */
+    public void popUntilFindFromEnd(List<EventMetricData> data, Set<Integer> state,
+        Function<Atom, Integer> getStateFromAtom) {
+        int lastStateIdx;
+        for (lastStateIdx = data.size() - 1; lastStateIdx >= 0; lastStateIdx--) {
+            Atom atom = data.get(lastStateIdx).getAtom();
+            if (state.contains(getStateFromAtom.apply(atom))) {
+                break;
+            }
+        }
+        if (lastStateIdx == data.size()-1) {
+            // Last element already is in state, so there's nothing to do.
+            return;
+        }
+        data.subList(lastStateIdx+1, data.size()).clear();
+    }
+
     /** Returns the UID of the host, which should always either be SHELL (2000) or ROOT (0). */
     protected int getHostUid() throws DeviceNotAvailableException {
         String strUid = "";
