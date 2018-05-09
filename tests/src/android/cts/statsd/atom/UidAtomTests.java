@@ -232,41 +232,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("found uid " + uid, found);
     }
 
-    @RestrictedBuildTest
-    public void testCpuTimePerUidFreq() throws Exception {
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(CpuTimePerUidFreq.UID_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
-
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        List<Atom> atomList = getGaugeMetricDataList();
-
-        // TODO: We don't have atom matching on gauge yet. Let's refactor this after that feature is
-        // implemented.
-        boolean found = false;
-        int uid = getUid();
-        long timeSpent = 0;
-        for (Atom atom : atomList) {
-            if (atom.getCpuTimePerUidFreq().getUid() == uid) {
-                found = true;
-                timeSpent += atom.getCpuTimePerUidFreq().getTimeMillis();
-            }
-        }
-        assertTrue(timeSpent > 0);
-        assertTrue("found uid " + uid, found);
-    }
-
     public void testCpuActiveTime() throws Exception {
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
