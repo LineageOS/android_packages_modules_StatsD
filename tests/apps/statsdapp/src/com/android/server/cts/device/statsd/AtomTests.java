@@ -77,15 +77,6 @@ public class AtomTests {
     }
 
     @Test
-    public void testAppBreadcrumbReported() {
-        StatsLog.logStart(1);
-        sleep(1_000);
-        StatsLog.logStop(1);
-        sleep(1_000);
-        StatsLog.logEvent(1);
-    }
-
-    @Test
     public void testBleScanOpportunistic() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_OPPORTUNISTIC).build();
