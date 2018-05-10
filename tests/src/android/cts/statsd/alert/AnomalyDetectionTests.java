@@ -45,8 +45,8 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.AnomalyDetectionTests";
 
-    private static final boolean INCIDENTD_TESTS_ENABLED = true;
-    private static final boolean PERFETTO_TESTS_ENABLED = true;
+    private static final boolean INCIDENTD_TESTS_ENABLED = false;
+    private static final boolean PERFETTO_TESTS_ENABLED = false;
 
     private static final int WAIT_AFTER_BREADCRUMB_MS = 2000;
 
