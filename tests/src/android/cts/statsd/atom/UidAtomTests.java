@@ -24,7 +24,6 @@ import android.platform.test.annotations.RestrictedBuildTest;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
@@ -34,7 +33,6 @@ import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.CpuTimePerUid;
-import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
@@ -232,6 +230,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("found uid " + uid, found);
     }
 
+    @RestrictedBuildTest
     public void testCpuActiveTime() throws Exception {
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
