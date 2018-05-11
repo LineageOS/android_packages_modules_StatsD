@@ -48,6 +48,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.tradefed.log.LogUtil;
 
 public class ValueMetricsTests extends DeviceAtomTestCase {
   private static final int APP_BREADCRUMB_REPORTED_A_MATCH_START_ID = 0;
@@ -97,6 +98,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     Thread.sleep(2000);
 
     StatsLogReport metricReport = getStatsLogReport();
+    LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
     StatsLogReport.ValueMetricDataWrapper valueData = metricReport.getValueMetrics();
@@ -107,8 +109,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     ValueMetricData data = valueData.getData(0);
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
-      assertTrue(bucketInfo.hasStartBucketElapsedNanos());
-      assertTrue(bucketInfo.hasEndBucketElapsedNanos());
+      MetricsUtils.assertBucketTimePresent(bucketInfo);
       totalValue += (int) bucketInfo.getValue();
     }
     assertEquals(totalValue, 8);
@@ -172,6 +173,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     Thread.sleep(1_000);
 
     StatsLogReport metricReport = getStatsLogReport();
+    LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
     turnScreenOff();
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
@@ -184,8 +186,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     ValueMetricData data = valueData.getData(0);
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
-      assertTrue(bucketInfo.hasStartBucketElapsedNanos());
-      assertTrue(bucketInfo.hasEndBucketElapsedNanos());
+      MetricsUtils.assertBucketTimePresent(bucketInfo);
       totalValue += (int) bucketInfo.getValue();
     }
     // At most we lose one full min bucket
@@ -254,6 +255,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     Thread.sleep(1_000);
 
     StatsLogReport metricReport = getStatsLogReport();
+    LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
     turnScreenOff();
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
@@ -266,8 +268,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     ValueMetricData data = valueData.getData(0);
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
-      assertTrue(bucketInfo.hasStartBucketElapsedNanos());
-      assertTrue(bucketInfo.hasEndBucketElapsedNanos());
+      MetricsUtils.assertBucketTimePresent(bucketInfo);
       totalValue += (int) bucketInfo.getValue();
     }
     // At most we lose one full min bucket

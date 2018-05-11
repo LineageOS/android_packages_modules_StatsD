@@ -596,7 +596,7 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.w("Device does " + (requiredAnswer ? "not " : "") + "have feature "
                     + featureName);
         }
-        return hasIt;
+        return hasIt == requiredAnswer;
     }
 
 }

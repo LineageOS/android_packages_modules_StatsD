@@ -33,7 +33,7 @@ public class AlarmTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.AnomalyDetectionTests";
 
-    private static final boolean INCIDENTD_TESTS_ENABLED = true;
+    private static final boolean INCIDENTD_TESTS_ENABLED = false;
 
     // Config constants
     private static final int ALARM_ID = 11;

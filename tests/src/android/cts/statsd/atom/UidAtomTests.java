@@ -24,7 +24,6 @@ import android.platform.test.annotations.RestrictedBuildTest;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
@@ -34,7 +33,6 @@ import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.CpuTimePerUid;
-import com.android.os.AtomsProto.CpuTimePerUidFreq;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
@@ -69,6 +67,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA = "android.hardware.camera";
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
+    private static final String FEATURE_WATCH = "android.hardware.type.watch";
+
+    private static final boolean DAVEY_ENABLED = false;
 
     @Override
     protected void setUp() throws Exception {
@@ -230,40 +231,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     @RestrictedBuildTest
-    public void testCpuTimePerUidFreq() throws Exception {
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(CpuTimePerUidFreq.UID_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FREQ_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
-
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        List<Atom> atomList = getGaugeMetricDataList();
-
-        // TODO: We don't have atom matching on gauge yet. Let's refactor this after that feature is
-        // implemented.
-        boolean found = false;
-        int uid = getUid();
-        long timeSpent = 0;
-        for (Atom atom : atomList) {
-            if (atom.getCpuTimePerUidFreq().getUid() == uid) {
-                found = true;
-                timeSpent += atom.getCpuTimePerUidFreq().getTimeMillis();
-            }
-        }
-        assertTrue(timeSpent > 0);
-        assertTrue("found uid " + uid, found);
-    }
-
     public void testCpuActiveTime() throws Exception {
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
@@ -375,6 +342,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDavey() throws Exception {
+        if (!DAVEY_ENABLED ) return;
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
@@ -588,6 +556,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> onState = new HashSet<>(
@@ -614,6 +583,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPictureInPictureState() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
@@ -680,26 +650,5 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
                 atom.getForegroundState().getNumber());
         assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
-    }
-
-    public void testBreadcrumb() throws Exception {
-        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag, false);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testAppBreadcrumbReported");
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        List<EventMetricData> data = getEventMetricDataList();
-        assertEquals(3, data.size());
-        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
-        atom = data.get(1).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.STOP_VALUE);
-        atom = data.get(2).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.UNSPECIFIED_VALUE);
     }
 }
