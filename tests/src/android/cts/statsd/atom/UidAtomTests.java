@@ -198,6 +198,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUid() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
@@ -232,6 +233,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     @RestrictedBuildTest
     public void testCpuActiveTime() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_ACTIVE_TIME_FIELD_NUMBER)
@@ -389,6 +391,44 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
     }
 
+    //Note: this test does not have uid, but must run on the device
+    public void testScreenBrightness() throws Exception {
+        int initialBrightness = getScreenBrightness();
+        boolean isInitialManual = isScreenBrightnessModeManual();
+        turnScreenOn();
+        setScreenBrightnessMode(true);
+        setScreenBrightness(200);
+        Thread.sleep(WAIT_TIME_LONG);
+
+        final int atomTag = Atom.SCREEN_BRIGHTNESS_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> screenMin = new HashSet<>(Arrays.asList(47));
+        Set<Integer> screen100 = new HashSet<>(Arrays.asList(100));
+        Set<Integer> screen200 = new HashSet<>(Arrays.asList(198));
+        // Set<Integer> screenMax = new HashSet<>(Arrays.asList(255));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(screenMin, screen100, screen200);
+
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testScreenBrightness");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Restore initial screen brightness
+        setScreenBrightness(initialBrightness);
+        setScreenBrightnessMode(isInitialManual);
+        turnScreenOff();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        popUntilFind(data, screenMin, atom->atom.getScreenBrightnessChanged().getLevel());
+        popUntilFindFromEnd(data, screen200, atom->atom.getScreenBrightnessChanged().getLevel());
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+            atom -> atom.getScreenBrightnessChanged().getLevel());
+    }
     public void testSyncState() throws Exception {
         final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
@@ -510,7 +550,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int key = WifiScanStateChanged.STATE_FIELD_NUMBER;
         final int stateOn = WifiScanStateChanged.State.ON_VALUE;
         final int stateOff = WifiScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMillis = 500;
+        final int minTimeDiffMillis = 250;
         final int maxTimeDiffMillis = 60_000;
         final boolean demandExactlyTwo = false; // Two scans are performed, so up to 4 atoms logged.
 

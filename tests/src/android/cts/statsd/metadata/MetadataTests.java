@@ -42,12 +42,13 @@ public class MetadataTests extends MetadataTestCase {
 
     // Tests that anomaly detection for value works.
     public void testConfigTtl() throws Exception {
-        final int TTL_TIME_SEC = 3;
+        final int TTL_TIME_SEC = 8;
         StatsdConfig.Builder config = getBaseConfig();
         config.setTtlInSeconds(TTL_TIME_SEC); // should reset in 3 seconds.
         turnScreenOff();
 
         uploadConfig(config);
+        long startTime = System.currentTimeMillis();
         Thread.sleep(WAIT_TIME_SHORT);
         turnScreenOn();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -67,7 +68,9 @@ public class MetadataTests extends MetadataTestCase {
         assertTrue("Did not find an active CTS config", foundActiveConfig);
 
         turnScreenOff();
-        Thread.sleep(WAIT_TIME_LONG); // Has been 3 seconds, config should TTL
+        while(System.currentTimeMillis() - startTime < 8_000) {
+            Thread.sleep(10);
+        }
         turnScreenOn(); // Force events to make sure the config TTLs.
         report = getStatsdStatsReport();
         LogUtil.CLog.d("got following statsdstats report: " + report.toString());
@@ -81,7 +84,7 @@ public class MetadataTests extends MetadataTestCase {
                             stats.hasDeletionTimeSec());
                     assertTrue("Config deletion time should be about " + TTL_TIME_SEC +
                             " after creation",
-                            Math.abs(stats.getDeletionTimeSec() - expectedTime) <= 1);
+                            Math.abs(stats.getDeletionTimeSec() - expectedTime) <= 2);
                 }
                 // There should still be one active config, that is marked as reset.
                 if(!stats.hasDeletionTimeSec()) {
@@ -93,7 +96,7 @@ public class MetadataTests extends MetadataTestCase {
                     assertEquals("Reset time and creation time should be equal for TTl'd configs",
                             stats.getResetTimeSec(), stats.getCreationTimeSec());
                     assertTrue("Reset config should be created when the original config TTL'd",
-                            Math.abs(stats.getCreationTimeSec() - expectedTime) <= 1);
+                            Math.abs(stats.getCreationTimeSec() - expectedTime) <= 2);
                 }
             }
         }

@@ -64,6 +64,7 @@ public class HostAtomTests extends AtomTestCase {
     private static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
+    private static final String FEATURE_WATCH = "android.hardware.type.watch";
 
     @Override
     protected void setUp() throws Exception {
@@ -249,53 +250,6 @@ public class HostAtomTests extends AtomTestCase {
                 atom -> atom.getBatteryLevelChanged().getBatteryLevel());
     }
 
-    public void testScreenBrightnessChangedAtom() throws Exception {
-        // Setup: record initial brightness state, set mode to manual and brightness to full.
-        int initialBrightness = getScreenBrightness();
-        boolean isInitialManual = isScreenBrightnessModeManual();
-        turnScreenOn();
-        setScreenBrightnessMode(true);
-        setScreenBrightness(255);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        final int atomTag = Atom.SCREEN_BRIGHTNESS_CHANGED_FIELD_NUMBER;
-
-        Set<Integer> screenMin = new HashSet<>(Arrays.asList(25));
-        Set<Integer> screen100 = new HashSet<>(Arrays.asList(100));
-        Set<Integer> screen200 = new HashSet<>(Arrays.asList(200));
-        Set<Integer> screenMax = new HashSet<>(Arrays.asList(255));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(screenMin, screen100, screen200, screenMax);
-
-        createAndUploadConfig(atomTag);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // Trigger events in same order.
-        setScreenBrightness(25);
-        Thread.sleep(WAIT_TIME_SHORT);
-        setScreenBrightness(100);
-        Thread.sleep(WAIT_TIME_SHORT);
-        setScreenBrightness(200);
-        Thread.sleep(WAIT_TIME_SHORT);
-        setScreenBrightness(255);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // Restore initial screen brightness
-        setScreenBrightness(initialBrightness);
-        setScreenBrightnessMode(isInitialManual);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getScreenBrightnessChanged().getLevel());
-    }
-
     public void testDeviceIdleModeStateChangedAtom() throws Exception {
         // Setup, leave doze mode.
         leaveDozeMode();
@@ -352,20 +306,21 @@ public class HostAtomTests extends AtomTestCase {
 
         // Trigger events in same order.
         turnBatterySaverOn();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
         turnBatterySaverOff();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getBatterySaverModeStateChanged().getState().getNumber());
     }
 
     @RestrictedBuildTest
     public void testRemainingBatteryCapacity() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
             .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
@@ -392,6 +347,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testFullBatteryCapacity() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
@@ -419,6 +375,7 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testTemperature() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.TEMPERATURE_FIELD_NUMBER)
@@ -482,6 +439,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testCpuTimePerFreq() throws Exception {
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
@@ -553,6 +511,7 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testWifiActivityInfo() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
