@@ -68,6 +68,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
     private static final String FEATURE_WATCH = "android.hardware.type.watch";
+    private static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
 
     private static final boolean DAVEY_ENABLED = false;
 
@@ -78,7 +79,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testAppStartOccurred() throws Exception {
         final int atomTag = Atom.APP_START_OCCURRED_FIELD_NUMBER;
-        turnScreenOn();
 
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -88,7 +88,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        turnScreenOff();
         AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
         assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
         assertEquals("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity",
@@ -160,7 +159,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testBleScanResult() throws Exception {
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
-        turnScreenOn(); // BLE results are not given unless screen is on. TODO: make more robust.
 
         final int atom = Atom.BLE_SCAN_RESULT_RECEIVED_FIELD_NUMBER;
         final int field = BleScanResultReceived.NUM_RESULTS_FIELD_NUMBER;
@@ -172,8 +170,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(data.size() >= 1);
         BleScanResultReceived a0 = data.get(0).getAtom().getBleScanResultReceived();
         assertTrue(a0.getNumResults() >= 1);
-
-        turnScreenOff();
     }
 
     public void testCameraState() throws Exception {
@@ -253,7 +249,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> atomList = getGaugeMetricDataList();
-        turnScreenOff();
 
         boolean found = false;
         int uid = getUid();
@@ -350,9 +345,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false); // UID is logged without attribution node
 
-        turnScreenOn();
         runActivity("DaveyActivity", null, null);
-        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         assertTrue(data.size() == 1);
@@ -395,7 +388,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     public void testScreenBrightness() throws Exception {
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
-        turnScreenOn();
         setScreenBrightnessMode(true);
         setScreenBrightness(200);
         Thread.sleep(WAIT_TIME_LONG);
@@ -420,8 +412,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Restore initial screen brightness
         setScreenBrightness(initialBrightness);
         setScreenBrightnessMode(isInitialManual);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
 
         popUntilFind(data, screenMin, atom->atom.getScreenBrightnessChanged().getLevel());
         popUntilFindFromEnd(data, screen200, atom->atom.getScreenBrightnessChanged().getLevel());
@@ -544,7 +534,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testWifiScan() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
-        turnScreenOn();
 
         final int atom = Atom.WIFI_SCAN_STATE_CHANGED_FIELD_NUMBER;
         final int key = WifiScanStateChanged.STATE_FIELD_NUMBER;
@@ -563,8 +552,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
-
-        turnScreenOff();
     }
 
     public void testAudioState() throws Exception {
@@ -607,7 +594,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
 
-        turnScreenOn();
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -616,14 +602,14 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        turnScreenOff();
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
     public void testPictureInPictureState() throws Exception {
-        if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_WATCH, false) ||
+            !hasFeature(FEATURE_PICTURE_IN_PICTURE, true)) return;
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
@@ -632,7 +618,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(entered);
 
-        turnScreenOn();
         createAndUploadConfig(atomTag, false);
 
         runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
@@ -640,7 +625,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        turnScreenOff();
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
@@ -649,7 +633,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     public void testOverlayState() throws Exception {
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
-        turnScreenOn();
         Set<Integer> entered = new HashSet<>(
                 Arrays.asList(OverlayStateChanged.State.ENTERED_VALUE));
         Set<Integer> exited = new HashSet<>(
@@ -666,7 +649,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        turnScreenOff();
         // Assert that the events happened in the expected order.
         // The overlay box should appear about 2sec after the app start
         assertStatesOccurred(stateSet, data, 0,
