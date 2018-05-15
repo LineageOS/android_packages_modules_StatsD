@@ -26,6 +26,7 @@ import android.app.job.JobScheduler;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
@@ -54,6 +55,7 @@ import android.support.test.InstrumentationRegistry;
 import android.util.Log;
 import android.util.StatsLog;
 
+import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Test;
@@ -80,25 +82,25 @@ public class AtomTests {
     public void testBleScanOpportunistic() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_OPPORTUNISTIC).build();
-        performBleScan(scanSettings, false);
+        performBleScan(scanSettings, null,false);
     }
 
     @Test
     public void testBleScanUnoptimized() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-        performBleScan(scanSettings, false);
+        performBleScan(scanSettings, null, false);
     }
 
     @Test
     public void testBleScanResult() {
         ScanSettings scanSettings = new ScanSettings.Builder()
                 .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build();
-        // TODO: Add an extremely weak ScanFilter to allow background ble scan results.
-        performBleScan(scanSettings, true);
+        ScanFilter.Builder scanFilter = new ScanFilter.Builder();
+        performBleScan(scanSettings, Arrays.asList(scanFilter.build()), true);
     }
 
-    private static void performBleScan(ScanSettings scanSettings, boolean waitForResult) {
+    private static void performBleScan(ScanSettings scanSettings, List<ScanFilter> scanFilters, boolean waitForResult) {
         BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Log.e(TAG, "Device does not support Bluetooth");
@@ -137,7 +139,7 @@ public class AtomTests {
             }
         };
 
-        bleScanner.startScan(null, scanSettings, scanCallback);
+        bleScanner.startScan(scanFilters, scanSettings, scanCallback);
         if (waitForResult) {
             waitForReceiver(InstrumentationRegistry.getContext(), 59_000, resultsLatch, null);
         } else {
@@ -263,6 +265,26 @@ public class AtomTests {
         }.execute();
 
         waitForReceiver(context, 59_000, latch, null);
+    }
+
+    @Test
+    public void testScreenBrightness() {
+        Context context = InstrumentationRegistry.getContext();
+        PowerManager pm = context.getSystemService(PowerManager.class);
+        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK |
+                PowerManager.ACQUIRE_CAUSES_WAKEUP, "StatsdBrightnessTest");
+        wl.acquire();
+        sleep(500);
+
+        setScreenBrightness(47);
+        sleep(500);
+        setScreenBrightness(100);
+        sleep(500);
+        setScreenBrightness(198);
+        sleep(500);
+
+
+        wl.release();
     }
 
     @Test
@@ -447,5 +469,9 @@ public class AtomTests {
         if (ctx != null && receiver != null) {
             ctx.unregisterReceiver(receiver);
         }
+    }
+
+    private static void setScreenBrightness(int brightness) {
+        runShellCommand("settings put system screen_brightness " + brightness);
     }
 }

@@ -45,11 +45,11 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         uploadConfig(builder);
 
         doAppBreadcrumbReportedStart(0);
-        Thread.sleep(10);
         doAppBreadcrumbReportedStop(0);
         Thread.sleep(2000);  // Wait for the metrics to propagate to statsd.
 
         StatsLogReport metricReport = getStatsLogReport();
+        LogUtil.CLog.d("Got the following stats log report: \n" + metricReport.toString());
         assertEquals(MetricsUtils.COUNT_METRIC_ID, metricReport.getMetricId());
         assertTrue(metricReport.hasCountMetrics());
 
