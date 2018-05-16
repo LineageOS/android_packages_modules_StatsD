@@ -73,6 +73,7 @@ public class ValidationTests extends DeviceAtomTestCase {
     @Override
     protected void tearDown() throws Exception {
         resetBatteryStatus(); // Undo any unplugDevice().
+        turnScreenOn(); // Reset screen to on state
         super.tearDown();
     }
 
