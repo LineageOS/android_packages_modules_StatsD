@@ -102,6 +102,8 @@ public class HostAtomTests extends AtomTestCase {
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
+        // reset screen to on
+        turnScreenOn();
 
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
@@ -338,7 +340,6 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        turnScreenOff();
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getRemainingBatteryCapacity().hasChargeUAh());
@@ -364,8 +365,6 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
-
-        turnScreenOff();
 
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
@@ -394,8 +393,6 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
-
-        turnScreenOff();
 
         assertTrue(data.size() >= TemperatureTypeEnum.values().length - 1);
         for (int i = 0; i < data.size(); i++) {

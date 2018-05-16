@@ -137,13 +137,11 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(onStates); // state sets, in order
         createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
 
-        turnScreenOn();
         Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
 
         executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
         final int waitTime = EXTRA_WAIT_TIME_MS + 5_000; // Overlay may need to sit there a while.
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
-        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.
@@ -175,13 +173,11 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
         createAndUploadConfig(PROC_STATE_ATOM_TAG, false);  // False: does not use attribution.
 
-        turnScreenOn();
         Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
 
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
         final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
-        turnScreenOff();
 
         List<EventMetricData> data = getEventMetricDataList();
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.
@@ -210,6 +206,8 @@ public class ProcStateAtomTests extends DeviceAtomTestCase {
         popUntilFind(data, new HashSet<>(Arrays.asList(ProcessStateEnum.PROCESS_STATE_TOP_VALUE)),
                 PROC_STATE_FUNCTION); // clear out anything prior to it entering TOP.
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out TOP itself.
+        // reset screen back on
+        turnScreenOn();
         // Don't check the wait time, since it's up to the system how long top sleeping persists.
         assertStatesOccurred(stateSet, data, 0, PROC_STATE_FUNCTION);
     }

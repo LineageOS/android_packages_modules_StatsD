@@ -158,8 +158,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
                     .setCondition(predicateName.hashCode())
                     .build());
 
-    turnScreenOn();
-
     // Upload config.
     uploadConfig(builder);
 
@@ -174,7 +172,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
 
     StatsLogReport metricReport = getStatsLogReport();
     LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
-    turnScreenOff();
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
     StatsLogReport.ValueMetricDataWrapper valueData = metricReport.getValueMetrics();
@@ -236,8 +233,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
                     .setCondition(predicateName.hashCode())
                     .build());
 
-    turnScreenOn();
-
     // Upload config.
     uploadConfig(builder);
 
@@ -256,7 +251,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
 
     StatsLogReport metricReport = getStatsLogReport();
     LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
-    turnScreenOff();
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
     StatsLogReport.ValueMetricDataWrapper valueData = metricReport.getValueMetrics();
