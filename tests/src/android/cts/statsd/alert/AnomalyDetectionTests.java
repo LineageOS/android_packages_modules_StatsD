@@ -139,10 +139,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
         // Since timing is crucial and checking logcat for incidentd is slow, we don't test for it.
 
-        // We prevent the device from sleeping through the anomaly alarm to avoid extra waiting.
-        // This assumes (as per CTS requirements) that screen Stay Awake is on.
-        turnScreenOn();
-
         // Test that alarm doesn't fire early.
         String markTime = getCurrentLogcatDate();
         doAppBreadcrumbReportedStart(1);
@@ -180,7 +176,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
         if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
 
         doAppBreadcrumbReportedStop(1);
-        turnScreenOff();
     }
 
     // Tests that anomaly detection for duration works even when the alarm fires too late.
@@ -203,10 +198,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
                                 )
                         );
         uploadConfig(config);
-
-        // We prevent the device from sleeping through the anomaly alarm to avoid extra waiting.
-        // This assumes (as per CTS requirements) that screen Stay Awake is on.
-        turnScreenOn();
 
         doAppBreadcrumbReportedStart(1);
         Thread.sleep(5_000);
@@ -231,8 +222,6 @@ public class AnomalyDetectionTests extends AtomTestCase {
         assertTrue("Expected 1 (or possibly 2) anomalies, instead of " + data.size(),
                 1 == data.size() || 2 == data.size());
         assertEquals(ALERT_ID, data.get(0).getAtom().getAnomalyDetected().getAlertId());
-
-        turnScreenOff();
     }
 
     // Tests that anomaly detection for value works.
