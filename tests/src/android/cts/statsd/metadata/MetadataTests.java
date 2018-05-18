@@ -101,6 +101,5 @@ public class MetadataTests extends MetadataTestCase {
             }
         }
         assertTrue("Did not find an active CTS config after the TTL", foundActiveConfig);
-        turnScreenOff();
     }
 }
