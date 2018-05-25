@@ -338,6 +338,31 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(a1.getState().getNumber() == stateOff);
     }
 
+    public void testOverlayState() throws Exception {
+        final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> entered = new HashSet<>(
+                Arrays.asList(OverlayStateChanged.State.ENTERED_VALUE));
+        Set<Integer> exited = new HashSet<>(
+                Arrays.asList(OverlayStateChanged.State.EXITED_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(entered, exited);
+
+        createAndUploadConfig(atomTag, false);
+
+        runActivity("StatsdCtsForegroundActivity", "action", "action.show_application_overlay",
+                3_000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        // The overlay box should appear about 2sec after the app start
+        assertStatesOccurred(stateSet, data, 0,
+                atom -> atom.getOverlayStateChanged().getState().getNumber());
+    }
+
     public void testDavey() throws Exception {
         if (!DAVEY_ENABLED ) return;
         long MAX_DURATION = 2000;
@@ -628,31 +653,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
-    }
-
-    public void testOverlayState() throws Exception {
-        final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
-
-        Set<Integer> entered = new HashSet<>(
-                Arrays.asList(OverlayStateChanged.State.ENTERED_VALUE));
-        Set<Integer> exited = new HashSet<>(
-                Arrays.asList(OverlayStateChanged.State.EXITED_VALUE));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(entered, exited);
-
-        createAndUploadConfig(atomTag, false);
-
-        runActivity("StatsdCtsForegroundActivity", "action", "action.show_application_overlay",
-                3_000);
-
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // Assert that the events happened in the expected order.
-        // The overlay box should appear about 2sec after the app start
-        assertStatesOccurred(stateSet, data, 0,
-                atom -> atom.getOverlayStateChanged().getState().getNumber());
     }
 
     public void testAppCrashOccurred() throws Exception {
