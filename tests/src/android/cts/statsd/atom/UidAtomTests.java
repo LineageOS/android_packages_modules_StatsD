@@ -206,9 +206,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
 
-        turnScreenOff();
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> atomList = getGaugeMetricDataList();
@@ -239,14 +238,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         uploadConfig(config);
 
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> atomList = getGaugeMetricDataList();
 
