@@ -330,12 +330,10 @@ public class HostAtomTests extends AtomTestCase {
                 .setField(RemainingBatteryCapacity.CHARGE_UAH_FIELD_NUMBER));
         addGaugeAtom(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
@@ -356,12 +354,10 @@ public class HostAtomTests extends AtomTestCase {
                         .setField(FullBatteryCapacity.CAPACITY_UAH_FIELD_NUMBER));
         addGaugeAtom(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
@@ -384,12 +380,10 @@ public class HostAtomTests extends AtomTestCase {
                         .setField(Temperature.SENSOR_NAME_FIELD_NUMBER));
         addGaugeAtom(config, Atom.TEMPERATURE_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
@@ -417,12 +411,10 @@ public class HostAtomTests extends AtomTestCase {
                         .setField(KernelWakelock.NAME_FIELD_NUMBER));
         addGaugeAtom(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
@@ -444,13 +436,11 @@ public class HostAtomTests extends AtomTestCase {
                         .setField(CpuTimePerFreq.CLUSTER_FIELD_NUMBER));
         addGaugeAtom(config, Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
-        Thread.sleep(2000);
-        turnScreenOn();
-        Thread.sleep(2000);
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
 
@@ -468,12 +458,10 @@ public class HostAtomTests extends AtomTestCase {
                         .setField(SubsystemSleepState.SUBSYSTEM_NAME_FIELD_NUMBER));
         addGaugeAtom(config, Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER, dimension);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> dataList = getGaugeMetricDataList();
@@ -490,12 +478,10 @@ public class HostAtomTests extends AtomTestCase {
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> dataList = getGaugeMetricDataList();
@@ -512,12 +498,10 @@ public class HostAtomTests extends AtomTestCase {
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> dataList = getGaugeMetricDataList();
@@ -537,12 +521,10 @@ public class HostAtomTests extends AtomTestCase {
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
 
-        turnScreenOff();
-
         uploadConfig(config);
 
         Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> dataList = getGaugeMetricDataList();
