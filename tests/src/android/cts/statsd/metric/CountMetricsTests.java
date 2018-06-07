@@ -35,6 +35,9 @@ import java.util.List;
 public class CountMetricsTests extends DeviceAtomTestCase {
 
     public void testSimpleEventCountMetric() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         int matcherId = 1;
         StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
@@ -59,6 +62,9 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         assertEquals(2, countData.getData(0).getBucketInfo(0).getCount());
     }
     public void testEventCountWithCondition() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         int startMatcherId = 1;
         int endMatcherId = 2;
         int whatMatcherId = 3;
@@ -116,6 +122,9 @@ public class CountMetricsTests extends DeviceAtomTestCase {
     }
 
     public void testPartialBucketCountMetric() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         int matcherId = 1;
         StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()

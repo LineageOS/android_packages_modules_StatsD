@@ -78,6 +78,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppStartOccurred() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.APP_START_OCCURRED_FIELD_NUMBER;
 
         createAndUploadConfig(atomTag, false);
@@ -98,6 +101,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleScan() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -117,6 +123,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleUnoptimizedScan() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -158,6 +167,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleScanResult() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_RESULT_RECEIVED_FIELD_NUMBER;
@@ -173,6 +185,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCameraState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_CAMERA, true) && !hasFeature(FEATURE_CAMERA_FRONT, true)) return;
 
         final int atomTag = Atom.CAMERA_STATE_CHANGED_FIELD_NUMBER;
@@ -194,6 +209,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUid() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
@@ -228,6 +246,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     @RestrictedBuildTest
     public void testCpuActiveTime() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
@@ -260,6 +281,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testFlashlightState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
 
         final int atomTag = Atom.FLASHLIGHT_STATE_CHANGED_FIELD_NUMBER;
@@ -287,6 +311,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testForegroundServiceState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.FOREGROUND_SERVICE_STATE_CHANGED_FIELD_NUMBER;
         final String name = "testForegroundService";
 
@@ -312,6 +339,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testGpsScan() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_LOCATION_GPS, true)) return;
         // Whitelist this app against background location request throttling
         getDevice().executeShellCommand(String.format(
@@ -335,6 +365,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testOverlayState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
@@ -360,6 +393,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDavey() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!DAVEY_ENABLED ) return;
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
@@ -378,6 +414,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testScheduledJobState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         String expectedName = "com.android.server.cts.device.statsd/.StatsdJobService";
         final int atomTag = Atom.SCHEDULED_JOB_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> jobSchedule = new HashSet<>(
@@ -407,6 +446,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     //Note: this test does not have uid, but must run on the device
     public void testScreenBrightness() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
         setScreenBrightnessMode(true);
@@ -441,6 +483,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
             atom -> atom.getScreenBrightnessChanged().getLevel());
     }
     public void testSyncState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
         Set<Integer> syncOff = new HashSet<>(Arrays.asList(SyncStateChanged.State.OFF_VALUE));
@@ -461,6 +506,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakelockState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> wakelockOn = new HashSet<>(Arrays.asList(
                 WakelockStateChanged.State.ACQUIRE_VALUE,
@@ -496,6 +544,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakeupAlarm() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.WAKEUP_ALARM_OCCURRED_FIELD_NUMBER;
 
         StatsdConfig.Builder config = createConfigBuilder();
@@ -510,6 +561,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiLock() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
@@ -531,6 +585,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiMulticastLock() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atomTag = Atom.WIFI_MULTICAST_LOCK_STATE_CHANGED_FIELD_NUMBER;
@@ -554,6 +611,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiScan() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atom = Atom.WIFI_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -576,6 +636,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAudioState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
 
         final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
@@ -604,6 +667,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
@@ -629,6 +695,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPictureInPictureState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!hasFeature(FEATURE_WATCH, false) ||
             !hasFeature(FEATURE_PICTURE_IN_PICTURE, true)) return;
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
@@ -652,6 +721,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppCrashOccurred() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int atomTag = Atom.APP_CRASH_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
