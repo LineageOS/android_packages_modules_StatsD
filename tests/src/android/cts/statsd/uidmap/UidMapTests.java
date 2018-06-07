@@ -33,6 +33,9 @@ public class UidMapTests extends DeviceAtomTestCase {
 
     // Tests that every report has at least one snapshot.
     public void testUidSnapshotIncluded() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         // There should be at least the test app installed during the test setup.
         createAndUploadConfig(AtomsProto.Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER);
 
@@ -64,6 +67,9 @@ public class UidMapTests extends DeviceAtomTestCase {
 
     // Tests that delta event included during app installation.
     public void testChangeFromInstallation() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
         createAndUploadConfig(AtomsProto.Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER);
         // Install the package after the config is sent to statsd. The uid map is not guaranteed to
@@ -90,6 +96,9 @@ public class UidMapTests extends DeviceAtomTestCase {
 
     // We check that a re-installation gives a change event (similar to an app upgrade).
     public void testChangeFromReinstall() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
         getDevice().installPackage(buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), false, true);
         createAndUploadConfig(AtomsProto.Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER);
@@ -113,6 +122,9 @@ public class UidMapTests extends DeviceAtomTestCase {
     }
 
     public void testChangeFromUninstall() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
         getDevice().installPackage(buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), true, true);
         createAndUploadConfig(AtomsProto.Atom.UID_PROCESS_STATE_CHANGED_FIELD_NUMBER);

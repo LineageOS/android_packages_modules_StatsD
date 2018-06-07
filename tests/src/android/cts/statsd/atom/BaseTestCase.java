@@ -141,4 +141,13 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
             throw new AssertionError(errorBuilder.toString());
         }
     }
+
+    protected boolean statsdDisabled() throws DeviceNotAvailableException {
+        if (getDevice().getProperty("ro.statsd.enable").equals("false")
+                && getDevice().getProperty("ro.config.low_ram").equals("true")) {
+            CLog.d("Statsd is not enabled on the device");
+            return true;
+        }
+        return false;
+    }
 }

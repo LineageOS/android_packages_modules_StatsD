@@ -82,6 +82,10 @@ public class AtomTestCase extends BaseTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+        if (statsdDisabled()) {
+            return;
+        }
         // TODO: need to do these before running real test:
         // 1. compile statsd and push to device
         // 2. make sure StatsCompanionService and incidentd is running

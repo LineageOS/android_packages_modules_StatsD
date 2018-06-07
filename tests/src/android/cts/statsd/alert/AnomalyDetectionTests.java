@@ -72,6 +72,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for count works.
     // Also tests that anomaly detection works when spanning multiple buckets.
     public void testCountAnomalyDetection() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         StatsdConfig.Builder config = getBaseConfig(10, 20, 2 /* threshold: > 2 counts */)
                 .addCountMetric(CountMetric.newBuilder()
                         .setId(METRIC_ID)
@@ -119,6 +122,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
     // Tests that anomaly detection for duration works.
     // Also tests that refractory periods in anomaly detection work.
     public void testDurationAnomalyDetection() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(17, 17, 10_000_000_000L  /*threshold: > 10 seconds in nanoseconds*/)
@@ -180,6 +186,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for duration works even when the alarm fires too late.
     public void testDurationAnomalyDetectionForLateAlarms() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         final int APP_BREADCRUMB_REPORTED_IS_ON_PREDICATE = 1423;
         StatsdConfig.Builder config =
                 getBaseConfig(50, 0, 6_000_000_000L /* threshold: > 6 seconds in nanoseconds */)
@@ -226,6 +235,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for value works.
     public void testValueAnomalyDetection() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         StatsdConfig.Builder config = getBaseConfig(4, 0, 6 /* threshold: value > 6 */)
                 .addValueMetric(ValueMetric.newBuilder()
                         .setId(METRIC_ID)
@@ -259,6 +271,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Test that anomaly detection integrates with perfetto properly.
     public void testPerfetto() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         String chars = getDevice().getProperty("ro.build.characteristics");
         if (chars.contains("watch")) {
                 return;
@@ -305,6 +320,9 @@ public class AnomalyDetectionTests extends AtomTestCase {
 
     // Tests that anomaly detection for gauge works.
     public void testGaugeAnomalyDetection() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         StatsdConfig.Builder config = getBaseConfig(1, 20, 6 /* threshold: value > 6 */)
                 .addGaugeMetric(GaugeMetric.newBuilder()
                         .setId(METRIC_ID)
