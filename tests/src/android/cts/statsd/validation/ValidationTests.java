@@ -78,6 +78,9 @@ public class ValidationTests extends DeviceAtomTestCase {
     }
 
     public void testPartialWakelock() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         resetBatteryStats();
         unplugDevice();
         turnScreenOff();
@@ -134,6 +137,9 @@ public class ValidationTests extends DeviceAtomTestCase {
 
     @RestrictedBuildTest
     public void testPartialWakelockDuration() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -189,6 +195,9 @@ public class ValidationTests extends DeviceAtomTestCase {
     }
 
     public void testPartialWakelockLoad() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
         if (!ENABLE_LOAD_TEST) return;
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);
