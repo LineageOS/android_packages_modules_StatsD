@@ -69,6 +69,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
     private static final String FEATURE_WATCH = "android.hardware.type.watch";
     private static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
+    private static final String FEATURE_PC = "android.hardware.type.pc";
 
     private static final boolean DAVEY_ENABLED = false;
 
@@ -569,6 +570,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_PC, false)) return;
 
         final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> lockOn = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.ON_VALUE));
@@ -593,6 +595,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_PC, false)) return;
 
         final int atomTag = Atom.WIFI_MULTICAST_LOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> lockOn = new HashSet<>(
