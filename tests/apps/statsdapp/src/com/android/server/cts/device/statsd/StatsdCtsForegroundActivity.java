@@ -121,6 +121,7 @@ public class StatsdCtsForegroundActivity extends Activity {
         finish();
     }
 
+    @SuppressWarnings("ConstantOverflow")
     private void doCrash() {
         Log.e(TAG, "About to crash the app with 1/0 " + (long)1/0);
     }
