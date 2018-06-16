@@ -75,9 +75,15 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
-        // Setup, make sure the screen is off.
+        // Setup, make sure the screen is off and turn off AoD if it is on.
+        // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
+        // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
+        String aodState = getAodState();
+        setAodState("0");
+        turnScreenOn();
+        Thread.sleep(WAIT_TIME_SHORT);
         turnScreenOff();
-        Thread.sleep(WAIT_TIME_LONG);
+        Thread.sleep(WAIT_TIME_SHORT);
 
         final int atomTag = Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER;
 
@@ -107,7 +113,8 @@ public class HostAtomTests extends AtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
         // reset screen to on
         turnScreenOn();
-
+        // Restores AoD to initial state.
+        setAodState(aodState);
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
                 atom -> atom.getScreenStateChanged().getState().getNumber());
