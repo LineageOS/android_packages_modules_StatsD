@@ -574,34 +574,6 @@ public class HostAtomTests extends AtomTestCase {
         }
     }
 
-    public void testBluetoothActivityInfo() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_BLUETOOTH, true)) return;
-        StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.BLUETOOTH_ACTIVITY_INFO_FIELD_NUMBER, null);
-
-        turnScreenOff();
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> dataList = getGaugeMetricDataList();
-
-        for (Atom atom: dataList) {
-            assertTrue(atom.getBluetoothActivityInfo().getTimestampMillis() > 0);
-            assertTrue(atom.getBluetoothActivityInfo().getBluetoothStackState() >= 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerIdleTimeMillis() > 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerTxTimeMillis() >= 0);
-            assertTrue(atom.getBluetoothActivityInfo().getControllerRxTimeMillis() >= 0);
-            assertTrue(atom.getBluetoothActivityInfo().getEnergyUsed() >= 0);
-        }
-    }
-
     // Explicitly tests if the adb command to log a breadcrumb is working.
     public void testBreadcrumbAdb() throws Exception {
         if (statsdDisabled()) {
