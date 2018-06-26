@@ -83,6 +83,10 @@ public class ValidationTests extends DeviceAtomTestCase {
         }
         resetBatteryStats();
         unplugDevice();
+        // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
+        // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
+        String aodState = getAodState();
+        setAodState("0");
         turnScreenOff();
 
         final int atomTag = Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER;
@@ -133,6 +137,8 @@ public class ValidationTests extends DeviceAtomTestCase {
         assertTrue(wl.getMaxDurationMs() < 700);
         assertTrue(wl.getTotalDurationMs() >= 500);
         assertTrue(wl.getTotalDurationMs() < 700);
+
+        setAodState(aodState); // restores AOD to initial state.
     }
 
     @RestrictedBuildTest
@@ -141,11 +147,17 @@ public class ValidationTests extends DeviceAtomTestCase {
             return;
         }
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
+        // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
+        // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
+        String aodState = getAodState();
+        setAodState("0");
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);
         Thread.sleep(WAIT_TIME_SHORT);
         resetBatteryStats();
         unplugDevice();
         turnScreenOff();
+
+        Thread.sleep(WAIT_TIME_SHORT);
 
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWakelockState");
         Thread.sleep(WAIT_TIME_LONG); // Make sure the one second bucket has ended.
@@ -192,6 +204,8 @@ public class ValidationTests extends DeviceAtomTestCase {
         assertTrue("For uid=" + EXPECTED_UID + " tag=" + EXPECTED_TAG + " had " +
                         "BatteryStats=" + bsDurationMs + "ms but statsd=" + statsdDurationMs + "ms",
                 difference <= Math.max(bsDurationMs / 10, 10L));
+
+        setAodState(aodState); // restores AOD to initial state.
     }
 
     public void testPartialWakelockLoad() throws Exception {
