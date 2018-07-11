@@ -516,28 +516,6 @@ public class HostAtomTests extends AtomTestCase {
         }
     }
 
-    public void testModemActivityInfo() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_TELEPHONY, true)) return;
-        StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.MODEM_ACTIVITY_INFO_FIELD_NUMBER, null);
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> dataList = getGaugeMetricDataList();
-
-        for (Atom atom: dataList) {
-            assertTrue(atom.getModemActivityInfo().getTimestampMillis() > 0);
-            assertTrue(atom.getModemActivityInfo().getSleepTimeMillis() > 0);
-        }
-    }
-
     public void testWifiActivityInfo() throws Exception {
         if (statsdDisabled()) {
             return;
