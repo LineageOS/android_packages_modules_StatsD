@@ -20,7 +20,8 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAG
 
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
-import android.view.DisplayStateEnum;
+import android.service.procstats.ProcessStatsProto;
+import android.service.procstats.ProcessStatsServiceDumpProto;
 
 import com.android.annotations.Nullable;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
@@ -36,9 +37,10 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
-import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.StatsLog.DurationMetricData;
+import com.android.os.StatsLog.ValueMetricData;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
@@ -66,6 +68,7 @@ public class AtomTestCase extends BaseTestCase {
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
     public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
+    public static final String DUMP_PROCSTATS_CMD = "dumpsys procstats";
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     public static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
@@ -199,6 +202,48 @@ public class AtomTestCase extends BaseTestCase {
         return data;
     }
 
+    /**
+     * Gets the statsd report and extract duration metric data.
+     * Note that this also deletes that report from statsd.
+     */
+    protected List<DurationMetricData> getDurationMetricDataList() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<DurationMetricData> data = new ArrayList<>();
+        for (StatsLogReport metric : report.getMetricsList()) {
+            data.addAll(metric.getDurationMetrics().getDataList());
+        }
+
+        LogUtil.CLog.d("Got DurationMetricDataList as following:\n");
+        for (DurationMetricData d : data) {
+            LogUtil.CLog.d("Duration " + d);
+        }
+        return data;
+    }
+
+    /**
+     * Gets the statsd report and extract value metric data.
+     * Note that this also deletes that report from statsd.
+     */
+    protected List<ValueMetricData> getValueMetricDataList() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<ValueMetricData> data = new ArrayList<>();
+        for (StatsLogReport metric : report.getMetricsList()) {
+            data.addAll(metric.getValueMetrics().getDataList());
+        }
+
+        LogUtil.CLog.d("Got ValueMetricDataList as following:\n");
+        for (ValueMetricData d : data) {
+            LogUtil.CLog.d("Value " + d);
+        }
+        return data;
+    }
+
     protected StatsLogReport getStatsLogReport() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
         assertTrue(reportList.getReportsCount() == 1);
@@ -213,7 +258,7 @@ public class AtomTestCase extends BaseTestCase {
         try {
             ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
                     String.join(" ", DUMP_REPORT_CMD, String.valueOf(CONFIG_ID),
-                            "--proto"));
+                            "--include_current_bucket", "--proto"));
             return reportList;
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
             LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
@@ -232,6 +277,23 @@ public class AtomTestCase extends BaseTestCase {
             return batteryStatsProto;
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
             LogUtil.CLog.e("Failed to dump batterystats proto");
+            throw (e);
+        }
+    }
+
+    protected List<ProcessStatsProto> getProcStatsProto() throws Exception {
+        try {
+            List<ProcessStatsProto> processStatsProtoList = getDump(
+                    ProcessStatsServiceDumpProto.parser(),
+                    String.join(" ", DUMP_PROCSTATS_CMD,
+                            "--proto")).getProcstatsNow().getProcessStatsList();
+            LogUtil.CLog.d("Got procstats:\n ");
+            for (ProcessStatsProto processStatsProto : processStatsProtoList) {
+                LogUtil.CLog.d(processStatsProto.toString());
+            }
+            return processStatsProtoList;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump procstats proto");
             throw (e);
         }
     }

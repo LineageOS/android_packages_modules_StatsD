@@ -92,6 +92,10 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
         assertNull("Failed to install " + appFileName + ": " + result, result);
     }
 
+    protected CompatibilityBuildHelper getBuildHelper() {
+        return new CompatibilityBuildHelper(mCtsBuild);
+    }
+
     /**
      * Run a device side test.
      *
