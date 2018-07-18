@@ -48,6 +48,9 @@ import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.log.LogUtil;
 
 import com.google.common.io.Files;
+import com.google.protobuf.ByteString;
+import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.CommandStatus;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -125,6 +128,44 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.d(methodName + "() indicates false.");
             return false;
         }
+    }
+
+    /**
+     * Returns a protobuf-encoded perfetto config that enables the kernel
+     * ftrace tracer with sched_switch for 10 seconds.
+     * See https://android.googlesource.com/platform/external/perfetto/+/master/docs/trace-config.md
+     * for details on how to generate this.
+     */
+    protected ByteString getPerfettoConfig() {
+        return ByteString.copyFrom(new byte[] { 0xa, 0x3, 0x8, (byte) 0x80, 0x1, 0x12, 0x23, 0xa,
+                        0x21, 0xa, 0xc, 0x6c, 0x69, 0x6e, 0x75, 0x78, 0x2e, 0x66, 0x74, 0x72, 0x61,
+                        0x63, 0x65, 0x10, 0x0, (byte) 0xa2, 0x6, 0xe, 0xa, 0xc, 0x73, 0x63, 0x68,
+                        0x65, 0x64, 0x5f, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x18, (byte) 0x90,
+                        0x4e });
+    }
+
+    /**
+     * Resets the state of the Perfetto guardrails. This avoids that the test fails if it's
+     * run too close of for too many times and hits the upload limit.
+     */
+    protected void resetPerfettoGuardrails() throws Exception {
+        final String cmd = "perfetto --reset-guardrails";
+        CommandResult cr = getDevice().executeShellV2Command(cmd);
+        if (cr.getStatus() != CommandStatus.SUCCESS)
+            throw new Exception(String.format("Error while executing %s: %s %s", cmd, cr.getStdout(), cr.getStderr()));
+    }
+
+    /**
+     * Determines whether perfetto enabled the kernel ftrace tracer.
+     */
+    protected boolean isSystemTracingEnabled() throws Exception {
+        final String path = "/sys/kernel/debug/tracing/tracing_on";
+        String tracing_on = getDevice().executeShellCommand("cat " + path);
+        if (tracing_on.startsWith("0"))
+            return false;
+        if (tracing_on.startsWith("1"))
+            return true;
+        throw new Exception(String.format("Unexpected state for %s = %s", path, tracing_on));
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
