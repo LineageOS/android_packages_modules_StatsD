@@ -120,11 +120,11 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
 
         final TestRunResult result = listener.getCurrentRunResults();
         if (result.isRunFailure()) {
-            throw new AssertionError("Failed to successfully run device tests for "
+            throw new Error("Failed to successfully run device tests for "
                     + result.getName() + ": " + result.getRunFailureMessage());
         }
         if (result.getNumTests() == 0) {
-            throw new AssertionError("No tests were run on the device");
+            throw new Error("No tests were run on the device");
         }
 
         if (result.hasFailedTests()) {

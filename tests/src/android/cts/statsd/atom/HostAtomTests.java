@@ -522,6 +522,8 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!checkDeviceFor("checkWifiEnhancedPowerReportingSupported")) return;
+
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
