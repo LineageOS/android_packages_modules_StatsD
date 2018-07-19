@@ -54,11 +54,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import perfetto.protos.PerfettoConfig.DataSourceConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig.BufferConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig.DataSource;
-
 /**
  * Base class for testing Statsd atoms.
  * Validates reporting of statsd logging based on different events
@@ -114,20 +109,6 @@ public class AtomTestCase extends BaseTestCase {
         String log = getLogcatSince(date, String.format(
                 "-s %s -e %s", INCIDENTD_TAG, INCIDENTD_STARTED_STRING));
         return log.contains(INCIDENTD_STARTED_STRING);
-    }
-
-    /**
-     * Determines whether logcat indicates that perfetto fired since the given device date.
-     */
-    protected boolean didPerfettoStartSince(String date) throws Exception {
-        final String PERFETTO_TAG = "perfetto";
-        final String PERFETTO_STARTED_STRING = "Enabled tracing";
-        final String PERFETTO_STARTED_REGEX = ".*" + PERFETTO_STARTED_STRING + ".*";
-        // TODO: Do something more robust than this in case of delayed logging.
-        Thread.sleep(1000);
-        String log = getLogcatSince(date, String.format(
-                "-s %s -e %s", PERFETTO_TAG, PERFETTO_STARTED_REGEX));
-        return log.contains(PERFETTO_STARTED_STRING);
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
@@ -245,19 +226,6 @@ public class AtomTestCase extends BaseTestCase {
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
     protected static FieldValueMatcher.Builder createFvm(int field) {
         return FieldValueMatcher.newBuilder().setField(field);
-    }
-
-    protected static TraceConfig createPerfettoTraceConfig() {
-        return TraceConfig.newBuilder()
-            .addBuffers(BufferConfig.newBuilder().setSizeKb(32))
-            .addDataSources(DataSource.newBuilder()
-                .setConfig(DataSourceConfig.newBuilder()
-                    .setName("linux.ftrace")
-                    .setTargetBuffer(0)
-                    .build()
-                )
-            )
-            .build();
     }
 
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {
