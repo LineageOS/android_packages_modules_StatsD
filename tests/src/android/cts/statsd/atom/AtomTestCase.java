@@ -15,6 +15,9 @@
  */
 package android.cts.statsd.atom;
 
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
+
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
@@ -54,11 +57,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
-import perfetto.protos.PerfettoConfig.DataSourceConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig.BufferConfig;
-import perfetto.protos.PerfettoConfig.TraceConfig.DataSource;
-
 /**
  * Base class for testing Statsd atoms.
  * Validates reporting of statsd logging based on different events
@@ -86,11 +84,6 @@ public class AtomTestCase extends BaseTestCase {
         if (statsdDisabled()) {
             return;
         }
-        // TODO: need to do these before running real test:
-        // 1. compile statsd and push to device
-        // 2. make sure StatsCompanionService and incidentd is running
-        // 3. start statsd
-        // These should go away once we have statsd properly set up.
 
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
@@ -100,6 +93,7 @@ public class AtomTestCase extends BaseTestCase {
     @Override
     protected void tearDown() throws Exception {
         removeConfig(CONFIG_ID);
+        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
         super.tearDown();
     }
 
@@ -116,18 +110,18 @@ public class AtomTestCase extends BaseTestCase {
         return log.contains(INCIDENTD_STARTED_STRING);
     }
 
-    /**
-     * Determines whether logcat indicates that perfetto fired since the given device date.
-     */
-    protected boolean didPerfettoStartSince(String date) throws Exception {
-        final String PERFETTO_TAG = "perfetto";
-        final String PERFETTO_STARTED_STRING = "Enabled tracing";
-        final String PERFETTO_STARTED_REGEX = ".*" + PERFETTO_STARTED_STRING + ".*";
-        // TODO: Do something more robust than this in case of delayed logging.
-        Thread.sleep(1000);
-        String log = getLogcatSince(date, String.format(
-                "-s %s -e %s", PERFETTO_TAG, PERFETTO_STARTED_REGEX));
-        return log.contains(PERFETTO_STARTED_STRING);
+    protected boolean checkDeviceFor(String methodName) throws Exception {
+        try {
+            installPackage(DEVICE_SIDE_TEST_APK, true);
+            runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".Checkers", methodName);
+            // Test passes, meaning that the answer is true.
+            LogUtil.CLog.d(methodName + "() indicates true.");
+            return true;
+        } catch (AssertionError e) {
+            // Method is designed to fail if the answer is false.
+            LogUtil.CLog.d(methodName + "() indicates false.");
+            return false;
+        }
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
@@ -245,19 +239,6 @@ public class AtomTestCase extends BaseTestCase {
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
     protected static FieldValueMatcher.Builder createFvm(int field) {
         return FieldValueMatcher.newBuilder().setField(field);
-    }
-
-    protected static TraceConfig createPerfettoTraceConfig() {
-        return TraceConfig.newBuilder()
-            .addBuffers(BufferConfig.newBuilder().setSizeKb(32))
-            .addDataSources(DataSource.newBuilder()
-                .setConfig(DataSourceConfig.newBuilder()
-                    .setName("linux.ftrace")
-                    .setTargetBuffer(0)
-                    .build()
-                )
-            )
-            .build();
     }
 
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag) throws Exception {

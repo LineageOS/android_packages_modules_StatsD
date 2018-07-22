@@ -345,24 +345,37 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         if (!hasFeature(FEATURE_LOCATION_GPS, true)) return;
         // Whitelist this app against background location request throttling
+        String origWhitelist = getDevice().executeShellCommand(
+                "settings get global location_background_throttle_package_whitelist").trim();
         getDevice().executeShellCommand(String.format(
                 "settings put global location_background_throttle_package_whitelist %s",
                 DEVICE_SIDE_TEST_PACKAGE));
 
-        final int atom = Atom.GPS_SCAN_STATE_CHANGED_FIELD_NUMBER;
-        final int key = GpsScanStateChanged.STATE_FIELD_NUMBER;
-        final int stateOn = GpsScanStateChanged.State.ON_VALUE;
-        final int stateOff = GpsScanStateChanged.State.OFF_VALUE;
-        final int minTimeDiffMillis = 500;
-        final int maxTimeDiffMillis = 60_000;
+        try {
+            final int atom = Atom.GPS_SCAN_STATE_CHANGED_FIELD_NUMBER;
+            final int key = GpsScanStateChanged.STATE_FIELD_NUMBER;
+            final int stateOn = GpsScanStateChanged.State.ON_VALUE;
+            final int stateOff = GpsScanStateChanged.State.OFF_VALUE;
+            final int minTimeDiffMillis = 500;
+            final int maxTimeDiffMillis = 60_000;
 
-        List<EventMetricData> data = doDeviceMethodOnOff("testGpsScan", atom, key,
-                stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
+            List<EventMetricData> data = doDeviceMethodOnOff("testGpsScan", atom, key,
+                    stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
-        GpsScanStateChanged a0 = data.get(0).getAtom().getGpsScanStateChanged();
-        GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
-        assertTrue(a0.getState().getNumber() == stateOn);
-        assertTrue(a1.getState().getNumber() == stateOff);
+            GpsScanStateChanged a0 = data.get(0).getAtom().getGpsScanStateChanged();
+            GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
+            assertTrue(a0.getState().getNumber() == stateOn);
+            assertTrue(a1.getState().getNumber() == stateOff);
+        } finally {
+            if ("null".equals(origWhitelist) || "".equals(origWhitelist)) {
+                getDevice().executeShellCommand(
+                        "settings delete global location_background_throttle_package_whitelist");
+            } else {
+                getDevice().executeShellCommand(String.format(
+                        "settings put global location_background_throttle_package_whitelist %s",
+                        origWhitelist));
+            }
+        }
     }
 
     public void testOverlayState() throws Exception {
