@@ -221,4 +221,8 @@ public class DeviceAtomTestCase extends AtomTestCase {
     protected void resetBatteryStats() throws Exception {
         getDevice().executeShellCommand("dumpsys batterystats --reset");
     }
+
+    protected void clearProcStats() throws Exception {
+        getDevice().executeShellCommand("dumpsys procstats --clear");
+    }
 }

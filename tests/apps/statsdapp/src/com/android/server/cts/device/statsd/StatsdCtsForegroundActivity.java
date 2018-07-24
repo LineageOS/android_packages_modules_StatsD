@@ -37,11 +37,13 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String KEY_ACTION = "action";
     public static final String ACTION_END_IMMEDIATELY = "action.end_immediately";
     public static final String ACTION_SLEEP_WHILE_TOP = "action.sleep_top";
+    public static final String ACTION_LONG_SLEEP_WHILE_TOP = "action.long_sleep_top";
     public static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
     public static final String ACTION_CRASH = "action.crash";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
     public static final int SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY = 2_000;
+    public static final int LONG_SLEEP_WHILE_TOP = 60_000;
 
     @Override
     public void onCreate(Bundle bundle) {
@@ -61,7 +63,10 @@ public class StatsdCtsForegroundActivity extends Activity {
                 finish();
                 break;
             case ACTION_SLEEP_WHILE_TOP:
-                doSleepWhileTop();
+                doSleepWhileTop(SLEEP_OF_ACTION_SLEEP_WHILE_TOP);
+                break;
+            case ACTION_LONG_SLEEP_WHILE_TOP:
+                doSleepWhileTop(LONG_SLEEP_WHILE_TOP);
                 break;
             case ACTION_SHOW_APPLICATION_OVERLAY:
                 doShowApplicationOverlay();
@@ -76,11 +81,11 @@ public class StatsdCtsForegroundActivity extends Activity {
     }
 
     /** Does nothing, but asynchronously. */
-    private void doSleepWhileTop() {
+    private void doSleepWhileTop(int sleepTime) {
         new AsyncTask<Void, Void, Void>() {
             @Override
             protected Void doInBackground(Void... params) {
-                AtomTests.sleep(SLEEP_OF_ACTION_SLEEP_WHILE_TOP);
+                AtomTests.sleep(sleepTime);
                 return null;
             }
 
