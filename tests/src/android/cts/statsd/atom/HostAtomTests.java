@@ -17,7 +17,6 @@ package android.cts.statsd.atom;
 
 import android.os.BatteryPluggedStateEnum; // From os/enums.proto
 import android.os.BatteryStatusEnum; // From os/enums.proto
-import android.os.TemperatureTypeEnum; // From os/enums.proto
 import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.DeviceIdleModeEnum; // From server/enums.proto
 import android.view.DisplayStateEnum; // From view/enums.proto
@@ -45,7 +44,6 @@ import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SubsystemSleepState;
-import com.android.os.AtomsProto.Temperature;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil.CLog;
 
@@ -399,44 +397,6 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
     }
 
-    @RestrictedBuildTest
-    public void testTemperature() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.TEMPERATURE_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(Temperature.SENSOR_LOCATION_FIELD_NUMBER))
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(Temperature.SENSOR_NAME_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.TEMPERATURE_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> data = getGaugeMetricDataList();
-
-        assertTrue(data.size() >= TemperatureTypeEnum.values().length - 1);
-        for (int i = 0; i < data.size(); i++) {
-            Temperature temp = data.get(i).getTemperature();
-            assertTrue("Temperature atom " + i + " has no type",
-                    temp.hasSensorLocation());
-            assertTrue("Temperature reported atom " + i + " has no temperature",
-                    temp.hasTemperatureDC());
-            assertTrue("Temperature reported atom " + i + " has an unreasonably low temperature:" +
-                    + temp.getTemperatureDC(), temp.getTemperatureDC() > 0);
-            assertTrue("Temperature reported atom " + i + " has an unreasonably high temperature:" +
-                    + temp.getTemperatureDC(), temp.getTemperatureDC() < 800);
-
-        }
-    }
-
     public void testKernelWakelock() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -522,6 +482,8 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!checkDeviceFor("checkWifiEnhancedPowerReportingSupported")) return;
+
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 

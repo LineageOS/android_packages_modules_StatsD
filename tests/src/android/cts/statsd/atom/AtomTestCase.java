@@ -15,6 +15,9 @@
  */
 package android.cts.statsd.atom;
 
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
+
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
@@ -86,11 +89,6 @@ public class AtomTestCase extends BaseTestCase {
         if (statsdDisabled()) {
             return;
         }
-        // TODO: need to do these before running real test:
-        // 1. compile statsd and push to device
-        // 2. make sure StatsCompanionService and incidentd is running
-        // 3. start statsd
-        // These should go away once we have statsd properly set up.
 
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
@@ -100,6 +98,7 @@ public class AtomTestCase extends BaseTestCase {
     @Override
     protected void tearDown() throws Exception {
         removeConfig(CONFIG_ID);
+        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
         super.tearDown();
     }
 
@@ -128,6 +127,18 @@ public class AtomTestCase extends BaseTestCase {
         String log = getLogcatSince(date, String.format(
                 "-s %s -e %s", PERFETTO_TAG, PERFETTO_STARTED_REGEX));
         return log.contains(PERFETTO_STARTED_STRING);
+    }
+
+    protected boolean checkDeviceFor(String methodName) throws Exception {
+        try {
+            installPackage(DEVICE_SIDE_TEST_APK, true);
+            runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".Checkers", methodName);
+            // Test passes, meaning that the answer is true.
+            return true;
+        } catch (AssertionError e) {
+            // Method is designed to fail if the answer is false.
+            return false;
+        }
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
