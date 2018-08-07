@@ -15,37 +15,22 @@
  */
 package android.cts.statsd.atom;
 
-import android.os.BatteryPluggedStateEnum; // From os/enums.proto
-import android.os.BatteryStatusEnum; // From os/enums.proto
+import android.os.BatteryPluggedStateEnum;
+import android.os.BatteryStatusEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
-import android.server.DeviceIdleModeEnum; // From server/enums.proto
-import android.view.DisplayStateEnum; // From view/enums.proto
+import android.server.DeviceIdleModeEnum;
+import android.view.DisplayStateEnum;
 
-import com.android.internal.os.StatsdConfigProto.Alert;
-import com.android.internal.os.StatsdConfigProto.CountMetric;
-import com.android.internal.os.StatsdConfigProto.DurationMetric;
-import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
-import com.android.internal.os.StatsdConfigProto.GaugeMetric;
-import com.android.internal.os.StatsdConfigProto.IncidentdDetails;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.internal.os.StatsdConfigProto.Subscription;
-import com.android.internal.os.StatsdConfigProto.TimeUnit;
-import com.android.internal.os.StatsdConfigProto.ValueMetric;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
-import com.android.os.AtomsProto.ChargingStateChanged;
-import com.android.os.AtomsProto.CpuTimePerFreq;
-import com.android.os.AtomsProto.DeviceIdleModeStateChanged;
 import com.android.os.AtomsProto.FullBatteryCapacity;
 import com.android.os.AtomsProto.KernelWakelock;
-import com.android.os.AtomsProto.PluggedStateChanged;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
-import com.android.os.AtomsProto.ScreenStateChanged;
 import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
-import com.android.tradefed.log.LogUtil.CLog;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -422,32 +407,6 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
-    }
-
-    public void testCpuTimePerFreq() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(CpuTimePerFreq.CLUSTER_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.CPU_TIME_PER_FREQ_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> data = getGaugeMetricDataList();
-
-        Atom atom = data.get(0);
-        assertTrue(atom.getCpuTimePerFreq().getCluster() >= 0);
-        assertTrue(atom.getCpuTimePerFreq().getFreqIndex() >= 0);
-        assertTrue(atom.getCpuTimePerFreq().getTimeMillis() > 0);
     }
 
     public void testSubsystemSleepState() throws Exception {
