@@ -69,6 +69,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
     private static final String FEATURE_WATCH = "android.hardware.type.watch";
     private static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
+    private static final String FEATURE_PC = "android.hardware.type.pc";
 
     private static final boolean DAVEY_ENABLED = false;
 
@@ -224,9 +225,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
 
-        turnScreenOff();
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> atomList = getGaugeMetricDataList();
@@ -260,14 +260,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         uploadConfig(config);
 
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
         runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
         Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOff();
-        Thread.sleep(WAIT_TIME_SHORT);
-        turnScreenOn();
-        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> atomList = getGaugeMetricDataList();
 
@@ -569,6 +566,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_PC, false)) return;
 
         final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> lockOn = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.ON_VALUE));
@@ -593,6 +591,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_PC, false)) return;
 
         final int atomTag = Atom.WIFI_MULTICAST_LOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> lockOn = new HashSet<>(
