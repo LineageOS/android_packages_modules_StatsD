@@ -20,8 +20,8 @@ import static org.junit.Assert.assertTrue;
 import android.cts.statsd.atom.ProcStateAtomTests;
 import android.cts.statsd.atom.ProcStateTestCase;
 import android.service.procstats.ProcessStatsProto;
-import android.service.procstats.ProcessStatsProto.State;
-import android.service.procstats.ProcessStatsProto.State.ProcessState;
+import android.service.procstats.ProcessStatsStateProto;
+import android.service.procstats.ProcessStatsStateProto.ProcessState;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.StatsLog.DimensionsValue;
@@ -121,7 +121,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         for (ProcessStatsProto p : processStatsProtoList) {
             if (p.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d(p.toString());
-                for (State s : p.getStatesList()) {
+                for (ProcessStatsStateProto s : p.getStatesList()) {
                     if (s.getProcessState() == ProcessState.TOP) {
                         durationInTopProcStats += s.getDurationMs();
                     }
@@ -186,7 +186,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         for (ProcessStatsProto p : processStatsProtoList) {
             if (p.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d(p.toString());
-                for (State s : p.getStatesList()) {
+                for (ProcessStatsStateProto s : p.getStatesList()) {
                     if (s.getProcessState() == ProcessState.CACHED_EMPTY) {
                         durationInProcStats += s.getDurationMs();
                     }
@@ -251,7 +251,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         for (ProcessStatsProto p : processStatsProtoList) {
             if (p.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d(p.toString());
-                for (State s : p.getStatesList()) {
+                for (ProcessStatsStateProto s : p.getStatesList()) {
                     valueInProcStats = Math.max(s.getPss().getMax(), valueInProcStats);
                 }
             }
