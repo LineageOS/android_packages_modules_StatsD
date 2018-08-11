@@ -46,6 +46,7 @@ import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.tradefed.log.LogUtil;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -701,8 +702,14 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        String supported = getDevice().executeShellCommand("am supports-multiwindow");
         if (!hasFeature(FEATURE_WATCH, false) ||
-            !hasFeature(FEATURE_PICTURE_IN_PICTURE, true)) return;
+            !hasFeature(FEATURE_PICTURE_IN_PICTURE, true) ||
+            !supported.contains("true")) {
+            LogUtil.CLog.d("Skipping picture in picture atom test.");
+            return;
+        }
+
         final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
@@ -713,6 +720,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         createAndUploadConfig(atomTag, false);
 
+        LogUtil.CLog.d("Playing video in Picture-in-Picture mode");
         runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
 
         // Sorted list of events in order in which they occurred.
