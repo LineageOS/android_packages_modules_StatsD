@@ -29,7 +29,6 @@ import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.FullBatteryCapacity;
 import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
-import com.android.os.AtomsProto.SubsystemSleepState;
 import com.android.os.StatsLog.EventMetricData;
 
 import java.util.Arrays;
@@ -407,32 +406,6 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
-    }
-
-    public void testSubsystemSleepState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(SubsystemSleepState.SUBSYSTEM_NAME_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.SUBSYSTEM_SLEEP_STATE_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> dataList = getGaugeMetricDataList();
-
-        for (Atom atom: dataList) {
-            assertTrue(!atom.getSubsystemSleepState().getSubsystemName().equals(""));
-            assertTrue(atom.getSubsystemSleepState().getCount() >= 0);
-            assertTrue(atom.getSubsystemSleepState().getTimeMillis() >= 0);
-        }
     }
 
     public void testWifiActivityInfo() throws Exception {
