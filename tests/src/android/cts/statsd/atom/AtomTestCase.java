@@ -41,17 +41,17 @@ import com.android.os.AtomsProto.Atom;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.DurationMetricData;
-import com.android.os.StatsLog.ValueMetricData;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.log.LogUtil;
+import com.android.tradefed.util.CommandResult;
+import com.android.tradefed.util.CommandStatus;
 
 import com.google.common.io.Files;
 import com.google.protobuf.ByteString;
-import com.android.tradefed.util.CommandResult;
-import com.android.tradefed.util.CommandStatus;
 
 import java.io.File;
 import java.text.SimpleDateFormat;

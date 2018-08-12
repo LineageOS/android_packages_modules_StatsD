@@ -16,11 +16,14 @@
 
 package com.android.server.cts.device.statsd;
 
+import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
+
+import static org.junit.Assert.assertTrue;
+
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
-import android.app.Activity;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.bluetooth.BluetoothAdapter;
@@ -35,9 +38,8 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -55,11 +57,7 @@ import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.support.test.InstrumentationRegistry;
 import android.util.Log;
-import android.util.StatsLog;
 
-import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import java.util.Arrays;
