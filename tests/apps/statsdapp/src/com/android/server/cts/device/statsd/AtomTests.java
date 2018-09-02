@@ -51,6 +51,8 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.support.test.InstrumentationRegistry;
 import android.util.Log;
 import android.util.StatsLog;
@@ -333,6 +335,16 @@ public class AtomTests {
         CountDownLatch latch = StatsdJobService.resetCountDownLatch();
         js.schedule(job);
         waitForReceiver(context, 2_500, latch, null);
+    }
+
+    @Test
+    public void testVibratorState() {
+        Context context = InstrumentationRegistry.getContext();
+        Vibrator vib = context.getSystemService(Vibrator.class);
+        if (vib.hasVibrator()) {
+            vib.vibrate(VibrationEffect.createOneShot(
+                    500 /* ms */, VibrationEffect.DEFAULT_AMPLITUDE));
+        }
     }
 
     @Test

@@ -41,6 +41,7 @@ import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
+import com.android.os.AtomsProto.VibratorStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
@@ -79,6 +80,28 @@ public class UidAtomTests extends DeviceAtomTestCase {
         super.setUp();
     }
 
+    public void testAppCrashOccurred() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        final int atomTag = Atom.APP_CRASH_OCCURRED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runActivity("StatsdCtsForegroundActivity", "action", "action.crash");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        AppCrashOccurred atom = data.get(0).getAtom().getAppCrashOccurred();
+        assertEquals("crash", atom.getEventType());
+        assertEquals(AppCrashOccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
+        assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
+                atom.getForegroundState().getNumber());
+        assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
+    }
+
     public void testAppStartOccurred() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -100,6 +123,37 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertFalse(atom.getIsInstantApp());
         assertTrue(atom.getActivityStartMillis() > 0);
         assertTrue(atom.getTransitionDelayMillis() > 0);
+    }
+
+    public void testAudioState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
+
+        final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
+        final String name = "testAudioState";
+
+        Set<Integer> onState = new HashSet<>(
+                Arrays.asList(AudioStateChanged.State.ON_VALUE));
+        Set<Integer> offState = new HashSet<>(
+                Arrays.asList(AudioStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // AudioStateChanged timestamp is fuzzed to 5min buckets
+        assertStatesOccurred(stateSet, data, 0,
+                atom -> atom.getAudioStateChanged().getState().getNumber());
     }
 
     public void testBleScan() throws Exception {
@@ -282,6 +336,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("found uid " + uid, found);
     }
 
+    public void testDavey() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!DAVEY_ENABLED ) return;
+        long MAX_DURATION = 2000;
+        long MIN_DURATION = 750;
+        final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false); // UID is logged without attribution node
+
+        runActivity("DaveyActivity", null, null);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertTrue(data.size() == 1);
+        long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMillis();
+        assertTrue("Jank duration of " + duration + "ms was less than " + MIN_DURATION + "ms",
+                duration >= MIN_DURATION);
+        assertTrue("Jank duration of " + duration + "ms was longer than " + MAX_DURATION + "ms",
+                duration <= MAX_DURATION);
+    }
+
     public void testFlashlightState() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -379,6 +454,34 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
     }
 
+    public void testMediaCodecActivity() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+        final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
+
+        Set<Integer> onState = new HashSet<>(
+                Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
+        Set<Integer> offState = new HashSet<>(
+                Arrays.asList(MediaCodecStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runActivity("VideoPlayerActivity", "action", "action.play_video");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getMediaCodecStateChanged().getState().getNumber());
+    }
+
     public void testOverlayState() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -407,25 +510,37 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getOverlayStateChanged().getState().getNumber());
     }
 
-    public void testDavey() throws Exception {
+    public void testPictureInPictureState() throws Exception {
         if (statsdDisabled()) {
             return;
         }
-        if (!DAVEY_ENABLED ) return;
-        long MAX_DURATION = 2000;
-        long MIN_DURATION = 750;
-        final int atomTag = Atom.DAVEY_OCCURRED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag, false); // UID is logged without attribution node
+        String supported = getDevice().executeShellCommand("am supports-multiwindow");
+        if (!hasFeature(FEATURE_WATCH, false) ||
+                !hasFeature(FEATURE_PICTURE_IN_PICTURE, true) ||
+                !supported.contains("true")) {
+            LogUtil.CLog.d("Skipping picture in picture atom test.");
+            return;
+        }
 
-        runActivity("DaveyActivity", null, null);
+        final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
 
+        Set<Integer> entered = new HashSet<>(
+                Arrays.asList(PictureInPictureStateChanged.State.ENTERED_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(entered);
+
+        createAndUploadConfig(atomTag, false);
+
+        LogUtil.CLog.d("Playing video in Picture-in-Picture mode");
+        runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
+
+        // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
-        assertTrue(data.size() == 1);
-        long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMillis();
-        assertTrue("Jank duration of " + duration + "ms was less than " + MIN_DURATION + "ms",
-                duration >= MIN_DURATION);
-        assertTrue("Jank duration of " + duration + "ms was longer than " + MAX_DURATION + "ms",
-                duration <= MAX_DURATION);
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
     }
 
     public void testScheduledJobState() throws Exception {
@@ -518,6 +633,36 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getSyncStateChanged().getState().getNumber());
+    }
+
+    public void testVibratorState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!checkDeviceFor("checkVibratorSupported")) return;
+
+        final int atomTag = Atom.VIBRATOR_STATE_CHANGED_FIELD_NUMBER;
+        final String name = "testVibratorState";
+
+        Set<Integer> onState = new HashSet<>(
+                Arrays.asList(VibratorStateChanged.State.ON_VALUE));
+        Set<Integer> offState = new HashSet<>(
+                Arrays.asList(VibratorStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertStatesOccurred(stateSet, data, 300,
+                atom -> atom.getVibratorStateChanged().getState().getNumber());
     }
 
     public void testWakelockState() throws Exception {
@@ -650,119 +795,5 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
-    }
-
-    public void testAudioState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
-
-        final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
-        final String name = "testAudioState";
-
-        Set<Integer> onState = new HashSet<>(
-                Arrays.asList(AudioStateChanged.State.ON_VALUE));
-        Set<Integer> offState = new HashSet<>(
-                Arrays.asList(AudioStateChanged.State.OFF_VALUE));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
-
-        createAndUploadConfig(atomTag, true);  // True: uses attribution.
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
-
-        Thread.sleep(WAIT_TIME_SHORT);
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // AudioStateChanged timestamp is fuzzed to 5min buckets
-        assertStatesOccurred(stateSet, data, 0,
-                atom -> atom.getAudioStateChanged().getState().getNumber());
-    }
-
-    public void testMediaCodecActivity() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_WATCH, false)) return;
-        final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
-
-        Set<Integer> onState = new HashSet<>(
-                Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
-        Set<Integer> offState = new HashSet<>(
-                Arrays.asList(MediaCodecStateChanged.State.OFF_VALUE));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(onState, offState);
-
-        createAndUploadConfig(atomTag, true);  // True: uses attribution.
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        runActivity("VideoPlayerActivity", "action", "action.play_video");
-
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getMediaCodecStateChanged().getState().getNumber());
-    }
-
-    public void testPictureInPictureState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        String supported = getDevice().executeShellCommand("am supports-multiwindow");
-        if (!hasFeature(FEATURE_WATCH, false) ||
-            !hasFeature(FEATURE_PICTURE_IN_PICTURE, true) ||
-            !supported.contains("true")) {
-            LogUtil.CLog.d("Skipping picture in picture atom test.");
-            return;
-        }
-
-        final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
-
-        Set<Integer> entered = new HashSet<>(
-                Arrays.asList(PictureInPictureStateChanged.State.ENTERED_VALUE));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(entered);
-
-        createAndUploadConfig(atomTag, false);
-
-        LogUtil.CLog.d("Playing video in Picture-in-Picture mode");
-        runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
-
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
-    }
-
-    public void testAppCrashOccurred() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        final int atomTag = Atom.APP_CRASH_OCCURRED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag, false);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        runActivity("StatsdCtsForegroundActivity", "action", "action.crash");
-
-        Thread.sleep(WAIT_TIME_SHORT);
-        // Sorted list of events in order in which they occurred.
-        List<EventMetricData> data = getEventMetricDataList();
-
-        AppCrashOccurred atom = data.get(0).getAtom().getAppCrashOccurred();
-        assertEquals("crash", atom.getEventType());
-        assertEquals(AppCrashOccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
-        assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
-                atom.getForegroundState().getNumber());
-        assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
     }
 }
