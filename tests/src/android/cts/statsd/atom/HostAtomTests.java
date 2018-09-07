@@ -340,7 +340,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -363,7 +363,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -406,7 +406,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -442,7 +442,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!checkDeviceFor("checkWifiEnhancedPowerReportingSupported")) return;
 
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         uploadConfig(config);
 

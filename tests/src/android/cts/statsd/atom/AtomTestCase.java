@@ -225,13 +225,15 @@ public class AtomTestCase extends BaseTestCase {
 
     protected List<Atom> getGaugeMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue(reportList.getReportsCount() == 1);
+        assertTrue("Only one report expected", reportList.getReportsCount() == 1);
         // only config
         ConfigMetricsReport report = reportList.getReports(0);
+        assertTrue("Only one metric expected", report.getMetricsCount() == 1);
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData :
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
+            assertTrue("Only one bucket expected", gaugeMetricData.getBucketInfoCount() == 1);
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }
@@ -412,12 +414,12 @@ public class AtomTestCase extends BaseTestCase {
     /**
      * Adds an atom to a gauge metric of a config
      *
-     * @param conf      configuration
-     * @param atomId    atom id (from atoms.proto)
-     * @param dimension dimension is needed for most pulled atoms
+     * @param conf        configuration
+     * @param atomId      atom id (from atoms.proto)
+     * @param gaugeMetric the gauge metric to add
      */
     protected void addGaugeAtom(StatsdConfig.Builder conf, int atomId,
-            @Nullable FieldMatcher.Builder dimension) throws Exception {
+            GaugeMetric.Builder gaugeMetric) throws Exception {
         final String atomName = "Atom" + System.nanoTime();
         final String gaugeName = "Gauge" + System.nanoTime();
         final String predicateName = "APP_BREADCRUMB";
@@ -456,18 +458,31 @@ public class AtomTestCase extends BaseTestCase {
                         .setCountNesting(false)
                 )
         );
-        GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
+        gaugeMetric
                 .setId(gaugeName.hashCode())
                 .setWhat(atomName.hashCode())
+                .setCondition(predicateName.hashCode());
+        conf.addGaugeMetric(gaugeMetric.build());
+    }
+
+    /**
+     * Adds an atom to a gauge metric of a config
+     *
+     * @param conf      configuration
+     * @param atomId    atom id (from atoms.proto)
+     * @param dimension dimension is needed for most pulled atoms
+     */
+    protected void addGaugeAtomWithDimensions(StatsdConfig.Builder conf, int atomId,
+            @Nullable FieldMatcher.Builder dimension) throws Exception {
+        GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
                 .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
                 .setMaxNumGaugeAtomsPerBucket(10000)
-                .setBucket(TimeUnit.CTS)
-                .setCondition(predicateName.hashCode());
+                .setBucket(TimeUnit.CTS);
         if (dimension != null) {
             gaugeMetric.setDimensionsInWhat(dimension.build());
         }
-        conf.addGaugeMetric(gaugeMetric.build());
+        addGaugeAtom(conf, atomId, gaugeMetric);
     }
 
     /**
@@ -610,6 +625,34 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void plugInWireless() throws Exception {
         getDevice().executeShellCommand("cmd battery set wireless 1");
+    }
+
+    protected void enableLooperStats() throws Exception {
+        getDevice().executeShellCommand("cmd looper_stats enable");
+    }
+
+    protected void resetLooperStats() throws Exception {
+        getDevice().executeShellCommand("cmd looper_stats reset");
+    }
+
+    protected void disableLooperStats() throws Exception {
+        getDevice().executeShellCommand("cmd looper_stats disable");
+    }
+
+    protected void enableBinderStats() throws Exception {
+        getDevice().executeShellCommand("dumpsys binder_calls_stats --enable");
+    }
+
+    protected void resetBinderStats() throws Exception {
+        getDevice().executeShellCommand("dumpsys binder_calls_stats --reset");
+    }
+
+    protected void disableBinderStats() throws Exception {
+        getDevice().executeShellCommand("dumpsys binder_calls_stats --disable");
+    }
+
+    protected void binderStatsNoSampling() throws Exception {
+        getDevice().executeShellCommand("dumpsys binder_calls_stats --no-sampling");
     }
 
     public void setAppBreadcrumbPredicate() throws Exception {

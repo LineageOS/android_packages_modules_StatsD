@@ -22,20 +22,25 @@ import static org.junit.Assert.assertTrue;
 import android.os.WakeLockLevelEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
 
+import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
+import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
+import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
@@ -270,7 +275,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -307,7 +312,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 .setField(Atom.CPU_ACTIVE_TIME_FIELD_NUMBER)
                 .addChild(FieldMatcher.newBuilder()
                         .setField(CpuActiveTime.UID_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.CPU_ACTIVE_TIME_FIELD_NUMBER, dimension);
+        addGaugeAtomWithDimensions(config, Atom.CPU_ACTIVE_TIME_FIELD_NUMBER, dimension);
 
         uploadConfig(config);
 
@@ -791,5 +796,67 @@ public class UidAtomTests extends DeviceAtomTestCase {
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
         assertTrue(a0.getState().getNumber() == stateOn);
         assertTrue(a1.getState().getNumber() == stateOff);
+    }
+
+    public void testBinderStats() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        try {
+            unplugDevice();
+            Thread.sleep(WAIT_TIME_SHORT);
+            enableBinderStats();
+            binderStatsNoSampling();
+            resetBinderStats();
+            StatsdConfig.Builder config = getPulledConfig();
+            FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
+                    .setField(Atom.BINDER_CALLS_FIELD_NUMBER);
+            GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
+                    .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
+                    .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
+                    .setDimensionsInWhat(dimension.build())
+                    .setMaxNumGaugeAtomsPerBucket(1000)
+                    .setBucket(TimeUnit.CTS);
+            addGaugeAtom(config, Atom.BINDER_CALLS_FIELD_NUMBER, gaugeMetric);
+
+            uploadConfig(config);
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification",3_000);
+
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            boolean found = false;
+            int uid = getUid();
+            List<Atom> atomList = getGaugeMetricDataList();
+            for (Atom atom : atomList) {
+                BinderCalls calls = atom.getBinderCalls();
+                boolean classMatches = calls.getServiceClassName().contains(
+                        "com.android.server.notification.NotificationManagerService");
+                boolean methodMatches = calls.getServiceMethodName()
+                        .equals("createNotificationChannels");
+
+                if (calls.getUid() == uid && classMatches && methodMatches) {
+                    found = true;
+                    assertTrue("Call count should not be negative or equal to 0.",
+                            calls.getRecordedCallCount() > 0);
+                    assertTrue("Call count should not be negative or equal to 0.",
+                            calls.getCallCount() > 0);
+                    assertTrue("Wrong latency",
+                            calls.getRecordedTotalLatencyMicros() > 0
+                            && calls.getRecordedTotalLatencyMicros() < 1000000);
+                    assertTrue("Wrong cpu usage",
+                            calls.getRecordedTotalCpuMicros() > 0
+                            && calls.getRecordedTotalCpuMicros() < 1000000);
+                }
+            }
+
+            assertTrue("Did not find a matching atom for uid " + uid, found);
+
+        } finally {
+            disableBinderStats();
+            plugInAc();
+        }
     }
 }
