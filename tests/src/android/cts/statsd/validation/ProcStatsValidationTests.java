@@ -19,9 +19,9 @@ import static org.junit.Assert.assertTrue;
 
 import android.cts.statsd.atom.ProcStateAtomTests;
 import android.cts.statsd.atom.ProcStateTestCase;
+import android.service.procstats.ProcessState;
 import android.service.procstats.ProcessStatsProto;
 import android.service.procstats.ProcessStatsStateProto;
-import android.service.procstats.ProcessStatsStateProto.ProcessState;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.StatsLog.DimensionsValue;
@@ -122,7 +122,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             if (p.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d(p.toString());
                 for (ProcessStatsStateProto s : p.getStatesList()) {
-                    if (s.getProcessState() == ProcessState.TOP) {
+                    if (s.getProcessState() == ProcessState.PROCESS_STATE_TOP) {
                         durationInTopProcStats += s.getDurationMs();
                     }
                 }
@@ -187,7 +187,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             if (p.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d(p.toString());
                 for (ProcessStatsStateProto s : p.getStatesList()) {
-                    if (s.getProcessState() == ProcessState.CACHED_EMPTY) {
+                    if (s.getProcessState() == ProcessState.PROCESS_STATE_CACHED_EMPTY) {
                         durationInProcStats += s.getDurationMs();
                     }
                 }
