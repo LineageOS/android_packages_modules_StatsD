@@ -31,6 +31,7 @@ import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.StatsLog.EventMetricData;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +48,10 @@ public class HostAtomTests extends AtomTestCase {
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
     private static final String FEATURE_WATCH = "android.hardware.type.watch";
+
+    // Either file must exist to read kernel wake lock stats.
+    private static final String WAKE_LOCK_FILE = "/proc/wakelocks";
+    private static final String WAKE_SOURCES_FILE = "/d/wakeup_sources";
 
     @Override
     protected void setUp() throws Exception {
@@ -382,7 +387,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testKernelWakelock() throws Exception {
-        if (statsdDisabled()) {
+        if (statsdDisabled() || !kernelWakelockStatsExist()) {
             return;
         }
         StatsdConfig.Builder config = getPulledConfig();
@@ -406,6 +411,15 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
+    }
+
+    // Returns true iff either |WAKE_LOCK_FILE| or |WAKE_SOURCES_FILE| exists.
+    private boolean kernelWakelockStatsExist() {
+      try {
+        return doesFileExist(WAKE_LOCK_FILE) || doesFileExist(WAKE_SOURCES_FILE);
+      } catch(Exception e) {
+        return false;
+      }
     }
 
     public void testWifiActivityInfo() throws Exception {
