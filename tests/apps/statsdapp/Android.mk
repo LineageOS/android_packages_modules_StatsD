@@ -36,8 +36,7 @@ LOCAL_STATIC_JAVA_LIBRARIES := \
     compatibility-device-util \
     androidx.legacy_legacy-support-v4 \
     legacy-android-test \
-    android-support-test \
-    statsdprotolite
+    android-support-test
 
 # tag this module as a cts test artifact
 LOCAL_COMPATIBILITY_SUITE := cts vts general-tests
