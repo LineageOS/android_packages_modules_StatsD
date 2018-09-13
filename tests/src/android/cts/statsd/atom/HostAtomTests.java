@@ -26,6 +26,7 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
+import com.android.os.AtomsProto.BatteryVoltage;
 import com.android.os.AtomsProto.FullBatteryCapacity;
 import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
@@ -371,6 +372,28 @@ public class HostAtomTests extends AtomTestCase {
         Atom atom = data.get(0);
         assertTrue(atom.getFullBatteryCapacity().hasCapacityUAh());
         assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
+    }
+
+    public void testBatteryVoltage() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtom(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getBatteryVoltage().hasVoltageMV());
+        assertTrue(atom.getBatteryVoltage().getVoltageMV() > 0);
     }
 
     public void testKernelWakelock() throws Exception {
