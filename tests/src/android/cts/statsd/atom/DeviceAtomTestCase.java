@@ -172,6 +172,13 @@ public class DeviceAtomTestCase extends AtomTestCase {
     }
 
     /**
+     * Uninstalls the test apk.
+     */
+    protected void uninstallPackage() throws Exception{
+        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
+    }
+
+    /**
      * Required to successfully start a background service from adb in O.
      */
     protected void allowBackgroundServices() throws Exception {
@@ -224,5 +231,17 @@ public class DeviceAtomTestCase extends AtomTestCase {
 
     protected void clearProcStats() throws Exception {
         getDevice().executeShellCommand("dumpsys procstats --clear");
+    }
+
+    protected void startProcStatsTesting() throws Exception {
+        getDevice().executeShellCommand("dumpsys procstats --start-testing");
+    }
+
+    protected void stopProcStatsTesting() throws Exception {
+        getDevice().executeShellCommand("dumpsys procstats --stop-testing");
+    }
+
+    protected void commitProcStatsToDisk() throws Exception {
+        getDevice().executeShellCommand("dumpsys procstats --commit");
     }
 }

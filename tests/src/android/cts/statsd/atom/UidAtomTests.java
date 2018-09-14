@@ -270,11 +270,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.CPU_TIME_PER_UID_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(CpuTimePerUid.UID_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, dimension);
+        addGaugeAtom(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
 
         uploadConfig(config);
 

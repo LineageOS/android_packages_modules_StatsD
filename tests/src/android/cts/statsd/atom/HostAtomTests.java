@@ -334,11 +334,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-            .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
-            .addChild(FieldMatcher.newBuilder()
-                .setField(RemainingBatteryCapacity.CHARGE_UAH_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
+        addGaugeAtom(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -361,11 +357,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(FullBatteryCapacity.CAPACITY_UAH_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, dimension);
+        addGaugeAtom(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
@@ -386,11 +378,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.KERNEL_WAKELOCK_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(KernelWakelock.NAME_FIELD_NUMBER));
-        addGaugeAtom(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, dimension);
+        addGaugeAtom(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
