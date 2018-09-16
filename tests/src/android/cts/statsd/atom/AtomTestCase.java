@@ -20,6 +20,7 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAG
 
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
+import android.service.procstats.ProcessStatsPackageProto;
 import android.service.procstats.ProcessStatsProto;
 import android.service.procstats.ProcessStatsServiceDumpProto;
 
@@ -339,6 +340,26 @@ public class AtomTestCase extends BaseTestCase {
         }
     }
 
+    /*
+     * Get all procstats package data in proto
+     */
+    protected List<ProcessStatsPackageProto> getAllProcStatsProto() throws Exception {
+        try {
+            List<ProcessStatsPackageProto> processStatsProtoList = getDump(
+                    ProcessStatsServiceDumpProto.parser(),
+                    String.join(" ", DUMP_PROCSTATS_CMD,
+                            "--proto")).getProcstatsOver24Hrs().getPackageStatsList();
+            LogUtil.CLog.d("Got procstats:\n ");
+            for (ProcessStatsPackageProto processStatsProto : processStatsProtoList) {
+                LogUtil.CLog.d(processStatsProto.toString());
+            }
+            return processStatsProtoList;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump procstats proto");
+            throw (e);
+        }
+    }
+
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
     protected static FieldValueMatcher.Builder createFvm(int field) {
         return FieldValueMatcher.newBuilder().setField(field);
@@ -440,6 +461,7 @@ public class AtomTestCase extends BaseTestCase {
                 .setWhat(atomName.hashCode())
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
                 .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
+                .setMaxNumGaugeAtomsPerBucket(10000)
                 .setBucket(TimeUnit.CTS)
                 .setCondition(predicateName.hashCode());
         if (dimension != null) {
