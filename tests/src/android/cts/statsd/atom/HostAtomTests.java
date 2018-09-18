@@ -26,11 +26,13 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
+import com.android.os.AtomsProto.BatteryVoltage;
 import com.android.os.AtomsProto.FullBatteryCapacity;
 import com.android.os.AtomsProto.KernelWakelock;
 import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.StatsLog.EventMetricData;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -47,6 +49,10 @@ public class HostAtomTests extends AtomTestCase {
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
     private static final String FEATURE_WATCH = "android.hardware.type.watch";
+
+    // Either file must exist to read kernel wake lock stats.
+    private static final String WAKE_LOCK_FILE = "/proc/wakelocks";
+    private static final String WAKE_SOURCES_FILE = "/d/wakeup_sources";
 
     @Override
     protected void setUp() throws Exception {
@@ -373,8 +379,30 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
     }
 
-    public void testKernelWakelock() throws Exception {
+    public void testBatteryVoltage() throws Exception {
         if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtom(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getBatteryVoltage().hasVoltageMV());
+        assertTrue(atom.getBatteryVoltage().getVoltageMV() > 0);
+    }
+
+    public void testKernelWakelock() throws Exception {
+        if (statsdDisabled() || !kernelWakelockStatsExist()) {
             return;
         }
         StatsdConfig.Builder config = getPulledConfig();
@@ -394,6 +422,15 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
         assertTrue(atom.getKernelWakelock().hasTime());
+    }
+
+    // Returns true iff either |WAKE_LOCK_FILE| or |WAKE_SOURCES_FILE| exists.
+    private boolean kernelWakelockStatsExist() {
+      try {
+        return doesFileExist(WAKE_LOCK_FILE) || doesFileExist(WAKE_SOURCES_FILE);
+      } catch(Exception e) {
+        return false;
+      }
     }
 
     public void testWifiActivityInfo() throws Exception {
