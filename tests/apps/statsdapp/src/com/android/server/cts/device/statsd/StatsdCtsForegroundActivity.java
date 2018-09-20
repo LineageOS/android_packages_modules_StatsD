@@ -19,6 +19,9 @@ package com.android.server.cts.device.statsd;
 import com.android.server.cts.device.statsd.AtomTests;
 
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
@@ -39,6 +42,7 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_SLEEP_WHILE_TOP = "action.sleep_top";
     public static final String ACTION_LONG_SLEEP_WHILE_TOP = "action.long_sleep_top";
     public static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
+    public static final String ACTION_SHOW_NOTIFICATION = "action.show_notification";
     public static final String ACTION_CRASH = "action.crash";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
@@ -70,6 +74,9 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_SHOW_APPLICATION_OVERLAY:
                 doShowApplicationOverlay();
+                break;
+            case ACTION_SHOW_NOTIFICATION:
+                doShowNotification();
                 break;
             case ACTION_CRASH:
                 doCrash();
@@ -123,6 +130,25 @@ public class StatsdCtsForegroundActivity extends Activity {
 
         // The overlay continues long after the finish. The following is just to end the activity.
         AtomTests.sleep(SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY);
+        finish();
+    }
+
+    private void doShowNotification() {
+        final int notificationId = R.layout.activity_main;
+        final String notificationChannel = "StatsdCtsChannel";
+
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        nm.createNotificationChannel(new NotificationChannel(notificationChannel, "Statsd Cts",
+                NotificationManager.IMPORTANCE_DEFAULT));
+
+        nm.notify(
+                notificationId,
+                new Notification.Builder(this, notificationChannel)
+                        .setSmallIcon(android.R.drawable.stat_notify_chat)
+                        .setContentTitle("StatsdCts")
+                        .setContentText("StatsdCts")
+                        .build());
+        nm.cancel(notificationId);
         finish();
     }
 
