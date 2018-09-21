@@ -25,6 +25,7 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
+import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 
 import java.util.Arrays;
@@ -469,6 +470,46 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<EventMetricData> data = getEventMetricDataList();
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertTrue(atom.getLabel() == 1);
+        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+    }
+
+    // Test dumpsys stats --proto.
+    public void testDumpsysStats() throws Exception {
+        // TODO: Once shell can find stats service without root, enable this test.
+        final boolean DISABLED = true;
+        if (DISABLED) {
+            return;
+        }
+        if (statsdDisabled()) {
+            return;
+        }
+        final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        doAppBreadcrumbReportedStart(1);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Get the stats incident section.
+        List<ConfigMetricsReportList> listList = getReportsFromStatsDataDumpProto();
+        assertTrue(listList.size() > 0);
+
+        // Extract the relevent report from the incident section.
+        ConfigMetricsReportList ourList = null;
+        for (ConfigMetricsReportList list : listList) {
+            ConfigMetricsReportList.ConfigKey configKey = list.getConfigKey();
+            if (configKey.getUid() == getHostUid() && configKey.getId() == CONFIG_ID) {
+                ourList = list;
+                break;
+            }
+        }
+        assertNotNull("Could not find list for uid=" + getHostUid()
+                + " id=" + CONFIG_ID, ourList);
+
+        // Make sure that the report is correct.
+        List<EventMetricData> data = getEventMetricDataList(ourList);
         AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
         assertTrue(atom.getLabel() == 1);
         assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
