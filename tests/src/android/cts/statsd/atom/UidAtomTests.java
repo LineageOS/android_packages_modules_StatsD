@@ -48,6 +48,7 @@ import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.VibratorStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
+import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
@@ -716,8 +717,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = doDeviceMethod("testWakeupAlarm", config);
         assertTrue(data.size() >= 1);
         for (int i = 0; i < data.size(); i++) {
-            String tag = data.get(i).getAtom().getWakeupAlarmOccurred().getTag();
-            assertTrue(tag.equals("*walarm*:android.cts.statsd.testWakeupAlarm"));
+            WakeupAlarmOccurred wao = data.get(i).getAtom().getWakeupAlarmOccurred();
+            assertEquals("*walarm*:android.cts.statsd.testWakeupAlarm", wao.getTag());
+            assertEquals(DEVICE_SIDE_TEST_PACKAGE, wao.getPackageName());
         }
     }
 
