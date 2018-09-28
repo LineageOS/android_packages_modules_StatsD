@@ -379,7 +379,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
 
         uploadConfig(config);
 
