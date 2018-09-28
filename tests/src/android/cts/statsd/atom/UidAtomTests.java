@@ -43,6 +43,7 @@ import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
+import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.VibratorStateChanged;
@@ -810,15 +811,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             binderStatsNoSampling();
             resetBinderStats();
             StatsdConfig.Builder config = getPulledConfig();
-            FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                    .setField(Atom.BINDER_CALLS_FIELD_NUMBER);
-            GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
-                    .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
-                    .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
-                    .setDimensionsInWhat(dimension.build())
-                    .setMaxNumGaugeAtomsPerBucket(1000)
-                    .setBucket(TimeUnit.CTS);
-            addGaugeAtom(config, Atom.BINDER_CALLS_FIELD_NUMBER, gaugeMetric);
+            addGaugeAtomWithDimensions(config, Atom.BINDER_CALLS_FIELD_NUMBER, null);
 
             uploadConfig(config);
             Thread.sleep(WAIT_TIME_SHORT);
@@ -912,5 +905,48 @@ public class UidAtomTests extends DeviceAtomTestCase {
             cleanUpLooperStats();
             plugInAc();
         }
+    }
+
+    public void testProcessMemoryState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Get ProcessMemoryState as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_STATE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Start test app.
+        try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
+                "action.show_notification")) {
+            setAppBreadcrumbPredicate();
+        }
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Assert about ProcessMemoryState for the test app.
+        List<Atom> atoms = getGaugeMetricDataList();
+        int uid = getUid();
+        boolean found = false;
+        for (Atom atom : atoms) {
+            ProcessMemoryState state = atom.getProcessMemoryState();
+            if (state.getUid() != uid) {
+                continue;
+            }
+            found = true;
+            assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
+            assertTrue("oom_score should be positive", state.getOomScore() > 0);
+            assertTrue("pgfaults should not be negative", state.getPgfault() >= 0);
+            assertTrue("pgmfaults should not be negative", state.getPgmajfault() >= 0);
+            assertTrue("usage_in_bytes should be positive", state.getRssInBytes() > 0);
+            assertTrue("cache_in_bytes should not be negative", state.getCacheInBytes() >= 0);
+            assertTrue("swap_in_bytes should not be negative", state.getSwapInBytes() >= 0);
+            assertTrue("rss_high_watermark_in_bytes should be positive",
+                    state.getRssHighWatermarkInBytes() > 0);
+            assertTrue("rss_high_watermark_in_bytes should not be smaller than usage_in_bytes",
+                    state.getRssHighWatermarkInBytes() >= state.getRssInBytes());
+        }
+        assertTrue("Did not find a matching atom for uid=" + uid, found);
     }
 }
