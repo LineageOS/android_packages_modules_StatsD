@@ -21,18 +21,12 @@ import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.DeviceIdleModeEnum;
 import android.view.DisplayStateEnum;
 
-import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
-import com.android.os.AtomsProto.BatteryVoltage;
-import com.android.os.AtomsProto.FullBatteryCapacity;
-import com.android.os.AtomsProto.KernelWakelock;
-import com.android.os.AtomsProto.RemainingBatteryCapacity;
 import com.android.os.StatsLog.EventMetricData;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -385,7 +379,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtom(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
+        addGaugeAtomWithDimensions(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
 
         uploadConfig(config);
 

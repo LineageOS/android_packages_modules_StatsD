@@ -31,16 +31,14 @@ import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AudioStateChanged;
+import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
-import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
-import com.android.os.AtomsProto.CpuTimePerUid;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
-import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
@@ -48,6 +46,7 @@ import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.VibratorStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
+import com.android.os.AtomsProto.WakeupAlarmOccurred;
 import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
@@ -716,8 +715,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = doDeviceMethod("testWakeupAlarm", config);
         assertTrue(data.size() >= 1);
         for (int i = 0; i < data.size(); i++) {
-            String tag = data.get(i).getAtom().getWakeupAlarmOccurred().getTag();
-            assertTrue(tag.equals("*walarm*:android.cts.statsd.testWakeupAlarm"));
+            WakeupAlarmOccurred wao = data.get(i).getAtom().getWakeupAlarmOccurred();
+            assertEquals("*walarm*:android.cts.statsd.testWakeupAlarm", wao.getTag());
+            assertEquals(DEVICE_SIDE_TEST_PACKAGE, wao.getPackageName());
         }
     }
 
