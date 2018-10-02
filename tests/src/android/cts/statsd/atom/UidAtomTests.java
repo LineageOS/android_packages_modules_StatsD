@@ -39,6 +39,7 @@ import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
@@ -856,6 +857,59 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         } finally {
             disableBinderStats();
+            plugInAc();
+        }
+    }
+
+    public void testLooperStats() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        try {
+            unplugDevice();
+            setUpLooperStats();
+            StatsdConfig.Builder config = getPulledConfig();
+            addGaugeAtomWithDimensions(config, Atom.LOOPER_STATS_FIELD_NUMBER, null);
+            uploadConfig(config);
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification", 3_000);
+
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            List<Atom> atomList = getGaugeMetricDataList();
+
+            boolean found = false;
+            int uid = getUid();
+            for (Atom atom : atomList) {
+                LooperStats stats = atom.getLooperStats();
+                String notificationServiceFullName =
+                        "com.android.server.notification.NotificationManagerService";
+                boolean handlerMatches =
+                        stats.getHandlerClassName().equals(
+                                notificationServiceFullName + "$WorkerHandler");
+                boolean messageMatches =
+                        stats.getMessageName().equals(
+                                notificationServiceFullName + "$EnqueueNotificationRunnable");
+                if (atom.getLooperStats().getUid() == uid && handlerMatches && messageMatches) {
+                    found = true;
+                    assertTrue(stats.getMessageCount() > 0);
+                    assertTrue("Message count should be non-negative.",
+                            stats.getMessageCount() > 0);
+                    assertTrue("Recorded message count should be non-negative.",
+                            stats.getRecordedMessageCount() > 0);
+                    assertTrue("Wrong latency",
+                            stats.getRecordedTotalLatencyMicros() > 0
+                                    && stats.getRecordedTotalLatencyMicros() < 1000000);
+                    assertTrue("Wrong cpu usage",
+                            stats.getRecordedTotalCpuMicros() > 0
+                                    && stats.getRecordedTotalCpuMicros() < 1000000);
+                }
+            }
+            assertTrue("Did not find a matching atom for uid " + uid, found);
+        } finally {
+            cleanUpLooperStats();
             plugInAc();
         }
     }

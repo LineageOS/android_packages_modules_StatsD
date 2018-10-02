@@ -655,6 +655,16 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().executeShellCommand("dumpsys binder_calls_stats --no-sampling");
     }
 
+    protected void setUpLooperStats() throws Exception {
+        getDevice().executeShellCommand("cmd looper_stats enable");
+        getDevice().executeShellCommand("cmd looper_stats sampling_interval 1");
+        getDevice().executeShellCommand("cmd looper_stats reset");
+    }
+
+    protected void cleanUpLooperStats() throws Exception {
+        getDevice().executeShellCommand("cmd looper_stats disable");
+    }
+
     public void setAppBreadcrumbPredicate() throws Exception {
         doAppBreadcrumbReportedStart(1);
     }
