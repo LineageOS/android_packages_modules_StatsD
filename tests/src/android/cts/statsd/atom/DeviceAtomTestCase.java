@@ -205,6 +205,24 @@ public class DeviceAtomTestCase extends AtomTestCase {
      */
     protected void runActivity(String activity, String actionKey, String actionValue,
             long waitTime) throws Exception {
+        try (AutoCloseable a = withActivity(activity, actionKey, actionValue)) {
+            Thread.sleep(waitTime);
+        }
+    }
+
+    /**
+     * Starts the specified activity and returns an {@link AutoCloseable} that stops the activity
+     * when closed.
+     *
+     * <p>Example usage:
+     * <pre>
+     *     try (AutoClosable a = withActivity("activity", "action", "action-value")) {
+     *         doStuff();
+     *     }
+     * </pre>
+     */
+    protected AutoCloseable withActivity(String activity, String actionKey, String actionValue)
+            throws Exception {
         String intentString = null;
         if (actionKey != null && actionValue != null) {
             intentString = actionKey + " " + actionValue;
@@ -217,12 +235,11 @@ public class DeviceAtomTestCase extends AtomTestCase {
                     "am start -n " + DEVICE_SIDE_TEST_PACKAGE + "/." + activity + " -e " +
                             intentString);
         }
-
-        Thread.sleep(waitTime);
-        getDevice().executeShellCommand(
-                "am force-stop " + DEVICE_SIDE_TEST_PACKAGE);
-
-        Thread.sleep(WAIT_TIME_SHORT);
+        return () -> {
+            getDevice().executeShellCommand(
+                    "am force-stop " + DEVICE_SIDE_TEST_PACKAGE);
+            Thread.sleep(WAIT_TIME_SHORT);
+        };
     }
 
     protected void resetBatteryStats() throws Exception {
