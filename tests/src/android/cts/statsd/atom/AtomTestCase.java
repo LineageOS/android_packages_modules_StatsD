@@ -20,8 +20,6 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAG
 
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
-import android.service.procstats.ProcessStatsPackageProto;
-import android.service.procstats.ProcessStatsProto;
 import android.service.procstats.ProcessStatsServiceDumpProto;
 
 import com.android.annotations.Nullable;
@@ -38,6 +36,9 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.ProcessStatsPackageProto;
+import com.android.os.AtomsProto.ProcessStatsProto;
+import com.android.os.AtomsProto.ProcessStatsStateProto;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.DurationMetricData;
@@ -327,10 +328,19 @@ public class AtomTestCase extends BaseTestCase {
 
     protected List<ProcessStatsProto> getProcStatsProto() throws Exception {
         try {
-            List<ProcessStatsProto> processStatsProtoList = getDump(
+
+            List<ProcessStatsProto> processStatsProtoList =
+                new ArrayList<ProcessStatsProto>();
+            android.service.procstats.ProcessStatsSectionProto sectionProto = getDump(
                     ProcessStatsServiceDumpProto.parser(),
                     String.join(" ", DUMP_PROCSTATS_CMD,
-                            "--proto")).getProcstatsNow().getProcessStatsList();
+                            "--proto")).getProcstatsNow();
+            for (android.service.procstats.ProcessStatsProto stats :
+                    sectionProto.getProcessStatsList()) {
+                ProcessStatsProto procStats = ProcessStatsProto.parser().parseFrom(
+                    stats.toByteArray());
+                processStatsProtoList.add(procStats);
+            }
             LogUtil.CLog.d("Got procstats:\n ");
             for (ProcessStatsProto processStatsProto : processStatsProtoList) {
                 LogUtil.CLog.d(processStatsProto.toString());
@@ -347,10 +357,18 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected List<ProcessStatsPackageProto> getAllProcStatsProto() throws Exception {
         try {
-            List<ProcessStatsPackageProto> processStatsProtoList = getDump(
+            android.service.procstats.ProcessStatsSectionProto sectionProto = getDump(
                     ProcessStatsServiceDumpProto.parser(),
                     String.join(" ", DUMP_PROCSTATS_CMD,
-                            "--proto")).getProcstatsOver24Hrs().getPackageStatsList();
+                            "--proto")).getProcstatsOver24Hrs();
+            List<ProcessStatsPackageProto> processStatsProtoList =
+                new ArrayList<ProcessStatsPackageProto>();
+            for (android.service.procstats.ProcessStatsPackageProto pkgStast :
+                sectionProto.getPackageStatsList()) {
+              ProcessStatsPackageProto pkgAtom =
+                  ProcessStatsPackageProto.parser().parseFrom(pkgStast.toByteArray());
+                processStatsProtoList.add(pkgAtom);
+            }
             LogUtil.CLog.d("Got procstats:\n ");
             for (ProcessStatsPackageProto processStatsProto : processStatsProtoList) {
                 LogUtil.CLog.d(processStatsProto.toString());
