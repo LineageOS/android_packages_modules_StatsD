@@ -19,12 +19,12 @@ import static org.junit.Assert.assertTrue;
 
 import android.cts.statsd.atom.ProcStateTestCase;
 import android.service.procstats.ProcessState;
-import android.service.procstats.ProcessStatsPackageProto;
-import android.service.procstats.ProcessStatsProto;
-import android.service.procstats.ProcessStatsStateProto;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.ProcessStatsPackageProto;
+import com.android.os.AtomsProto.ProcessStatsProto;
+import com.android.os.AtomsProto.ProcessStatsStateProto;
 import com.android.os.StatsLog.DimensionsValue;
 import com.android.os.StatsLog.DurationBucketInfo;
 import com.android.os.StatsLog.DurationMetricData;
