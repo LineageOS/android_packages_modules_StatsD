@@ -118,7 +118,7 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         for (EventMetricData event : data) {
             String tag = event.getAtom().getWakelockStateChanged().getTag();
-            WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getLevel();
+            WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getType();
             assertTrue("Expected tag: " + EXPECTED_TAG + ", but got tag: " + tag,
                     tag.equals(EXPECTED_TAG));
             assertTrue("Expected wakelock level: " + EXPECTED_LEVEL + ", but got level: " + type,
@@ -448,7 +448,7 @@ public class ValidationTests extends DeviceAtomTestCase {
             .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                 .setAtomId(atomTag)
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                    .setField(WakelockStateChanged.LEVEL_FIELD_NUMBER)
+                    .setField(WakelockStateChanged.TYPE_FIELD_NUMBER)
                     .setEqInt(WakeLockLevelEnum.PARTIAL_WAKE_LOCK_VALUE))
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
                     .setField(WakelockStateChanged.STATE_FIELD_NUMBER)
@@ -459,7 +459,7 @@ public class ValidationTests extends DeviceAtomTestCase {
             .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                 .setAtomId(atomTag)
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                    .setField(WakelockStateChanged.LEVEL_FIELD_NUMBER)
+                    .setField(WakelockStateChanged.TYPE_FIELD_NUMBER)
                     .setEqInt(WakeLockLevelEnum.PARTIAL_WAKE_LOCK_VALUE))
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
                     .setField(WakelockStateChanged.STATE_FIELD_NUMBER)
@@ -470,7 +470,7 @@ public class ValidationTests extends DeviceAtomTestCase {
             .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                 .setAtomId(atomTag)
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                    .setField(WakelockStateChanged.LEVEL_FIELD_NUMBER)
+                    .setField(WakelockStateChanged.TYPE_FIELD_NUMBER)
                     .setEqInt(WakeLockLevelEnum.PARTIAL_WAKE_LOCK_VALUE))
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
                     .setField(WakelockStateChanged.STATE_FIELD_NUMBER)
@@ -481,7 +481,7 @@ public class ValidationTests extends DeviceAtomTestCase {
             .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
                 .setAtomId(atomTag)
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                    .setField(WakelockStateChanged.LEVEL_FIELD_NUMBER)
+                    .setField(WakelockStateChanged.TYPE_FIELD_NUMBER)
                     .setEqInt(WakeLockLevelEnum.PARTIAL_WAKE_LOCK_VALUE))
                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
                     .setField(WakelockStateChanged.STATE_FIELD_NUMBER)
