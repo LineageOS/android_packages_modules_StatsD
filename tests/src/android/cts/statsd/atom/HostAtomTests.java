@@ -346,8 +346,8 @@ public class HostAtomTests extends AtomTestCase {
 
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
-        assertTrue(atom.getRemainingBatteryCapacity().hasChargeUAh());
-        assertTrue(atom.getRemainingBatteryCapacity().getChargeUAh() > 0);
+        assertTrue(atom.getRemainingBatteryCapacity().hasChargeMicroAmpereHour());
+        assertTrue(atom.getRemainingBatteryCapacity().getChargeMicroAmpereHour() > 0);
     }
 
     @RestrictedBuildTest
@@ -369,8 +369,8 @@ public class HostAtomTests extends AtomTestCase {
 
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
-        assertTrue(atom.getFullBatteryCapacity().hasCapacityUAh());
-        assertTrue(atom.getFullBatteryCapacity().getCapacityUAh() > 0);
+        assertTrue(atom.getFullBatteryCapacity().hasCapacityMicroAmpereHour());
+        assertTrue(atom.getFullBatteryCapacity().getCapacityMicroAmpereHour() > 0);
     }
 
     public void testBatteryVoltage() throws Exception {
@@ -391,8 +391,8 @@ public class HostAtomTests extends AtomTestCase {
 
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
-        assertTrue(atom.getBatteryVoltage().hasVoltageMV());
-        assertTrue(atom.getBatteryVoltage().getVoltageMV() > 0);
+        assertTrue(atom.getBatteryVoltage().hasVoltageMillivolt());
+        assertTrue(atom.getBatteryVoltage().getVoltageMillivolt() > 0);
     }
 
     public void testKernelWakelock() throws Exception {
@@ -415,7 +415,7 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getKernelWakelock().hasCount());
         assertTrue(atom.getKernelWakelock().hasVersion());
         assertTrue(atom.getKernelWakelock().getVersion() > 0);
-        assertTrue(atom.getKernelWakelock().hasTime());
+        assertTrue(atom.getKernelWakelock().hasTimeMicros());
     }
 
     // Returns true iff either |WAKE_LOCK_FILE| or |WAKE_SOURCES_FILE| exists.

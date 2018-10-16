@@ -123,7 +123,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                 LogUtil.CLog.d(p.toString());
                 for (ProcessStatsStateProto s : p.getStatesList()) {
                     if (s.getProcessState() == ProcessState.PROCESS_STATE_TOP) {
-                        durationInTopProcStats += s.getDurationMs();
+                        durationInTopProcStats += s.getDurationMillis();
                     }
                 }
             }
@@ -188,7 +188,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                 LogUtil.CLog.d(p.toString());
                 for (ProcessStatsStateProto s : p.getStatesList()) {
                     if (s.getProcessState() == ProcessState.PROCESS_STATE_CACHED_EMPTY) {
-                        durationInProcStats += s.getDurationMs();
+                        durationInProcStats += s.getDurationMillis();
                     }
                 }
             }
@@ -320,7 +320,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                         for (ProcessStatsStateProto state : process.getStatesList()) {
                             if (state.getProcessState()
                                     == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                                durationStatsd = state.getDurationMs();
+                                durationStatsd = state.getDurationMillis();
                                 pssAvgStatsd = state.getPss().getAverage();
                                 ussAvgStatsd = state.getUss().getAverage();
                                 rssAvgStatsd = state.getRss().getAverage();
@@ -345,7 +345,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                     for (ProcessStatsStateProto state : process.getStatesList()) {
                         if (state.getProcessState()
                                 == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                            durationProcstats = state.getDurationMs();
+                            durationProcstats = state.getDurationMillis();
                             pssAvgProcstats = state.getPss().getAverage();
                             ussAvgProcstats = state.getUss().getAverage();
                             rssAvgProcstats = state.getRss().getAverage();
@@ -423,7 +423,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                         for (ProcessStatsStateProto state : process.getStatesList()) {
                             if (state.getProcessState()
                                     == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                                durationStatsd = state.getDurationMs();
+                                durationStatsd = state.getDurationMillis();
                                 pssAvgStatsd = state.getPss().getAverage();
                                 ussAvgStatsd = state.getUss().getAverage();
                                 rssAvgStatsd = state.getRss().getAverage();
@@ -452,7 +452,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                     for (ProcessStatsStateProto state : process.getStatesList()) {
                         if (state.getProcessState()
                                 == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                            durationProcstats = state.getDurationMs();
+                            durationProcstats = state.getDurationMillis();
                             pssAvgProcstats = state.getPss().getAverage();
                             ussAvgProcstats = state.getUss().getAverage();
                             rssAvgProcstats = state.getRss().getAverage();

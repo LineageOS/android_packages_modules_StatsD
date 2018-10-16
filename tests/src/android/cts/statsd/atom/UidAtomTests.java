@@ -697,10 +697,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         for (EventMetricData event: data) {
             String tag = event.getAtom().getWakelockStateChanged().getTag();
-            WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getLevel();
+            WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getType();
             assertTrue("Expected tag: " + EXPECTED_TAG + ", but got tag: " + tag,
                     tag.equals(EXPECTED_TAG));
-            assertTrue("Expected wakelock level: " + EXPECTED_LEVEL  + ", but got level: " + type,
+            assertTrue("Expected wakelock type: " + EXPECTED_LEVEL  + ", but got level: " + type,
                     type == EXPECTED_LEVEL);
         }
     }
@@ -936,9 +936,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
             found = true;
             assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
-            assertTrue("oom_score should be positive", state.getOomScore() > 0);
-            assertTrue("pgfaults should not be negative", state.getPgfault() >= 0);
-            assertTrue("pgmfaults should not be negative", state.getPgmajfault() >= 0);
+            assertTrue("oom_score should be positive", state.getOomAdjScore() > 0);
+            assertTrue("pgfaults should not be negative", state.getPageFault() >= 0);
+            assertTrue("pgmfaults should not be negative", state.getPageMajorFault() >= 0);
             assertTrue("usage_in_bytes should be positive", state.getRssInBytes() > 0);
             assertTrue("cache_in_bytes should not be negative", state.getCacheInBytes() >= 0);
             assertTrue("swap_in_bytes should not be negative", state.getSwapInBytes() >= 0);
