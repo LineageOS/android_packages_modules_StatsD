@@ -898,6 +898,20 @@ public class UidAtomTests extends DeviceAtomTestCase {
                     assertTrue("Wrong cpu usage",
                             stats.getRecordedTotalCpuMicros() > 0
                                     && stats.getRecordedTotalCpuMicros() < 1000000);
+                    assertTrue("Wrong max latency",
+                            stats.getRecordedMaxLatencyMicros() > 0
+                                    && stats.getRecordedMaxLatencyMicros() < 1000000);
+                    assertTrue("Wrong max cpu usage",
+                            stats.getRecordedMaxCpuMicros() > 0
+                                    && stats.getRecordedMaxCpuMicros() < 1000000);
+                    assertTrue("Recorded delay message count should be non-negative.",
+                            stats.getRecordedDelayMessageCount() > 0);
+                    assertTrue("Wrong delay",
+                            stats.getRecordedTotalDelayMillis() >= 0
+                                    && stats.getRecordedTotalDelayMillis() < 5000);
+                    assertTrue("Wrong max delay",
+                            stats.getRecordedMaxDelayMillis() >= 0
+                                    && stats.getRecordedMaxDelayMillis() < 5000);
                 }
             }
             assertTrue("Did not find a matching atom for uid " + uid, found);
