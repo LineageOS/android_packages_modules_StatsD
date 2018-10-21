@@ -229,7 +229,7 @@ public class AtomTestCase extends BaseTestCase {
         assertTrue("Only one report expected", reportList.getReportsCount() == 1);
         // only config
         ConfigMetricsReport report = reportList.getReports(0);
-        assertTrue("Only one metric expected", report.getMetricsCount() == 1);
+        assertEquals("Only one metric expected in the report", 1, report.getMetricsCount());
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData :

@@ -41,6 +41,7 @@ import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
+import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryState;
@@ -951,16 +952,51 @@ public class UidAtomTests extends DeviceAtomTestCase {
             found = true;
             assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
             assertTrue("oom_score should be positive", state.getOomAdjScore() > 0);
-            assertTrue("pgfaults should not be negative", state.getPageFault() >= 0);
-            assertTrue("pgmfaults should not be negative", state.getPageMajorFault() >= 0);
-            assertTrue("usage_in_bytes should be positive", state.getRssInBytes() > 0);
+            assertTrue("page_fault should not be negative", state.getPageFault() >= 0);
+            assertTrue("page_major_fault should not be negative", state.getPageMajorFault() >= 0);
+            assertTrue("rss_in_bytes should be positive", state.getRssInBytes() > 0);
             assertTrue("cache_in_bytes should not be negative", state.getCacheInBytes() >= 0);
             assertTrue("swap_in_bytes should not be negative", state.getSwapInBytes() >= 0);
             assertTrue("rss_high_watermark_in_bytes should be positive",
                     state.getRssHighWatermarkInBytes() > 0);
-            assertTrue("rss_high_watermark_in_bytes should not be smaller than usage_in_bytes",
+            assertTrue("rss_high_watermark_in_bytes should not be smaller than rss_in_bytes",
                     state.getRssHighWatermarkInBytes() >= state.getRssInBytes());
         }
         assertTrue("Did not find a matching atom for uid=" + uid, found);
+    }
+
+    public void testNativeProcessMemoryState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Get NativeProcessState as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.NATIVE_PROCESS_MEMORY_STATE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Trigger new pull.
+        setAppBreadcrumbPredicate();
+
+        // Assert about NativeProcessMemoryState for statsd.
+        List<Atom> atoms = getGaugeMetricDataList();
+        boolean found = false;
+        for (Atom atom : atoms) {
+            NativeProcessMemoryState state = atom.getNativeProcessMemoryState();
+            if (!state.getProcessName().contains("/statsd")) {
+                continue;
+            }
+            found = true;
+            assertTrue("uid is below 10000", state.getUid() < 10000);
+            assertTrue("page_fault should not be negative", state.getPageFault() >= 0);
+            assertTrue("page_major_fault should not be negative", state.getPageMajorFault() >= 0);
+            assertTrue("rss_in_bytes should be positive", state.getRssInBytes() > 0);
+            assertTrue("rss_high_watermark_in_bytes should be positive",
+                    state.getRssHighWatermarkInBytes() > 0);
+            assertTrue("rss_high_watermark_in_bytes should not be smaller than rss_in_bytes",
+                    state.getRssHighWatermarkInBytes() >= state.getRssInBytes());
+        }
+        assertTrue("Did not find a matching atom for statsd", found);
     }
 }
