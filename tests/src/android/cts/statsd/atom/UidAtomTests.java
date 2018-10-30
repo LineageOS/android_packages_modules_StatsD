@@ -996,6 +996,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
                     state.getRssHighWatermarkInBytes() > 0);
             assertTrue("rss_high_watermark_in_bytes should not be smaller than rss_in_bytes",
                     state.getRssHighWatermarkInBytes() >= state.getRssInBytes());
+            assertTrue("start_time_nanos should be positive", state.getStartTimeNanos() > 0);
+            assertTrue("start_time_nanos should be in the past",
+                    state.getStartTimeNanos() < System.nanoTime());
         }
         assertTrue("Did not find a matching atom for statsd", found);
     }
