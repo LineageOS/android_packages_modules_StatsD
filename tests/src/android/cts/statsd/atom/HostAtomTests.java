@@ -26,6 +26,7 @@ import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.AtomsProto.ConnectivityStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 
 import java.util.Arrays;
@@ -513,5 +514,40 @@ public class HostAtomTests extends AtomTestCase {
         AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
         assertTrue(atom.getLabel() == 1);
         assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+    }
+
+    public void testConnectivityStateChange() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+
+        final int atomTag = Atom.CONNECTIVITY_STATE_CHANGED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        turnOnAirplaneMode();
+        turnOffAirplaneMode();
+        // wait for long enough for device to restore connection
+        Thread.sleep(10_000);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        // at least 1 disconnect and 1 connect
+        assertTrue(data.size() >= 2);
+        boolean foundDisconnectEvent = false;
+        boolean foundConnectEvent = false;
+        for (EventMetricData d : data) {
+            ConnectivityStateChanged atom = d.getAtom().getConnectivityStateChanged();
+            if(atom.getState().getNumber()
+                    == ConnectivityStateChanged.State.DISCONNECTED_VALUE) {
+                foundDisconnectEvent = true;
+            }
+            if(atom.getState().getNumber()
+                    == ConnectivityStateChanged.State.CONNECTED_VALUE) {
+                foundConnectEvent = true;
+            }
+        }
+        assertTrue(foundConnectEvent && foundDisconnectEvent);
     }
 }
