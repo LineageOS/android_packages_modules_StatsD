@@ -70,6 +70,12 @@ import java.util.function.Function;
  */
 public class AtomTestCase extends BaseTestCase {
 
+    /**
+     * Run tests that are optional; they are not valid CTS tests per se, since not all devices can
+     * be expected to pass them, but can be run, if desired, to ensure they work when appropriate.
+     */
+    public static final boolean OPTIONAL_TESTS_ENABLED = false;
+
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
     public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
