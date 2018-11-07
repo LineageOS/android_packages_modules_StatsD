@@ -19,6 +19,7 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
 import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
 
 import android.os.BatteryStatsProto;
+import android.os.StatsDataDumpProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.service.procstats.ProcessStatsServiceDumpProto;
 
@@ -73,9 +74,9 @@ public class AtomTestCase extends BaseTestCase {
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
     public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
+    public static final String DUMPSYS_STATS_CMD = "dumpsys stats";
     public static final String DUMP_PROCSTATS_CMD = "dumpsys procstats";
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
-    public static final String CONFIG_UID = "1000";
     /** ID of the config, which evaluates to -1572883457. */
     public static final long CONFIG_ID = "cts_config".hashCode();
 
@@ -208,6 +209,15 @@ public class AtomTestCase extends BaseTestCase {
     /** Gets the statsd report and sorts it. Note that this also deletes that report from statsd. */
     protected List<EventMetricData> getEventMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
+        return getEventMetricDataList(reportList);
+    }
+
+    /**
+     * Extracts and sorts the EventMetricData from the given ConfigMetricsReportList (which must
+     * contain a single report).
+     */
+    protected List<EventMetricData> getEventMetricDataList(ConfigMetricsReportList reportList)
+            throws Exception {
         assertTrue("Expected one report", reportList.getReportsCount() == 1);
         ConfigMetricsReport report = reportList.getReports(0);
 
@@ -308,7 +318,7 @@ public class AtomTestCase extends BaseTestCase {
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
             LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
                     + "Perhaps there is not a valid statsd config for the requested "
-                    + "uid=" + CONFIG_UID + ", id=" + CONFIG_ID + ".");
+                    + "uid=" + getHostUid() + ", id=" + CONFIG_ID + ".");
             throw (e);
         }
     }
@@ -322,6 +332,25 @@ public class AtomTestCase extends BaseTestCase {
             return batteryStatsProto;
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
             LogUtil.CLog.e("Failed to dump batterystats proto");
+            throw (e);
+        }
+    }
+
+    /** Gets reports from the statsd data incident section from the stats dumpsys. */
+    protected List<ConfigMetricsReportList> getReportsFromStatsDataDumpProto() throws Exception {
+        try {
+            StatsDataDumpProto statsProto = getDump(StatsDataDumpProto.parser(),
+                    String.join(" ", DUMPSYS_STATS_CMD, "--proto"));
+            // statsProto holds repeated bytes, which we must parse into ConfigMetricsReportLists.
+            List<ConfigMetricsReportList> reports
+                    = new ArrayList<>(statsProto.getConfigMetricsReportListCount());
+            for (ByteString reportListBytes : statsProto.getConfigMetricsReportListList()) {
+                reports.add(ConfigMetricsReportList.parseFrom(reportListBytes));
+            }
+            LogUtil.CLog.d("Got dumpsys stats output:\n " + reports.toString());
+            return reports;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dumpsys stats proto");
             throw (e);
         }
     }
