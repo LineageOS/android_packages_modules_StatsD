@@ -87,10 +87,19 @@ public class AtomTestCase extends BaseTestCase {
     /** ID of the config, which evaluates to -1572883457. */
     public static final long CONFIG_ID = "cts_config".hashCode();
 
+    public static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
     public static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
-    public static final String FEATURE_WIFI = "android.hardware.wifi";
+    public static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
+    public static final String FEATURE_CAMERA = "android.hardware.camera";
+    public static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
+    public static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
+    public static final String FEATURE_LEANBACK_ONLY = "android.software.leanback_only";
+    public static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
+    public static final String FEATURE_PC = "android.hardware.type.pc";
+    public static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
     public static final String FEATURE_TELEPHONY = "android.hardware.telephony";
     public static final String FEATURE_WATCH = "android.hardware.type.watch";
+    public static final String FEATURE_WIFI = "android.hardware.wifi";
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
@@ -248,15 +257,15 @@ public class AtomTestCase extends BaseTestCase {
 
     protected List<Atom> getGaugeMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Only one report expected", reportList.getReportsCount() == 1);
+        assertTrue("Expected one report.", reportList.getReportsCount() == 1);
         // only config
         ConfigMetricsReport report = reportList.getReports(0);
-        assertEquals("Only one metric expected in the report", 1, report.getMetricsCount());
+        assertEquals("Expected one metric in the report.", 1, report.getMetricsCount());
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData :
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
-            assertTrue("Only one bucket expected", gaugeMetricData.getBucketInfoCount() == 1);
+            assertTrue("Expected one bucket.", gaugeMetricData.getBucketInfoCount() == 1);
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }

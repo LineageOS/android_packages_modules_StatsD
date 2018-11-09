@@ -36,6 +36,8 @@ import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
+import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
+import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
@@ -68,23 +70,17 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.UidAtomTests";
 
-    // These constants are those in PackageManager.
-    private static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
-    private static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
-    private static final String FEATURE_WIFI = "android.hardware.wifi";
-    private static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
-    private static final String FEATURE_CAMERA = "android.hardware.camera";
-    private static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
-    private static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
-    private static final String FEATURE_WATCH = "android.hardware.type.watch";
-    private static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
-    private static final String FEATURE_PC = "android.hardware.type.pc";
-
     private static final boolean DAVEY_ENABLED = false;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        resetBatteryStatus();
+        super.tearDown();
     }
 
     public void testAppCrashOccurred() throws Exception {
@@ -337,6 +333,62 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         assertTrue(timeSpent > 0);
         assertTrue("found uid " + uid, found);
+    }
+
+    public void testDeviceCalculatedPowerUse() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_USE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        unplugDevice();
+
+        Thread.sleep(WAIT_TIME_LONG);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        Atom atom = getGaugeMetricDataList().get(0);
+        assertTrue(atom.getDeviceCalculatedPowerUse().getComputedPowerMilliAmpHours() > 0);
+    }
+
+
+    public void testDeviceCalculatedPowerBlameUid() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config,
+                Atom.DEVICE_CALCULATED_POWER_BLAME_UID_FIELD_NUMBER, null);
+        uploadConfig(config);
+        unplugDevice();
+
+        Thread.sleep(WAIT_TIME_LONG);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> atomList = getGaugeMetricDataList();
+        boolean uidFound = false;
+        int uid = getUid();
+        float uidPower = 0;
+        for (Atom atom : atomList) {
+            DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
+                if (item.getUid() == uid) {
+                assertFalse("Found multiple power values for uid " + uid, uidFound);
+                uidFound = true;
+                uidPower = item.getPowerMilliAmpHours();
+            }
+        }
+        assertTrue("No power value for uid " + uid, uidFound);
+        assertTrue("Non-positive power value for uid " + uid, uidPower > 0);
     }
 
     public void testDavey() throws Exception {

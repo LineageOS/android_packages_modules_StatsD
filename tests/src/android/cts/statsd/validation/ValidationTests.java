@@ -289,7 +289,6 @@ public class ValidationTests extends DeviceAtomTestCase {
         //         ". Received " + expectedWakelocks.size(), expectedWakelocks.size(), NUM_THREADS);
     }
 
-
     // Helper functions
     // TODO: Refactor these into some utils class.
 

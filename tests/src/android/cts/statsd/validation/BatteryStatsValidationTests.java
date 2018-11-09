@@ -16,11 +16,16 @@
 package android.cts.statsd.validation;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
-import android.cts.statsd.atom.AtomTestCase;
+import android.cts.statsd.atom.DeviceAtomTestCase;
 import android.os.BatteryStatsProto;
+import android.os.UidProto;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
+import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
+import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
 import com.android.os.StatsLog.CountMetricData;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.log.LogUtil.CLog;
@@ -30,7 +35,7 @@ import java.util.List;
 /**
  * Side-by-side comparison between statsd and batterystats.
  */
-public class BatteryStatsValidationTests extends AtomTestCase {
+public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.BatteryStatsValidationTests";
 
@@ -68,5 +73,102 @@ public class BatteryStatsValidationTests extends AtomTestCase {
         assertTrue(countMetricData.get(0).getBucketInfo(0).getCount() > 0);
         assertEquals(batterystatsProto.getSystem().getMisc().getNumConnectivityChanges(),
                 countMetricData.get(0).getBucketInfo(0).getCount());
+    }
+
+    public void testPowerUse() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+        resetBatteryStats();
+        unplugDevice();
+
+        final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.8; // ratio that statsd and bs can differ
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_USE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        unplugDevice();
+
+        Thread.sleep(WAIT_TIME_LONG);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+        Thread.sleep(WAIT_TIME_LONG);
+
+        setAppBreadcrumbPredicate();
+        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
+        Thread.sleep(WAIT_TIME_LONG);
+        List<Atom> atomList = getGaugeMetricDataList();
+
+        // Extract statsd data
+        Atom atom = atomList.get(0);
+        float statsdPower = atom.getDeviceCalculatedPowerUse().getComputedPowerMilliAmpHours();
+        assertTrue("Statsd: Non-positive power value.", statsdPower > 0);
+
+        // Extract BatteryStats data
+        double bsPower = batterystatsProto.getSystem().getPowerUseSummary().getComputedPowerMah();
+        assertTrue("BatteryStats: Non-positive power value.", bsPower > 0);
+
+        assertTrue(String.format("Statsd (%f) < Batterystats (%f)", statsdPower, bsPower),
+                statsdPower > ALLOWED_FRACTIONAL_DIFFERENCE * bsPower);
+        assertTrue(String.format("Batterystats (%f) < Statsd (%f)", bsPower, statsdPower),
+                bsPower > ALLOWED_FRACTIONAL_DIFFERENCE * statsdPower);
+    }
+
+    public void testPowerBlameUid() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+        resetBatteryStats();
+        unplugDevice();
+
+        final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.8; // ratio that statsd and bs can differ
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_BLAME_UID_FIELD_NUMBER,
+                null);
+        uploadConfig(config);
+        unplugDevice();
+
+        Thread.sleep(WAIT_TIME_LONG);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
+        Thread.sleep(WAIT_TIME_LONG);
+
+        setAppBreadcrumbPredicate();
+        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
+        Thread.sleep(WAIT_TIME_LONG);
+        List<Atom> atomList = getGaugeMetricDataList();
+
+        // Extract statsd data
+        boolean uidFound = false;
+        int uid = getUid();
+        float statsdUidPower = 0;
+        for (Atom atom : atomList) {
+            DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
+            if (item.getUid() == uid) {
+                assertFalse("Found multiple power values for uid " + uid, uidFound);
+                uidFound = true;
+                statsdUidPower = item.getPowerMilliAmpHours();
+            }
+        }
+        assertTrue("Statsd: No power value for uid " + uid, uidFound);
+        assertTrue("Statsd: Non-positive power value for uid " + uid, statsdUidPower > 0);
+
+        // Extract batterystats data
+        double bsUidPower = -1;
+        boolean hadUid = false;
+        for (UidProto uidProto : batterystatsProto.getUidsList()) {
+            if (uidProto.getUid() == uid) {
+                hadUid = true;
+                bsUidPower = uidProto.getPowerUseItem().getComputedPowerMah();
+            }
+        }
+        assertTrue("Batterystats: No power value for uid " + uid, hadUid);
+        assertTrue("BatteryStats: Non-positive power value for uid " + uid, bsUidPower > 0);
+
+        assertTrue(String.format("Statsd (%f) < Batterystats (%f).", statsdUidPower, bsUidPower),
+                statsdUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * bsUidPower);
+        assertTrue(String.format("Batterystats (%f) < Statsd (%f).", bsUidPower, statsdUidPower),
+                bsUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * statsdUidPower);
     }
 }
