@@ -862,4 +862,11 @@ public class AtomTestCase extends BaseTestCase {
         return getDevice().doesFileExist(file);
     }
 
+    protected void turnOnAirplaneMode() throws Exception {
+        getDevice().executeShellCommand("cmd connectivity airplane-mode enable");
+    }
+
+    protected void turnOffAirplaneMode() throws Exception {
+        getDevice().executeShellCommand("cmd connectivity airplane-mode disable");
+    }
 }
