@@ -457,6 +457,29 @@ public class HostAtomTests extends AtomTestCase {
         }
     }
 
+    public void testOnDevicePowerMeasurement() throws Exception {
+        if (!OPTIONAL_TESTS_ENABLED) return;
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.ON_DEVICE_POWER_MEASUREMENT_FIELD_NUMBER, null);
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> dataList = getGaugeMetricDataList();
+
+        for (Atom atom: dataList) {
+            assertTrue(atom.getOnDevicePowerMeasurement().getMeasurementTimestampMillis() >= 0);
+            assertTrue(atom.getOnDevicePowerMeasurement().getEnergyMicrowattSecs() >= 0);
+        }
+    }
+
     // Explicitly tests if the adb command to log a breadcrumb is working.
     public void testBreadcrumbAdb() throws Exception {
         if (statsdDisabled()) {

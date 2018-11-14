@@ -242,7 +242,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                     && dimensionsValuesInWhat.get(1).getValueStr().equals(statsdPkgName)) {
                 LogUtil.CLog.d(d.toString());
                 for (ValueBucketInfo bucket : d.getBucketInfoList()) {
-                    valueInStatsd = Math.max(bucket.getValueLong(), valueInStatsd);
+                    valueInStatsd = Math.max(bucket.getValues(0).getValueLong(), valueInStatsd);
                 }
             }
         }

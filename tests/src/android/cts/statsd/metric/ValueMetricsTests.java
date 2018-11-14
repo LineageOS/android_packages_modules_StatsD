@@ -113,7 +113,9 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
       MetricsUtils.assertBucketTimePresent(bucketInfo);
-      totalValue += (int) bucketInfo.getValueLong();
+      assertEquals(1, bucketInfo.getValuesCount());
+      assertEquals(0, bucketInfo.getValues(0).getIndex());
+      totalValue += (int) bucketInfo.getValues(0).getValueLong();
     }
     assertEquals(totalValue, 8);
   }
@@ -190,7 +192,9 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
       MetricsUtils.assertBucketTimePresent(bucketInfo);
-      totalValue += (int) bucketInfo.getValueLong();
+      assertEquals(1, bucketInfo.getValuesCount());
+      assertEquals(0, bucketInfo.getValues(0).getIndex());
+      totalValue += (int) bucketInfo.getValues(0).getValueLong();
     }
     // At most we lose one full min bucket
     assertTrue(totalValue > (130_000 - 60_000));
@@ -272,7 +276,9 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     int totalValue = 0;
     for (ValueBucketInfo bucketInfo : data.getBucketInfoList()) {
       MetricsUtils.assertBucketTimePresent(bucketInfo);
-      totalValue += (int) bucketInfo.getValueLong();
+      assertEquals(1, bucketInfo.getValuesCount());
+      assertEquals(0, bucketInfo.getValues(0).getIndex());
+      totalValue += (int) bucketInfo.getValues(0).getValueLong();
     }
     // At most we lose one full min bucket
     assertTrue(totalValue > (GAP_INTERVAL*NUM_EVENTS - 60_000));
