@@ -50,22 +50,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
 
     private static final int EXTRA_WAIT_TIME_MS = 1_000; // as buffer when proc state changing.
 
-    private StatsdConfig getConfig(String fileName) throws IOException {
-        try {
-            // TODO: Ideally, we should use real metrics that are also pushed to the fleet.
-            File configFile = getBuildHelper().getTestFile(fileName);
-            String configStr = FileUtil.readStringFromFile(configFile);
-            StatsdConfig.Builder builder = StatsdConfig.newBuilder();
-            TextFormat.merge(configStr, builder);
-            return builder.build();
-        } catch (ParseException e) {
-            LogUtil.CLog.e(
-                    "Failed to parse the config! line: " + e.getLine() + " col: " + e.getColumn(),
-                    e);
-        }
-        return null;
-    }
-
     // Test process state top duration for test package.
     // TODO: replace this with exclusive state for all states when statsd features are added
     public void testProcessStateTopDuration() throws Exception {
@@ -73,7 +57,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_TOP_DURATION.pbtxt";
-        StatsdConfig config = getConfig(fileName);
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -138,7 +122,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_CACHED_EMPTY_DURATION.pbtxt";
-        StatsdConfig config = getConfig(fileName);
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -203,7 +187,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_PSS_VALUE.pbtxt";
-        StatsdConfig config = getConfig(fileName);
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -293,7 +277,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         final String fileName = "PROCSTATSQ_PULL.pbtxt";
-        StatsdConfig config = getConfig(fileName);
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -396,7 +380,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         final String fileName = "PROCSTATSQ_PULL_PKG_PROC.pbtxt";
-        StatsdConfig config = getConfig(fileName);
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);

@@ -45,6 +45,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
+import com.android.os.StatsLog.CountMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.device.DeviceNotAvailableException;
@@ -85,6 +86,11 @@ public class AtomTestCase extends BaseTestCase {
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     /** ID of the config, which evaluates to -1572883457. */
     public static final long CONFIG_ID = "cts_config".hashCode();
+
+    public static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
+    public static final String FEATURE_WIFI = "android.hardware.wifi";
+    public static final String FEATURE_TELEPHONY = "android.hardware.telephony";
+    public static final String FEATURE_WATCH = "android.hardware.type.watch";
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
@@ -280,6 +286,27 @@ public class AtomTestCase extends BaseTestCase {
         LogUtil.CLog.d("Got DurationMetricDataList as following:\n");
         for (DurationMetricData d : data) {
             LogUtil.CLog.d("Duration " + d);
+        }
+        return data;
+    }
+
+    /**
+     * Gets the statsd report and extract count metric data.
+     * Note that this also deletes that report from statsd.
+     */
+    protected List<CountMetricData> getCountMetricDataList() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<CountMetricData> data = new ArrayList<>();
+        for (StatsLogReport metric : report.getMetricsList()) {
+            data.addAll(metric.getCountMetrics().getDataList());
+        }
+
+        LogUtil.CLog.d("Got CountMetricDataList as following:\n");
+        for (CountMetricData d : data) {
+            LogUtil.CLog.d("Count " + d);
         }
         return data;
     }
