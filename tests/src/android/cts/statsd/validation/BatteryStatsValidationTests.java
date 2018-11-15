@@ -15,17 +15,19 @@
  */
 package android.cts.statsd.validation;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import android.cts.statsd.atom.DeviceAtomTestCase;
 import android.os.BatteryStatsProto;
 import android.os.UidProto;
+import android.os.UidProto.Package;
+import android.os.UidProto.Package.Service;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
-import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
+import com.android.os.StatsLog.DimensionsValue;
 import com.android.os.StatsLog.CountMetricData;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.log.LogUtil.CLog;
@@ -70,7 +72,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         List<CountMetricData> countMetricData = getCountMetricDataList();
         assertEquals(1, countMetricData.size());
         assertEquals(1, countMetricData.get(0).getBucketInfoCount());
-        assertTrue(countMetricData.get(0).getBucketInfo(0).getCount() > 0);
+        assertTrue(countMetricData.get(0).getBucketInfo(0).getCount() >= 2);
         assertEquals(batterystatsProto.getSystem().getMisc().getNumConnectivityChanges(),
                 countMetricData.get(0).getBucketInfo(0).getCount());
     }
@@ -170,5 +172,93 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
                 statsdUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * bsUidPower);
         assertTrue(String.format("Batterystats (%f) < Statsd (%f).", bsUidPower, statsdUidPower),
                 bsUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * statsdUidPower);
+    }
+
+    public void testServiceStartCount() throws Exception {
+        final String fileName = "BATTERYSTATS_SERVICE_START_COUNT.pbtxt";
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        LogUtil.CLog.d("Updating the following config:\n" + config.toString());
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testForegroundService");
+
+        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
+        List<CountMetricData> countMetricData = getCountMetricDataList();
+        assertTrue(countMetricData.size() > 0);
+        int uid = getUid();
+        long countFromStatsd = 0;
+        for (CountMetricData data : countMetricData) {
+            List<DimensionsValue> dims = data.getDimensionLeafValuesInWhatList();
+            if (dims.get(0).getValueInt() == uid) {
+                assertEquals(DEVICE_SIDE_TEST_PACKAGE, dims.get(1).getValueStr());
+                assertEquals(dims.get(2).getValueStr(), DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME);
+                countFromStatsd = data.getBucketInfo(0).getCount();
+                assertTrue(countFromStatsd > 0);
+            }
+        }
+        long countFromBS = 0;
+        for (UidProto uidProto : batterystatsProto.getUidsList()) {
+            if (uidProto.getUid() == uid) {
+                for (Package pkg : uidProto.getPackagesList()) {
+                    if (pkg.getName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
+                        for (Service svc : pkg.getServicesList()) {
+                            if (svc.getName().equals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME)) {
+                                countFromBS = svc.getStartCount();
+                                assertTrue(countFromBS > 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(countFromStatsd > 0);
+        assertTrue(countFromBS > 0);
+        assertEquals(countFromBS, countFromStatsd);
+    }
+
+    public void testServiceLaunchCount() throws Exception {
+        final String fileName = "BATTERYSTATS_SERVICE_LAUNCH_COUNT.pbtxt";
+        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        LogUtil.CLog.d("Updating the following config:\n" + config.toString());
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testForegroundService");
+
+        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
+        List<CountMetricData> countMetricData = getCountMetricDataList();
+        assertTrue(countMetricData.size() > 0);
+        int uid = getUid();
+        long countFromStatsd = 0;
+        for (CountMetricData data : countMetricData) {
+            List<DimensionsValue> dims = data.getDimensionLeafValuesInWhatList();
+            if (dims.get(0).getValueInt() == uid) {
+                assertEquals(DEVICE_SIDE_TEST_PACKAGE, dims.get(1).getValueStr());
+                assertEquals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME, dims.get(2).getValueStr());
+                countFromStatsd = data.getBucketInfo(0).getCount();
+                assertTrue(countFromStatsd > 0);
+            }
+        }
+        long countFromBS = 0;
+        for (UidProto uidProto : batterystatsProto.getUidsList()) {
+            if (uidProto.getUid() == uid) {
+                for (Package pkg : uidProto.getPackagesList()) {
+                    if (pkg.getName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
+                        for (Service svc : pkg.getServicesList()) {
+                            if (svc.getName().equals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME)) {
+                                countFromBS = svc.getLaunchCount();
+                                assertTrue(countFromBS > 0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        assertTrue(countFromStatsd > 0);
+        assertTrue(countFromBS > 0);
+        assertEquals(countFromBS, countFromStatsd);
     }
 }
