@@ -45,6 +45,7 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeMetricData;
+import com.android.os.StatsLog.CountMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.device.DeviceNotAvailableException;
@@ -85,6 +86,20 @@ public class AtomTestCase extends BaseTestCase {
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     /** ID of the config, which evaluates to -1572883457. */
     public static final long CONFIG_ID = "cts_config".hashCode();
+
+    public static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
+    public static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
+    public static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
+    public static final String FEATURE_CAMERA = "android.hardware.camera";
+    public static final String FEATURE_CAMERA_FLASH = "android.hardware.camera.flash";
+    public static final String FEATURE_CAMERA_FRONT = "android.hardware.camera.front";
+    public static final String FEATURE_LEANBACK_ONLY = "android.software.leanback_only";
+    public static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
+    public static final String FEATURE_PC = "android.hardware.type.pc";
+    public static final String FEATURE_PICTURE_IN_PICTURE = "android.software.picture_in_picture";
+    public static final String FEATURE_TELEPHONY = "android.hardware.telephony";
+    public static final String FEATURE_WATCH = "android.hardware.type.watch";
+    public static final String FEATURE_WIFI = "android.hardware.wifi";
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
@@ -242,15 +257,15 @@ public class AtomTestCase extends BaseTestCase {
 
     protected List<Atom> getGaugeMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Only one report expected", reportList.getReportsCount() == 1);
+        assertTrue("Expected one report.", reportList.getReportsCount() == 1);
         // only config
         ConfigMetricsReport report = reportList.getReports(0);
-        assertEquals("Only one metric expected in the report", 1, report.getMetricsCount());
+        assertEquals("Expected one metric in the report.", 1, report.getMetricsCount());
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData :
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
-            assertTrue("Only one bucket expected", gaugeMetricData.getBucketInfoCount() == 1);
+            assertTrue("Expected one bucket.", gaugeMetricData.getBucketInfoCount() == 1);
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }
@@ -280,6 +295,27 @@ public class AtomTestCase extends BaseTestCase {
         LogUtil.CLog.d("Got DurationMetricDataList as following:\n");
         for (DurationMetricData d : data) {
             LogUtil.CLog.d("Duration " + d);
+        }
+        return data;
+    }
+
+    /**
+     * Gets the statsd report and extract count metric data.
+     * Note that this also deletes that report from statsd.
+     */
+    protected List<CountMetricData> getCountMetricDataList() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        ConfigMetricsReport report = reportList.getReports(0);
+
+        List<CountMetricData> data = new ArrayList<>();
+        for (StatsLogReport metric : report.getMetricsList()) {
+            data.addAll(metric.getCountMetrics().getDataList());
+        }
+
+        LogUtil.CLog.d("Got CountMetricDataList as following:\n");
+        for (CountMetricData d : data) {
+            LogUtil.CLog.d("Count " + d);
         }
         return data;
     }

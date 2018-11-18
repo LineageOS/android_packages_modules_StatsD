@@ -30,13 +30,15 @@ import java.util.List;
  */
 public class DeviceAtomTestCase extends AtomTestCase {
 
-    protected static final String DEVICE_SIDE_TEST_APK = "CtsStatsdApp.apk";
-    protected static final String DEVICE_SIDE_TEST_PACKAGE =
+    public static final String DEVICE_SIDE_TEST_APK = "CtsStatsdApp.apk";
+    public static final String DEVICE_SIDE_TEST_PACKAGE =
             "com.android.server.cts.device.statsd";
-    protected static final long DEVICE_SIDE_TEST_PKG_HASH =
+    public static final String DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME =
+            "com.android.server.cts.device.statsd.StatsdCtsForegroundService";
+    public static final long DEVICE_SIDE_TEST_PKG_HASH =
             Long.parseUnsignedLong("15694052924544098582");
 
-    protected static final String CONFIG_NAME = "cts_config";
+    public static final String CONFIG_NAME = "cts_config";
 
     @Override
     protected void setUp() throws Exception {

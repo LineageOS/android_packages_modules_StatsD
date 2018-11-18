@@ -26,11 +26,8 @@ LOCAL_MODULE := CtsStatsdHostTestCases
 
 LOCAL_JAVA_LIBRARIES := cts-tradefed tradefed compatibility-host-util host-libprotobuf-java-full platformprotos
 
-LOCAL_COMPATIBILITY_SUPPORT_FILES := $(LOCAL_PATH)/PROCSTATSQ_PROCS_STATE_TOP_DURATION.pbtxt \
-	$(LOCAL_PATH)/PROCSTATSQ_PROCS_STATE_CACHED_EMPTY_DURATION.pbtxt \
-	$(LOCAL_PATH)/PROCSTATSQ_PROCS_STATE_PSS_VALUE.pbtxt \
-	$(LOCAL_PATH)/PROCSTATSQ_PULL.pbtxt \
-	$(LOCAL_PATH)/PROCSTATSQ_PULL_PKG_PROC.pbtxt
+LOCAL_COMPATIBILITY_SUPPORT_FILES := \
+	$(foreach file, $(call find-subdir-files, *.pbtxt), $(LOCAL_PATH)/$(file))
 
 include $(BUILD_HOST_JAVA_LIBRARY)
 

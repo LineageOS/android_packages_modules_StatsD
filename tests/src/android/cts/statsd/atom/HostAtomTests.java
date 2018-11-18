@@ -41,11 +41,6 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.HostAtomTests";
 
-    private static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
-    private static final String FEATURE_WIFI = "android.hardware.wifi";
-    private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
-    private static final String FEATURE_WATCH = "android.hardware.type.watch";
-
     // Either file must exist to read kernel wake lock stats.
     private static final String WAKE_LOCK_FILE = "/proc/wakelocks";
     private static final String WAKE_SOURCES_FILE = "/d/wakeup_sources";
