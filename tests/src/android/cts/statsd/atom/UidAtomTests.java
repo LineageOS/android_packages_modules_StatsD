@@ -47,6 +47,7 @@ import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryState;
+import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.VibratorStateChanged;
@@ -1053,5 +1054,51 @@ public class UidAtomTests extends DeviceAtomTestCase {
                     state.getStartTimeNanos() < System.nanoTime());
         }
         assertTrue("Did not find a matching atom for statsd", found);
+    }
+
+    public void testProcessMemoryHighWaterMark() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Get ProcessMemoryState as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_HIGH_WATER_MARK_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Start test app and trigger a pull while its running.
+        try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
+                "action.show_notification")) {
+            setAppBreadcrumbPredicate();
+        }
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Assert about ProcessMemoryHighWaterMark for the test app, statsd and system server.
+        List<Atom> atoms = getGaugeMetricDataList();
+        int uid = getUid();
+        boolean foundTestApp = false;
+        boolean foundStatsd = false;
+        boolean foundSystemServer = false;
+        for (Atom atom : atoms) {
+            ProcessMemoryHighWaterMark state = atom.getProcessMemoryHighWaterMark();
+            if (state.getUid() == uid) {
+                foundTestApp = true;
+                assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
+                assertTrue("rss_high_water_mark_in_bytes should be positive",
+                        state.getRssHighWaterMarkInBytes() > 0);
+            } else if (state.getProcessName().contains("/statsd")) {
+                foundStatsd = true;
+                assertTrue("rss_high_water_mark_in_bytes should be positive",
+                        state.getRssHighWaterMarkInBytes() > 0);
+            } else if (state.getProcessName().equals("system")) {
+                foundSystemServer = true;
+                assertTrue("rss_high_water_mark_in_bytes should be positive",
+                        state.getRssHighWaterMarkInBytes() > 0);
+            }
+        }
+        assertTrue("Did not find a matching atom for test app uid=" + uid, foundTestApp);
+        assertTrue("Did not find a matching atom for statsd", foundStatsd);
+        assertTrue("Did not find a matching atom for system server", foundSystemServer);
     }
 }
