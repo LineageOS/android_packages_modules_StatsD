@@ -565,7 +565,7 @@ public class AtomTestCase extends BaseTestCase {
             @Nullable FieldMatcher.Builder dimension) throws Exception {
         GaugeMetric.Builder gaugeMetric = GaugeMetric.newBuilder()
                 .setGaugeFieldsFilter(FieldFilter.newBuilder().setIncludeAll(true).build())
-                .setSamplingType(GaugeMetric.SamplingType.ALL_CONDITION_CHANGES)
+                .setSamplingType(GaugeMetric.SamplingType.CONDITION_CHANGE_TO_TRUE)
                 .setMaxNumGaugeAtomsPerBucket(10000)
                 .setBucket(TimeUnit.CTS);
         if (dimension != null) {
