@@ -687,6 +687,10 @@ public class AtomTestCase extends BaseTestCase {
         }
     }
 
+    protected String getProperty(String prop) throws Exception {
+        return getDevice().executeShellCommand("getprop " + prop).replace("\n", "");
+    }
+
     protected void turnScreenOn() throws Exception {
         getDevice().executeShellCommand("input keyevent KEYCODE_WAKEUP");
         getDevice().executeShellCommand("wm dismiss-keyguard");
