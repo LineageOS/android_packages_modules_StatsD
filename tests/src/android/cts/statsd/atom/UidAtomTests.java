@@ -239,8 +239,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : atomList) {
             if (atom.getCpuTimePerUid().getUid() == uid) {
                 found = true;
-                assertTrue(atom.getCpuTimePerUid().getUserTimeMillis() > 0);
-                assertTrue(atom.getCpuTimePerUid().getSysTimeMillis() > 0);
+                assertTrue(atom.getCpuTimePerUid().getUserTimeMicros() > 0);
+                assertTrue(atom.getCpuTimePerUid().getSysTimeMicros() > 0);
             }
         }
         assertTrue("found uid " + uid, found);
