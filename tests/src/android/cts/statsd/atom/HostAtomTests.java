@@ -25,8 +25,9 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
-import com.android.os.StatsLog.ConfigMetricsReportList;
+import com.android.os.AtomsProto.BuildInformation;
 import com.android.os.AtomsProto.ConnectivityStateChanged;
+import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 
 import java.util.Arrays;
@@ -451,6 +452,32 @@ public class HostAtomTests extends AtomTestCase {
             assertTrue(atom.getWifiActivityInfo().getControllerRxTimeMillis() >= 0);
             assertTrue(atom.getWifiActivityInfo().getControllerEnergyUsed() >= 0);
         }
+    }
+
+    public void testBuildInformation() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.BUILD_INFORMATION_FIELD_NUMBER, null);
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+        assertTrue(data.size() > 0);
+        BuildInformation atom = data.get(0).getBuildInformation();
+        assertEquals(getProperty("ro.product.brand"),             atom.getBrand());
+        assertEquals(getProperty("ro.product.name"),              atom.getProduct());
+        assertEquals(getProperty("ro.product.device"),            atom.getDevice());
+        assertEquals(getProperty("ro.build.version.release"),     atom.getVersionRelease());
+        assertEquals(getProperty("ro.build.id"),                  atom.getId());
+        assertEquals(getProperty("ro.build.version.incremental"), atom.getVersionIncremental());
+        assertEquals(getProperty("ro.build.type"),                atom.getType());
+        assertEquals(getProperty("ro.build.tags"),                atom.getTags());
     }
 
     public void testOnDevicePowerMeasurement() throws Exception {
