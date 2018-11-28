@@ -6,7 +6,8 @@ gauge_metric {
     include_all: true
   }
   bucket: ONE_DAY
-  sampling_type: ALL_CONDITION_CHANGES
+  condition: -377136895
+  sampling_type: CONDITION_CHANGE_TO_TRUE
   # Normal user should have <1000
   max_num_gauge_atoms_per_bucket: 2000
 }
@@ -14,6 +15,34 @@ atom_matcher {
   id: 3909523419673092535
   simple_atom_matcher {
     atom_id: 10034
+  }
+}
+atom_matcher {
+  id: -1651300237
+  simple_atom_matcher {
+    atom_id: 47
+    field_value_matcher {
+      field: 2
+      eq_int: 1
+    }
+  }
+}
+atom_matcher {
+  id: -1651300236
+  simple_atom_matcher {
+    atom_id: 47
+    field_value_matcher {
+      field: 2
+      eq_int: 2
+    }
+  }
+}
+predicate {
+  id: -377136895
+  simple_predicate {
+    start: -1651300237
+    stop: -1651300236
+    count_nesting: false
   }
 }
 allowed_log_source: "AID_GRAPHICS"

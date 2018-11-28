@@ -281,6 +281,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> statsdData = getGaugeMetricDataList();
 
@@ -383,6 +385,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> statsdData = getGaugeMetricDataList();
