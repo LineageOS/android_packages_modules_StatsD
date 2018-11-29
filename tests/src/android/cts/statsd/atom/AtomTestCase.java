@@ -15,6 +15,9 @@
  */
 package android.cts.statsd.atom;
 
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
+import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
+
 import android.os.BatteryStatsProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
@@ -86,11 +89,6 @@ public class AtomTestCase extends BaseTestCase {
         if (statsdDisabled()) {
             return;
         }
-        // TODO: need to do these before running real test:
-        // 1. compile statsd and push to device
-        // 2. make sure StatsCompanionService and incidentd is running
-        // 3. start statsd
-        // These should go away once we have statsd properly set up.
 
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
@@ -100,6 +98,7 @@ public class AtomTestCase extends BaseTestCase {
     @Override
     protected void tearDown() throws Exception {
         removeConfig(CONFIG_ID);
+        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
         super.tearDown();
     }
 
@@ -128,6 +127,18 @@ public class AtomTestCase extends BaseTestCase {
         String log = getLogcatSince(date, String.format(
                 "-s %s -e %s", PERFETTO_TAG, PERFETTO_STARTED_REGEX));
         return log.contains(PERFETTO_STARTED_STRING);
+    }
+
+    protected boolean checkDeviceFor(String methodName) throws Exception {
+        try {
+            installPackage(DEVICE_SIDE_TEST_APK, true);
+            runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".Checkers", methodName);
+            // Test passes, meaning that the answer is true.
+            return true;
+        } catch (AssertionError e) {
+            // Method is designed to fail if the answer is false.
+            return false;
+        }
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
@@ -315,21 +326,20 @@ public class AtomTestCase extends BaseTestCase {
             @Nullable FieldMatcher.Builder dimension) throws Exception {
         final String atomName = "Atom" + System.nanoTime();
         final String gaugeName = "Gauge" + System.nanoTime();
-        final String predicateName = "SCREEN_IS_ON";
+        final String predicateName = "APP_BREADCRUMB";
         SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder().setAtomId(atomId);
         conf.addAtomMatcher(AtomMatcher.newBuilder()
                 .setId(atomName.hashCode())
                 .setSimpleAtomMatcher(sam));
-        // TODO: change this predicate to something simpler and easier
-        final String predicateTrueName = "SCREEN_TURNED_ON";
-        final String predicateFalseName = "SCREEN_TURNED_OFF";
+        final String predicateTrueName = "APP_BREADCRUMB_1";
+        final String predicateFalseName = "APP_BREADCRUMB_2";
         conf.addAtomMatcher(AtomMatcher.newBuilder()
                 .setId(predicateTrueName.hashCode())
                 .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                        .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                         .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                .setField(ScreenStateChanged.STATE_FIELD_NUMBER)
-                                .setEqInt(DisplayStateEnum.DISPLAY_STATE_ON_VALUE)
+                                .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
+                                .setEqInt(1)
                         )
                 )
         )
@@ -337,10 +347,10 @@ public class AtomTestCase extends BaseTestCase {
                 .addAtomMatcher(AtomMatcher.newBuilder()
                         .setId(predicateFalseName.hashCode())
                         .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.SCREEN_STATE_CHANGED_FIELD_NUMBER)
+                                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                 .addFieldValueMatcher(FieldValueMatcher.newBuilder()
-                                        .setField(ScreenStateChanged.STATE_FIELD_NUMBER)
-                                        .setEqInt(DisplayStateEnum.DISPLAY_STATE_OFF_VALUE)
+                                        .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
+                                        .setEqInt(2)
                                 )
                         )
                 );
@@ -507,6 +517,14 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().executeShellCommand("cmd battery set wireless 1");
     }
 
+    public void setAppBreadcrumbPredicate() throws Exception {
+        doAppBreadcrumbReportedStart(1);
+    }
+
+    public void clearAppBreadcrumbPredicate() throws Exception {
+        doAppBreadcrumbReportedStart(2);
+    }
+
     public void doAppBreadcrumbReportedStart(int label) throws Exception {
         doAppBreadcrumbReported(label, AppBreadcrumbReported.State.START.ordinal());
     }
@@ -535,6 +553,16 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void setScreenBrightness(int brightness) throws Exception {
         getDevice().executeShellCommand("settings put system screen_brightness " + brightness);
+    }
+
+    // Gets whether "Always on Display" setting is enabled.
+    // In rare cases, this is different from whether the device can enter SCREEN_STATE_DOZE.
+    protected String getAodState() throws Exception {
+        return getDevice().executeShellCommand("settings get secure doze_always_on");
+    }
+
+    protected void setAodState(String state) throws Exception {
+        getDevice().executeShellCommand("settings put secure doze_always_on " + state);
     }
 
     protected boolean isScreenBrightnessModeManual() throws Exception {
