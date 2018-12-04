@@ -282,7 +282,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         Thread.sleep(WAIT_TIME_SHORT);
         setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> atomList = getGaugeMetricDataList();
 
