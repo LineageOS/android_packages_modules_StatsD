@@ -393,6 +393,30 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getBatteryVoltage().getVoltageMillivolt() > 0);
     }
 
+    // This test is for the pulled battery level atom.
+    public void testBatteryLevel() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.BATTERY_LEVEL_FIELD_NUMBER, null);
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getBatteryLevel().hasBatteryLevel());
+        assertTrue(atom.getBatteryLevel().getBatteryLevel() > 0);
+        assertTrue(atom.getBatteryLevel().getBatteryLevel() <= 100);
+    }
+
     public void testKernelWakelock() throws Exception {
         if (statsdDisabled() || !kernelWakelockStatsExist()) {
             return;
