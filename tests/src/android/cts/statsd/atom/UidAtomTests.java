@@ -1004,7 +1004,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
             found = true;
             assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
-            assertTrue("oom_score should be positive", state.getOomAdjScore() > 0);
+            assertTrue("oom_score should not be negative", state.getOomAdjScore() >= 0);
             assertTrue("page_fault should not be negative", state.getPageFault() >= 0);
             assertTrue("page_major_fault should not be negative", state.getPageMajorFault() >= 0);
             assertTrue("rss_in_bytes should be positive", state.getRssInBytes() > 0);
