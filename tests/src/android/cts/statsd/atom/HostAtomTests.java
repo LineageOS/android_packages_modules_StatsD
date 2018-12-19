@@ -547,11 +547,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // Test dumpsys stats --proto.
     public void testDumpsysStats() throws Exception {
-        // TODO: Once shell can find stats service without root, enable this test.
-        final boolean DISABLED = true;
-        if (DISABLED) {
-            return;
-        }
         if (statsdDisabled()) {
             return;
         }
