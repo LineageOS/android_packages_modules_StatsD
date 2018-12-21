@@ -57,7 +57,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final String fileName = "BATTERYSTATS_CONNECTIVITY_STATE_CHANGE_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 
@@ -176,7 +176,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
     public void testServiceStartCount() throws Exception {
         final String fileName = "BATTERYSTATS_SERVICE_START_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 
@@ -220,7 +220,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
     public void testServiceLaunchCount() throws Exception {
         final String fileName = "BATTERYSTATS_SERVICE_LAUNCH_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 

@@ -16,6 +16,8 @@
 
 package android.cts.statsd.atom;
 
+import android.cts.statsd.validation.ValidationTestUtil;
+
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.ddmlib.testrunner.RemoteAndroidTestRunner;
 import com.android.ddmlib.testrunner.TestResult.TestStatus;
@@ -56,6 +58,19 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
     @Override
     public void setBuild(IBuildInfo buildInfo) {
         mCtsBuild = buildInfo;
+    }
+
+    public IBuildInfo getBuild() {
+        return mCtsBuild;
+    }
+
+    /**
+     * Create and return {@link ValidationTestUtil} and give it the current build.
+     */
+    public ValidationTestUtil createValidationUtil() {
+        ValidationTestUtil util = new ValidationTestUtil();
+        util.setBuild(getBuild());
+        return util;
     }
 
     /**
