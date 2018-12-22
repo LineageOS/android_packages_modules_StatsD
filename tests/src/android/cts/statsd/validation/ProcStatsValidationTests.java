@@ -57,7 +57,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_TOP_DURATION.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -122,7 +122,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_CACHED_EMPTY_DURATION.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -187,7 +187,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             return;
         }
         final String fileName = "PROCSTATSQ_PROCS_STATE_PSS_VALUE.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
@@ -277,7 +277,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         final String fileName = "PROCSTATSQ_PULL.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -382,7 +382,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         final String fileName = "PROCSTATSQ_PULL_PKG_PROC.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
