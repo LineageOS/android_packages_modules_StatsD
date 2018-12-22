@@ -354,7 +354,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_LONG);
 
         Atom atom = getGaugeMetricDataList().get(0);
-        assertTrue(atom.getDeviceCalculatedPowerUse().getComputedPowerMilliAmpHours() > 0);
+        assertTrue(atom.getDeviceCalculatedPowerUse().getComputedPowerNanoAmpSecs() > 0);
     }
 
 
@@ -379,13 +379,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Atom> atomList = getGaugeMetricDataList();
         boolean uidFound = false;
         int uid = getUid();
-        float uidPower = 0;
+        long uidPower = 0;
         for (Atom atom : atomList) {
             DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
                 if (item.getUid() == uid) {
                 assertFalse("Found multiple power values for uid " + uid, uidFound);
                 uidFound = true;
-                uidPower = item.getPowerMilliAmpHours();
+                uidPower = item.getPowerNanoAmpSecs();
             }
         }
         assertTrue("No power value for uid " + uid, uidFound);
