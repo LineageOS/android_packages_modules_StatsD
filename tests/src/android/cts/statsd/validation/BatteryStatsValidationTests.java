@@ -57,7 +57,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final String fileName = "BATTERYSTATS_CONNECTIVITY_STATE_CHANGE_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 
@@ -103,17 +103,20 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
         // Extract statsd data
         Atom atom = atomList.get(0);
-        float statsdPower = atom.getDeviceCalculatedPowerUse().getComputedPowerMilliAmpHours();
-        assertTrue("Statsd: Non-positive power value.", statsdPower > 0);
+        long statsdPowerNas = atom.getDeviceCalculatedPowerUse().getComputedPowerNanoAmpSecs();
+        assertTrue("Statsd: Non-positive power value.", statsdPowerNas > 0);
 
         // Extract BatteryStats data
-        double bsPower = batterystatsProto.getSystem().getPowerUseSummary().getComputedPowerMah();
-        assertTrue("BatteryStats: Non-positive power value.", bsPower > 0);
+        double bsPowerNas = batterystatsProto.getSystem().getPowerUseSummary().getComputedPowerMah()
+                * 1_000_000L * 3600L; /* mAh to nAs */
+        assertTrue("BatteryStats: Non-positive power value.", bsPowerNas > 0);
 
-        assertTrue(String.format("Statsd (%f) < Batterystats (%f)", statsdPower, bsPower),
-                statsdPower > ALLOWED_FRACTIONAL_DIFFERENCE * bsPower);
-        assertTrue(String.format("Batterystats (%f) < Statsd (%f)", bsPower, statsdPower),
-                bsPower > ALLOWED_FRACTIONAL_DIFFERENCE * statsdPower);
+        assertTrue(
+                String.format("Statsd (%d) < Batterystats (%f)", statsdPowerNas, bsPowerNas),
+                statsdPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * bsPowerNas);
+        assertTrue(
+                String.format("Batterystats (%f) < Statsd (%d)", bsPowerNas, statsdPowerNas),
+                bsPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * statsdPowerNas);
     }
 
     public void testPowerBlameUid() throws Exception {
@@ -144,39 +147,42 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         // Extract statsd data
         boolean uidFound = false;
         int uid = getUid();
-        float statsdUidPower = 0;
+        long statsdUidPowerNas = 0;
         for (Atom atom : atomList) {
             DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
             if (item.getUid() == uid) {
                 assertFalse("Found multiple power values for uid " + uid, uidFound);
                 uidFound = true;
-                statsdUidPower = item.getPowerMilliAmpHours();
+                statsdUidPowerNas = item.getPowerNanoAmpSecs();
             }
         }
         assertTrue("Statsd: No power value for uid " + uid, uidFound);
-        assertTrue("Statsd: Non-positive power value for uid " + uid, statsdUidPower > 0);
+        assertTrue("Statsd: Non-positive power value for uid " + uid, statsdUidPowerNas > 0);
 
         // Extract batterystats data
-        double bsUidPower = -1;
+        double bsUidPowerNas = -1;
         boolean hadUid = false;
         for (UidProto uidProto : batterystatsProto.getUidsList()) {
             if (uidProto.getUid() == uid) {
                 hadUid = true;
-                bsUidPower = uidProto.getPowerUseItem().getComputedPowerMah();
+                bsUidPowerNas = uidProto.getPowerUseItem().getComputedPowerMah()
+                        * 1_000_000L * 3600L; /* mAh to nAs */;
             }
         }
         assertTrue("Batterystats: No power value for uid " + uid, hadUid);
-        assertTrue("BatteryStats: Non-positive power value for uid " + uid, bsUidPower > 0);
+        assertTrue("BatteryStats: Non-positive power value for uid " + uid, bsUidPowerNas > 0);
 
-        assertTrue(String.format("Statsd (%f) < Batterystats (%f).", statsdUidPower, bsUidPower),
-                statsdUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * bsUidPower);
-        assertTrue(String.format("Batterystats (%f) < Statsd (%f).", bsUidPower, statsdUidPower),
-                bsUidPower > ALLOWED_FRACTIONAL_DIFFERENCE * statsdUidPower);
+        assertTrue(
+                String.format("Statsd (%d) < Batterystats (%f).", statsdUidPowerNas, bsUidPowerNas),
+                statsdUidPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * bsUidPowerNas);
+        assertTrue(
+                String.format("Batterystats (%f) < Statsd (%d).", bsUidPowerNas, statsdUidPowerNas),
+                bsUidPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * statsdUidPowerNas);
     }
 
     public void testServiceStartCount() throws Exception {
         final String fileName = "BATTERYSTATS_SERVICE_START_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 
@@ -220,7 +226,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
     public void testServiceLaunchCount() throws Exception {
         final String fileName = "BATTERYSTATS_SERVICE_LAUNCH_COUNT.pbtxt";
-        StatsdConfig config = new ValidationTestUtil().getConfig(fileName);
+        StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
 

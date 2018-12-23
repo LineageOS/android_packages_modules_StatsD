@@ -547,11 +547,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // Test dumpsys stats --proto.
     public void testDumpsysStats() throws Exception {
-        // TODO: Once shell can find stats service without root, enable this test.
-        final boolean DISABLED = true;
-        if (DISABLED) {
-            return;
-        }
         if (statsdDisabled()) {
             return;
         }
@@ -568,14 +563,15 @@ public class HostAtomTests extends AtomTestCase {
 
         // Extract the relevent report from the incident section.
         ConfigMetricsReportList ourList = null;
+        int hostUid = getHostUid();
         for (ConfigMetricsReportList list : listList) {
             ConfigMetricsReportList.ConfigKey configKey = list.getConfigKey();
-            if (configKey.getUid() == getHostUid() && configKey.getId() == CONFIG_ID) {
+            if (configKey.getUid() == hostUid && configKey.getId() == CONFIG_ID) {
                 ourList = list;
                 break;
             }
         }
-        assertNotNull("Could not find list for uid=" + getHostUid()
+        assertNotNull("Could not find list for uid=" + hostUid
                 + " id=" + CONFIG_ID, ourList);
 
         // Make sure that the report is correct.
