@@ -815,6 +815,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Set<Integer> lockOff = new HashSet<>(
                 Arrays.asList(WifiMulticastLockStateChanged.State.OFF_VALUE));
 
+        final String EXPECTED_TAG = "StatsdCTSMulticastLock";
+
         // Add state sets to the list in order.
         List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
 
@@ -827,6 +829,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getWifiMulticastLockStateChanged().getState().getNumber());
+
+        for (EventMetricData event: data) {
+            String tag = event.getAtom().getWifiMulticastLockStateChanged().getTag();
+            assertEquals("Wrong tag.", EXPECTED_TAG, tag);
+        }
     }
 
     public void testWifiScan() throws Exception {
