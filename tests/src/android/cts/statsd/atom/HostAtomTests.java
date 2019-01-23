@@ -417,6 +417,29 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(atom.getBatteryLevel().getBatteryLevel() <= 100);
     }
 
+    // This test is for the pulled battery charge count atom.
+    public void testBatteryCycleCount() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.BATTERY_CYCLE_COUNT_FIELD_NUMBER, null);
+
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+
+        assertTrue(data.size() > 0);
+        Atom atom = data.get(0);
+        assertTrue(atom.getBatteryCycleCount().hasCycleCount());
+        assertTrue(atom.getBatteryCycleCount().getCycleCount() > 0);
+    }
+
     public void testKernelWakelock() throws Exception {
         if (statsdDisabled() || !kernelWakelockStatsExist()) {
             return;
