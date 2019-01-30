@@ -80,6 +80,13 @@
 
         <service android:name=".StatsdJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <service android:name=".DummyCallscreeningService"
+                 android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
     </application>
 
     <instrumentation android:name="android.support.test.runner.AndroidJUnitRunner"

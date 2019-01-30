@@ -27,6 +27,7 @@ import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
+import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
@@ -1105,6 +1106,46 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("Did not find a matching atom for system server", foundSystemServer);
     }
 
+    public void testRoleHolder() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Make device side test package a role holder
+        String callScreenAppRole = "android.app.role.CALL_SCREENING_APP";
+        getDevice().executeShellCommand(
+                "cmd role add-role-holder " + callScreenAppRole + " " + DEVICE_SIDE_TEST_PACKAGE);
+
+        // Set up what to collect
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.ROLE_HOLDER_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        boolean verifiedKnowRoleState = false;
+
+        // Pull a report
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        for (Atom atom : getGaugeMetricDataList()) {
+            AtomsProto.RoleHolder roleHolder = atom.getRoleHolder();
+
+            assertNotNull(roleHolder.getPackageName());
+            assertTrue(roleHolder.getUid() >= 0);
+            assertNotNull(roleHolder.getRole());
+
+            if (roleHolder.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
+                assertEquals(getUid(), roleHolder.getUid());
+                assertEquals(DEVICE_SIDE_TEST_PACKAGE, roleHolder.getPackageName());
+                assertEquals(callScreenAppRole, roleHolder.getRole());
+
+                verifiedKnowRoleState = true;
+            }
+        }
+
+        assertTrue(verifiedKnowRoleState);
+    }
 
     public void testDangerousPermissionState() throws Exception {
         if (statsdDisabled()) {
