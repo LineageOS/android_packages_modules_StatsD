@@ -36,6 +36,7 @@ import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
+import com.android.os.AtomsProto.DangerousPermissionState;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
 import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
 import com.android.os.AtomsProto.FlashlightStateChanged;
@@ -1102,5 +1103,45 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("Did not find a matching atom for test app uid=" + uid, foundTestApp);
         assertTrue("Did not find a matching atom for statsd", foundStatsd);
         assertTrue("Did not find a matching atom for system server", foundSystemServer);
+    }
+
+
+    public void testDangerousPermissionState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Set up what to collect
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        boolean verifiedKnowPermissionState = false;
+
+        // Pull a report
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        for (Atom atom : getGaugeMetricDataList()) {
+            DangerousPermissionState permissionState = atom.getDangerousPermissionState();
+
+            assertNotNull(permissionState.getPermissionName());
+            assertTrue(permissionState.getUid() >= 0);
+            assertNotNull(permissionState.getPackageName());
+
+            if (permissionState.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
+                assertEquals(getUid(), permissionState.getUid());
+
+                if (permissionState.getPermissionName().equals(
+                        "android.permission.ACCESS_FINE_LOCATION")) {
+                    assertTrue(permissionState.getIsGranted());
+
+                    verifiedKnowPermissionState = true;
+                }
+            }
+        }
+
+        assertTrue(verifiedKnowPermissionState);
     }
 }
