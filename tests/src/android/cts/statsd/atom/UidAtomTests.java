@@ -1112,7 +1112,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Make device side test package a role holder
-        String callScreenAppRole = "android.app.role.CALL_SCREENING_APP";
+        String callScreenAppRole = "android.app.role.CALL_SCREENING";
         getDevice().executeShellCommand(
                 "cmd role add-role-holder " + callScreenAppRole + " " + DEVICE_SIDE_TEST_PACKAGE);
 
