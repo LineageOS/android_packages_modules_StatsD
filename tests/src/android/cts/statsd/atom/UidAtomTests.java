@@ -544,6 +544,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(
@@ -1112,7 +1113,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Make device side test package a role holder
-        String callScreenAppRole = "android.app.role.CALL_SCREENING_APP";
+        String callScreenAppRole = "android.app.role.CALL_SCREENING";
         getDevice().executeShellCommand(
                 "cmd role add-role-holder " + callScreenAppRole + " " + DEVICE_SIDE_TEST_PACKAGE);
 
