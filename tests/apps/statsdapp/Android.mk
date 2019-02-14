@@ -35,7 +35,6 @@ LOCAL_STATIC_JAVA_LIBRARIES := \
     ctstestrunner \
     compatibility-device-util \
     androidx.legacy_legacy-support-v4 \
-    legacy-android-test \
     android-support-test \
     statsdprotolite
 
