@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,22 @@
 
 #pragma once
 
-#include "config/ConfigKey.h"
-#include "HashableDimensionKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "StatsPuller.h"
 
 namespace android {
 namespace os {
 namespace statsd {
 
-void triggerSubscribers(const int64_t ruleId, const int64_t metricId,
-                        const MetricDimensionKey& dimensionKey, int64_t metricValue,
-                        const ConfigKey& configKey, const std::vector<Subscription>& subscriptions);
+/**
+ * Reads train info from disk.
+ */
+class TrainInfoPuller : public StatsPuller {
+ public:
+  TrainInfoPuller();
+
+ private:
+  bool PullInternal(vector<std::shared_ptr<LogEvent>>* data) override;
+};
 
 }  // namespace statsd
 }  // namespace os
