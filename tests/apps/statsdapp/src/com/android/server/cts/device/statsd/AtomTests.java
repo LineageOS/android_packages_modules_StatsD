@@ -55,8 +55,9 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
-import android.support.test.InstrumentationRegistry;
 import android.util.Log;
+
+import androidx.test.InstrumentationRegistry;
 
 import org.junit.Test;
 

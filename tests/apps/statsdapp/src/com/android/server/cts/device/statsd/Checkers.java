@@ -16,11 +16,13 @@
 
 package com.android.server.cts.device.statsd;
 
+import static org.junit.Assert.assertTrue;
+
 import android.net.wifi.WifiManager;
 import android.os.Vibrator;
-import android.support.test.InstrumentationRegistry;
 
-import static org.junit.Assert.assertTrue;
+import androidx.test.InstrumentationRegistry;
+
 import org.junit.Test;
 
 /**
