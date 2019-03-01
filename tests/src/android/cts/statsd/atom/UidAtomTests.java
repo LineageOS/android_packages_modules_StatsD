@@ -43,6 +43,7 @@ import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
+import com.android.os.AtomsProto.HiddenApiUsed;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.NativeProcessMemoryState;
@@ -244,6 +245,45 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(data.size() >= 1);
         BleScanResultReceived a0 = data.get(0).getAtom().getBleScanResultReceived();
         assertTrue(a0.getNumResults() >= 1);
+    }
+
+    public void testHiddenApiUsed() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        String oldRate = getDevice().executeShellCommand(
+                "settings get global hidden_api_access_statslog_sampling_rate").trim();
+
+        getDevice().executeShellCommand(
+                "settings put global hidden_api_access_statslog_sampling_rate 65536");
+        try {
+            final int atomTag = Atom.HIDDEN_API_USED_FIELD_NUMBER;
+
+            createAndUploadConfig(atomTag, false);
+
+            runActivity("HiddenApiUsedActivity", null, null);
+
+
+            List<EventMetricData> data = getEventMetricDataList();
+            assertTrue(data.size() == 1);
+
+            HiddenApiUsed atom = data.get(0).getAtom().getHiddenApiUsed();
+
+            int uid = getUid();
+            assertEquals(uid, atom.getUid());
+            assertFalse(atom.getAccessDenied());
+            assertEquals("Landroid/app/Activity;->mWindow:Landroid/view/Window;",
+                    atom.getSignature());
+        } finally {
+            if (!oldRate.equals("null")) {
+                getDevice().executeShellCommand(
+                        "settings put global hidden_api_access_statslog_sampling_rate " + oldRate);
+            } else {
+                getDevice().executeShellCommand(
+                        "settings delete global hidden_api_access_statslog_sampling_rate");
+            }
+        }
     }
 
     public void testCameraState() throws Exception {
