@@ -214,21 +214,21 @@ public class HostAtomTests extends AtomTestCase {
 
         final int atomTag = Atom.BATTERY_LEVEL_CHANGED_FIELD_NUMBER;
 
-        Set<Integer> batteryDead = new HashSet<>(Arrays.asList(0));
+        Set<Integer> batteryLow = new HashSet<>(Arrays.asList(2));
         Set<Integer> battery25p = new HashSet<>(Arrays.asList(25));
         Set<Integer> battery50p = new HashSet<>(Arrays.asList(50));
         Set<Integer> battery75p = new HashSet<>(Arrays.asList(75));
         Set<Integer> batteryFull = new HashSet<>(Arrays.asList(100));
 
         // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(batteryDead, battery25p, battery50p,
+        List<Set<Integer>> stateSet = Arrays.asList(batteryLow, battery25p, battery50p,
                 battery75p, batteryFull);
 
         createAndUploadConfig(atomTag);
         Thread.sleep(WAIT_TIME_SHORT);
 
         // Trigger events in same order.
-        setBatteryLevel(0);
+        setBatteryLevel(2);
         Thread.sleep(WAIT_TIME_SHORT);
         setBatteryLevel(25);
         Thread.sleep(WAIT_TIME_SHORT);
