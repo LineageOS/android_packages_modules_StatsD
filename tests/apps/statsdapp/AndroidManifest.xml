@@ -81,7 +81,7 @@
             android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
-    <instrumentation android:name="android.support.test.runner.AndroidJUnitRunner"
+    <instrumentation android:name="androidx.test.runner.AndroidJUnitRunner"
                      android:targetPackage="com.android.server.cts.device.statsd"
                      android:label="CTS tests of android.os.statsd stats collection">
         <meta-data android:name="listener"
