@@ -45,7 +45,7 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
 
     protected IBuildInfo mCtsBuild;
 
-    private static final String TEST_RUNNER = "android.support.test.runner.AndroidJUnitRunner";
+    private static final String TEST_RUNNER = "androidx.test.runner.AndroidJUnitRunner";
 
     @Override
     protected void setUp() throws Exception {

@@ -32,11 +32,11 @@ LOCAL_JAVA_LIBRARIES := android.test.runner.stubs cts-junit org.apache.http.lega
 LOCAL_PRIVILEGED_MODULE := true
 
 LOCAL_STATIC_JAVA_LIBRARIES := \
-    ctstestrunner \
-    compatibility-device-util \
+    ctstestrunner-axt \
+    compatibility-device-util-axt \
     androidx.legacy_legacy-support-v4 \
     legacy-android-test \
-    android-support-test \
+    androidx.test.rules \
     statsdprotolite
 
 # tag this module as a cts test artifact
