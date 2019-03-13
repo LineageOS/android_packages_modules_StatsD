@@ -253,10 +253,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         String oldRate = getDevice().executeShellCommand(
-                "settings get global hidden_api_access_statslog_sampling_rate").trim();
+                "device_config get app_compat hidden_api_access_statslog_sampling_rate").trim();
 
         getDevice().executeShellCommand(
-                "settings put global hidden_api_access_statslog_sampling_rate 65536");
+                "device_config put app_compat hidden_api_access_statslog_sampling_rate 65536");
         try {
             final int atomTag = Atom.HIDDEN_API_USED_FIELD_NUMBER;
 
@@ -278,10 +278,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         } finally {
             if (!oldRate.equals("null")) {
                 getDevice().executeShellCommand(
-                        "settings put global hidden_api_access_statslog_sampling_rate " + oldRate);
+                        "device_config put app_compat hidden_api_access_statslog_sampling_rate "
+                        + oldRate);
             } else {
                 getDevice().executeShellCommand(
-                        "settings delete global hidden_api_access_statslog_sampling_rate");
+                        "device_config delete hidden_api_access_statslog_sampling_rate");
             }
         }
     }
