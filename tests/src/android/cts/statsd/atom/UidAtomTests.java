@@ -806,6 +806,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        // For automotive, all wakeup alarm becomes normal alarm. So this
+        // test does not work.
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         final int atomTag = Atom.WAKEUP_ALARM_OCCURRED_FIELD_NUMBER;
 
         StatsdConfig.Builder config = createConfigBuilder();

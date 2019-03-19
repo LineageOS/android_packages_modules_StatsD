@@ -88,6 +88,7 @@ public class AtomTestCase extends BaseTestCase {
     public static final long CONFIG_ID = "cts_config".hashCode();
 
     public static final String FEATURE_AUDIO_OUTPUT = "android.hardware.audio.output";
+    public static final String FEATURE_AUTOMOTIVE = "android.hardware.type.automotive";
     public static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
     public static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
     public static final String FEATURE_CAMERA = "android.hardware.camera";
