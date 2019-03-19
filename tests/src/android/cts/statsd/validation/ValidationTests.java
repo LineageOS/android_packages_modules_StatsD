@@ -63,6 +63,7 @@ import java.util.Set;
 public class ValidationTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.ValidationTests";
+    private static final String FEATURE_AUTOMOTIVE = "android.hardware.type.automotive";
     private static final boolean ENABLE_LOAD_TEST = false;
 
     @Override
@@ -81,6 +82,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         resetBatteryStats();
         unplugDevice();
         // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
@@ -146,6 +148,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
         // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.

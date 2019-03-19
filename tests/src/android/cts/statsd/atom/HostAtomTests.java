@@ -44,6 +44,7 @@ public class HostAtomTests extends AtomTestCase {
 
     private static final String TAG = "Statsd.HostAtomTests";
 
+    private static final String FEATURE_AUTOMOTIVE = "android.hardware.type.automotive";
     private static final String FEATURE_BLUETOOTH = "android.hardware.bluetooth";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
     private static final String FEATURE_TELEPHONY = "android.hardware.telephony";
@@ -111,6 +112,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set charging state to full.
         setChargingState(5);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -163,6 +165,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, unplug device.
         unplugDevice();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -215,6 +218,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set battery level to full.
         setBatteryLevel(100);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -301,6 +305,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, turn off battery saver.
         turnBatterySaverOff();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -338,6 +343,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         if (!hasBattery()) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
@@ -366,6 +372,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         if (!hasBattery()) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()

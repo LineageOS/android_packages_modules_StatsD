@@ -61,6 +61,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String TAG = "Statsd.UidAtomTests";
 
     // These constants are those in PackageManager.
+    private static final String FEATURE_AUTOMOTIVE = "android.hardware.type.automotive";
     private static final String FEATURE_BLUETOOTH_LE = "android.hardware.bluetooth_le";
     private static final String FEATURE_LOCATION_GPS = "android.hardware.location.gps";
     private static final String FEATURE_WIFI = "android.hardware.wifi";
@@ -550,6 +551,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        // For automotive, all wakeup alarm becomes normal alarm. So this
+        // test does not work.
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         final int atomTag = Atom.WAKEUP_ALARM_OCCURRED_FIELD_NUMBER;
 
         StatsdConfig.Builder config = createConfigBuilder();
