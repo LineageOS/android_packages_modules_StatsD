@@ -104,6 +104,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set charging state to full.
         setChargingState(5);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -156,6 +157,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, unplug device.
         unplugDevice();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -208,6 +210,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set battery level to full.
         setBatteryLevel(100);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -294,6 +297,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, turn off battery saver.
         turnBatterySaverOff();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -331,6 +335,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
@@ -354,6 +359,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
