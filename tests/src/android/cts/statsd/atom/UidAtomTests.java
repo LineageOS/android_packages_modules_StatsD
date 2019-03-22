@@ -15,18 +15,11 @@
  */
 package android.cts.statsd.atom;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import android.os.WakeLockLevelEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
 
-import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
-import com.android.internal.os.StatsdConfigProto.GaugeMetric;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
-import com.android.internal.os.StatsdConfigProto.TimeUnit;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
@@ -39,7 +32,6 @@ import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.DangerousPermissionState;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
-import com.android.os.AtomsProto.DeviceCalculatedPowerUse;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
@@ -49,8 +41,8 @@ import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
-import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
+import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.VibratorStateChanged;
@@ -1150,6 +1142,19 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue("Did not find a matching atom for system server", foundSystemServer);
     }
 
+    /**
+     * The the app id from a uid.
+     *
+     * @param uid The uid of the app
+     *
+     * @return The app id of the app
+     *
+     * @see android.os.UserHandle#getAppId
+     */
+    private static int getAppId(int uid) {
+        return uid % 100000;
+    }
+
     public void testRoleHolder() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -1172,6 +1177,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
+        int testAppId = getAppId(getUid());
+
         for (Atom atom : getGaugeMetricDataList()) {
             AtomsProto.RoleHolder roleHolder = atom.getRoleHolder();
 
@@ -1180,7 +1187,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             assertNotNull(roleHolder.getRole());
 
             if (roleHolder.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
-                assertEquals(getUid(), roleHolder.getUid());
+                assertEquals(testAppId, getAppId(roleHolder.getUid()));
                 assertEquals(DEVICE_SIDE_TEST_PACKAGE, roleHolder.getPackageName());
                 assertEquals(callScreenAppRole, roleHolder.getRole());
 
@@ -1208,6 +1215,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
+        int testAppId = getAppId(getUid());
+
         for (Atom atom : getGaugeMetricDataList()) {
             DangerousPermissionState permissionState = atom.getDangerousPermissionState();
 
@@ -1216,7 +1225,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             assertNotNull(permissionState.getPackageName());
 
             if (permissionState.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
-                assertEquals(getUid(), permissionState.getUid());
+                assertEquals(testAppId, getAppId(permissionState.getUid()));
 
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
