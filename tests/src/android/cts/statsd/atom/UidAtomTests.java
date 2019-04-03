@@ -15,6 +15,7 @@
  */
 package android.cts.statsd.atom;
 
+import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
 
@@ -816,7 +817,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
     }
 
-    public void testWifiLock() throws Exception {
+    public void testWifiLockHighPerf() throws Exception {
         if (statsdDisabled()) {
             return;
         }
@@ -831,7 +832,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
 
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiLock");
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiLockHighPerf");
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
@@ -839,6 +840,41 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getWifiLockStateChanged().getState().getNumber());
+
+        for (EventMetricData event : data) {
+            assertEquals(WifiModeEnum.WIFI_MODE_FULL_HIGH_PERF,
+                         event.getAtom().getWifiLockStateChanged().getMode());
+        }
+    }
+
+    public void testWifiLockLowLatency() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_WIFI, true)) return;
+        if (!hasFeature(FEATURE_PC, false)) return;
+
+        final int atomTag = Atom.WIFI_LOCK_STATE_CHANGED_FIELD_NUMBER;
+        Set<Integer> lockOn = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.ON_VALUE));
+        Set<Integer> lockOff = new HashSet<>(Arrays.asList(WifiLockStateChanged.State.OFF_VALUE));
+
+        // Add state sets to the list in order.
+        List<Set<Integer>> stateSet = Arrays.asList(lockOn, lockOff);
+
+        createAndUploadConfig(atomTag, true);  // True: uses attribution.
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWifiLockLowLatency");
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        // Assert that the events happened in the expected order.
+        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
+                atom -> atom.getWifiLockStateChanged().getState().getNumber());
+
+        for (EventMetricData event : data) {
+            assertEquals(WifiModeEnum.WIFI_MODE_FULL_LOW_LATENCY,
+                         event.getAtom().getWifiLockStateChanged().getMode());
+        }
     }
 
     public void testWifiMulticastLock() throws Exception {
