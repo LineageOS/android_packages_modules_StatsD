@@ -338,6 +338,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasBattery()) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
             .setField(Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER)
@@ -365,6 +366,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasBattery()) return;
         StatsdConfig.Builder config = getPulledConfig();
         FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
                 .setField(Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER)
