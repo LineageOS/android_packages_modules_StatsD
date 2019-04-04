@@ -350,7 +350,9 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getRemainingBatteryCapacity().hasChargeMicroAmpereHour());
-        assertTrue(atom.getRemainingBatteryCapacity().getChargeMicroAmpereHour() > 0);
+        if (hasBattery()) {
+            assertTrue(atom.getRemainingBatteryCapacity().getChargeMicroAmpereHour() > 0);
+        }
     }
 
     @RestrictedBuildTest
@@ -374,7 +376,9 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getFullBatteryCapacity().hasCapacityMicroAmpereHour());
-        assertTrue(atom.getFullBatteryCapacity().getCapacityMicroAmpereHour() > 0);
+        if (hasBattery()) {
+            assertTrue(atom.getFullBatteryCapacity().getCapacityMicroAmpereHour() > 0);
+        }
     }
 
     public void testBatteryVoltage() throws Exception {
@@ -396,7 +400,9 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getBatteryVoltage().hasVoltageMillivolt());
-        assertTrue(atom.getBatteryVoltage().getVoltageMillivolt() > 0);
+        if (hasBattery()) {
+            assertTrue(atom.getBatteryVoltage().getVoltageMillivolt() > 0);
+        }
     }
 
     // This test is for the pulled battery level atom.
@@ -419,8 +425,10 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getBatteryLevel().hasBatteryLevel());
-        assertTrue(atom.getBatteryLevel().getBatteryLevel() > 0);
-        assertTrue(atom.getBatteryLevel().getBatteryLevel() <= 100);
+        if (hasBattery()) {
+            assertTrue(atom.getBatteryLevel().getBatteryLevel() > 0);
+            assertTrue(atom.getBatteryLevel().getBatteryLevel() <= 100);
+        }
     }
 
     // This test is for the pulled battery charge count atom.
@@ -443,7 +451,9 @@ public class HostAtomTests extends AtomTestCase {
         assertTrue(data.size() > 0);
         Atom atom = data.get(0);
         assertTrue(atom.getBatteryCycleCount().hasCycleCount());
-        assertTrue(atom.getBatteryCycleCount().getCycleCount() > 0);
+        if (hasBattery()) {
+            assertTrue(atom.getBatteryCycleCount().getCycleCount() > 0);
+        }
     }
 
     public void testKernelWakelock() throws Exception {

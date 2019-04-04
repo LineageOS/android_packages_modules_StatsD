@@ -20,6 +20,7 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAG
 
 import android.os.BatteryStatsProto;
 import android.os.StatsDataDumpProto;
+import android.service.battery.BatteryServiceDumpProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.service.procstats.ProcessStatsServiceDumpProto;
 
@@ -80,6 +81,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    public static final String DUMP_BATTERY_CMD = "dumpsys battery";
     public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
     public static final String DUMPSYS_STATS_CMD = "dumpsys stats";
     public static final String DUMP_PROCSTATS_CMD = "dumpsys procstats";
@@ -452,6 +454,18 @@ public class AtomTestCase extends BaseTestCase {
         }
     }
 
+    protected boolean hasBattery() throws Exception {
+        try {
+            BatteryServiceDumpProto batteryProto = getDump(BatteryServiceDumpProto.parser(),
+                    String.join(" ", DUMP_BATTERY_CMD, "--proto"));
+            LogUtil.CLog.d("Got battery service dump:\n " + batteryProto.toString());
+            return batteryProto.getIsPresent();
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump batteryservice proto");
+            throw (e);
+        }
+    }
+
     /** Creates a FieldValueMatcher.Builder corresponding to the given field. */
     protected static FieldValueMatcher.Builder createFvm(int field) {
         return FieldValueMatcher.newBuilder().setField(field);
@@ -706,6 +720,14 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected void unplugDevice() throws Exception {
+        // On batteryless devices on Android P or above, the 'unplug' command
+        // alone does not simulate the really unplugged state.
+        //
+        // This is because charging state is left as "unknown". Unless a valid
+        // state like 3 = BatteryManager.BATTERY_STATUS_DISCHARGING is set,
+        // framework does not consider the device as running on battery.
+        setChargingState(3);
+
         getDevice().executeShellCommand("cmd battery unplug");
     }
 
@@ -832,7 +854,7 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected void turnBatterySaverOn() throws Exception {
-        getDevice().executeShellCommand("cmd battery unplug");
+        unplugDevice();
         getDevice().executeShellCommand("settings put global low_power 1");
     }
 

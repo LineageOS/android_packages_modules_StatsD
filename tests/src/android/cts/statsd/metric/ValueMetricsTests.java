@@ -98,14 +98,14 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     doAppBreadcrumbReportedStop(3);
 
     // Wait for the metrics to propagate to statsd.
-    Thread.sleep(2000);
+    Thread.sleep(1000);
 
     StatsLogReport metricReport = getStatsLogReport();
     LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
     assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
     assertTrue(metricReport.hasValueMetrics());
     StatsLogReport.ValueMetricDataWrapper valueData = metricReport.getValueMetrics();
-    assertEquals(valueData.getDataCount(), 1);
+    assertEquals(1, valueData.getDataCount());
 
     int bucketCount = valueData.getData(0).getBucketInfoCount();
     assertTrue(bucketCount > 1);
@@ -117,7 +117,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
       assertEquals(0, bucketInfo.getValues(0).getIndex());
       totalValue += (int) bucketInfo.getValues(0).getValueLong();
     }
-    assertEquals(totalValue, 8);
+    assertEquals(8, totalValue);
   }
 
   // Test value metric with pulled atoms and across multiple buckets
