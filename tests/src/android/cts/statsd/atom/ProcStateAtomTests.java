@@ -70,6 +70,7 @@ public class ProcStateAtomTests extends ProcStateTestCase {
                     ProcessStateEnum.PROCESS_STATE_PERSISTENT_VALUE, // TODO: untested
                     ProcessStateEnum.PROCESS_STATE_PERSISTENT_UI_VALUE, // TODO: untested
                     ProcessStateEnum.PROCESS_STATE_TOP_VALUE,
+                    ProcessStateEnum.PROCESS_STATE_BOUND_TOP_VALUE, // TODO: untested
                     ProcessStateEnum.PROCESS_STATE_BOUND_FOREGROUND_SERVICE_VALUE, // TODO: untested
                     ProcessStateEnum.PROCESS_STATE_FOREGROUND_SERVICE_VALUE,
                     ProcessStateEnum.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE,
