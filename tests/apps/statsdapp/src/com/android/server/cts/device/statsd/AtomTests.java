@@ -383,10 +383,22 @@ public class AtomTests {
     }
 
     @Test
-    public void testWifiLock() {
+    public void testWifiLockHighPerf() {
         Context context = InstrumentationRegistry.getContext();
         WifiManager wm = context.getSystemService(WifiManager.class);
-        WifiManager.WifiLock lock = wm.createWifiLock("StatsdCTSWifiLock");
+        WifiManager.WifiLock lock =
+                wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "StatsdCTSWifiLock");
+        lock.acquire();
+        sleep(500);
+        lock.release();
+    }
+
+    @Test
+    public void testWifiLockLowLatency() {
+        Context context = InstrumentationRegistry.getContext();
+        WifiManager wm = context.getSystemService(WifiManager.class);
+        WifiManager.WifiLock lock =
+                wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "StatsdCTSWifiLock");
         lock.acquire();
         sleep(500);
         lock.release();
