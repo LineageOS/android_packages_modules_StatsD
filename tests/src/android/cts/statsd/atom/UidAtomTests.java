@@ -1071,9 +1071,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
+            Thread.sleep(WAIT_TIME_SHORT);
+            // Trigger new pull.
             setAppBreadcrumbPredicate();
         }
-        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert about ProcessMemoryState for the test app.
         List<Atom> atoms = getGaugeMetricDataList();
