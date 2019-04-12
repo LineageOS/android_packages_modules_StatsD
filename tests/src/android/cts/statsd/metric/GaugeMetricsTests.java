@@ -18,10 +18,13 @@ package android.cts.statsd.metric;
 import android.cts.statsd.atom.DeviceAtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
+import com.android.internal.os.StatsdConfigProto.ActivationType;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
+import com.android.internal.os.StatsdConfigProto.EventActivation;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
+import com.android.internal.os.StatsdConfigProto.MetricActivation;
 import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
@@ -38,104 +41,159 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
   private static final int APP_BREADCRUMB_REPORTED_B_MATCH_START_ID = 2;
 
   public void testGaugeMetric() throws Exception {
-    if (statsdDisabled()) {
-      return;
-    }
-    // Add AtomMatcher's.
-    AtomMatcher startAtomMatcher =
-        MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
-    AtomMatcher stopAtomMatcher =
-        MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
-    AtomMatcher atomMatcher =
-        MetricsUtils.simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
+      if (statsdDisabled()) {
+        return;
+      }
+      // Add AtomMatcher's.
+      AtomMatcher startAtomMatcher =
+          MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
+      AtomMatcher stopAtomMatcher =
+          MetricsUtils.stopAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID);
+      AtomMatcher atomMatcher =
+          MetricsUtils.simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
 
-    StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
-    builder.addAtomMatcher(startAtomMatcher);
-    builder.addAtomMatcher(stopAtomMatcher);
-    builder.addAtomMatcher(atomMatcher);
+      StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+      builder.addAtomMatcher(startAtomMatcher);
+      builder.addAtomMatcher(stopAtomMatcher);
+      builder.addAtomMatcher(atomMatcher);
 
-    // Add Predicate's.
-    SimplePredicate simplePredicate = SimplePredicate.newBuilder()
-                                          .setStart(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID)
-                                          .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
-                                          .build();
-    Predicate predicate = Predicate.newBuilder()
-                              .setId(MetricsUtils.StringToId("Predicate"))
-                              .setSimplePredicate(simplePredicate)
-                              .build();
-    builder.addPredicate(predicate);
+      // Add Predicate's.
+      SimplePredicate simplePredicate = SimplePredicate.newBuilder()
+                                            .setStart(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID)
+                                            .setStop(APP_BREADCRUMB_REPORTED_A_MATCH_STOP_ID)
+                                            .build();
+      Predicate predicate = Predicate.newBuilder()
+                                .setId(MetricsUtils.StringToId("Predicate"))
+                                .setSimplePredicate(simplePredicate)
+                                .build();
+      builder.addPredicate(predicate);
 
-    // Add GaugeMetric.
-    FieldMatcher fieldMatcher =
-        FieldMatcher.newBuilder().setField(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID).build();
-    builder.addGaugeMetric(
-        StatsdConfigProto.GaugeMetric.newBuilder()
-            .setId(MetricsUtils.GAUGE_METRIC_ID)
-            .setWhat(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
-            .setCondition(predicate.getId())
-            .setGaugeFieldsFilter(
-                FieldFilter.newBuilder().setIncludeAll(false).setFields(fieldMatcher).build())
-            .setDimensionsInWhat(
-                FieldMatcher.newBuilder()
-                    .setField(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
-                    .addChild(FieldMatcher.newBuilder()
-                                  .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                  .build())
-                    .build())
-            .setBucket(StatsdConfigProto.TimeUnit.CTS)
-            .build());
+      // Add GaugeMetric.
+      FieldMatcher fieldMatcher =
+          FieldMatcher.newBuilder().setField(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID).build();
+      builder.addGaugeMetric(
+          StatsdConfigProto.GaugeMetric.newBuilder()
+              .setId(MetricsUtils.GAUGE_METRIC_ID)
+              .setWhat(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
+              .setCondition(predicate.getId())
+              .setGaugeFieldsFilter(
+                  FieldFilter.newBuilder().setIncludeAll(false).setFields(fieldMatcher).build())
+              .setDimensionsInWhat(
+                  FieldMatcher.newBuilder()
+                      .setField(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
+                      .addChild(FieldMatcher.newBuilder()
+                                    .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                    .build())
+                      .build())
+              .setBucket(StatsdConfigProto.TimeUnit.CTS)
+              .build());
 
-    // Upload config.
-    uploadConfig(builder);
+      // Upload config.
+      uploadConfig(builder);
 
-    // Create AppBreadcrumbReported Start/Stop events.
-    doAppBreadcrumbReportedStart(0);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStart(1);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStart(2);
-    Thread.sleep(2000);
-    doAppBreadcrumbReportedStop(2);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStop(0);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStop(1);
-    doAppBreadcrumbReportedStart(2);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStart(1);
-    Thread.sleep(2000);
-    doAppBreadcrumbReportedStop(2);
-    Thread.sleep(10);
-    doAppBreadcrumbReportedStop(1);
+      // Create AppBreadcrumbReported Start/Stop events.
+      doAppBreadcrumbReportedStart(0);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStart(1);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStart(2);
+      Thread.sleep(2000);
+      doAppBreadcrumbReportedStop(2);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStop(0);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStop(1);
+      doAppBreadcrumbReportedStart(2);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStart(1);
+      Thread.sleep(2000);
+      doAppBreadcrumbReportedStop(2);
+      Thread.sleep(10);
+      doAppBreadcrumbReportedStop(1);
 
-    // Wait for the metrics to propagate to statsd.
-    Thread.sleep(2000);
+      // Wait for the metrics to propagate to statsd.
+      Thread.sleep(2000);
 
-    StatsLogReport metricReport = getStatsLogReport();
-    LogUtil.CLog.d("Got the following gauge metric data: " + metricReport.toString());
-    assertEquals(MetricsUtils.GAUGE_METRIC_ID, metricReport.getMetricId());
-    assertTrue(metricReport.hasGaugeMetrics());
-    StatsLogReport.GaugeMetricDataWrapper gaugeData = metricReport.getGaugeMetrics();
-    assertEquals(gaugeData.getDataCount(), 1);
+      StatsLogReport metricReport = getStatsLogReport();
+      LogUtil.CLog.d("Got the following gauge metric data: " + metricReport.toString());
+      assertEquals(MetricsUtils.GAUGE_METRIC_ID, metricReport.getMetricId());
+      assertTrue(metricReport.hasGaugeMetrics());
+      StatsLogReport.GaugeMetricDataWrapper gaugeData = metricReport.getGaugeMetrics();
+      assertEquals(gaugeData.getDataCount(), 1);
 
-    int bucketCount = gaugeData.getData(0).getBucketInfoCount();
-    GaugeMetricData data = gaugeData.getData(0);
-    assertTrue(bucketCount > 2);
-    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(0));
-    assertEquals(data.getBucketInfo(0).getAtomCount(), 1);
-    assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getLabel(), 0);
-    assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getState(),
-        AppBreadcrumbReported.State.START);
+      int bucketCount = gaugeData.getData(0).getBucketInfoCount();
+      GaugeMetricData data = gaugeData.getData(0);
+      assertTrue(bucketCount > 2);
+      MetricsUtils.assertBucketTimePresent(data.getBucketInfo(0));
+      assertEquals(data.getBucketInfo(0).getAtomCount(), 1);
+      assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getLabel(), 0);
+      assertEquals(data.getBucketInfo(0).getAtom(0).getAppBreadcrumbReported().getState(),
+          AppBreadcrumbReported.State.START);
 
-    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(1));
-    assertEquals(data.getBucketInfo(1).getAtomCount(), 1);
+      MetricsUtils.assertBucketTimePresent(data.getBucketInfo(1));
+      assertEquals(data.getBucketInfo(1).getAtomCount(), 1);
 
-    MetricsUtils.assertBucketTimePresent(data.getBucketInfo(bucketCount-1));
-    assertEquals(data.getBucketInfo(bucketCount - 1).getAtomCount(), 1);
-    assertEquals(
-        data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getLabel(), 2);
-    assertEquals(
-        data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getState(),
-        AppBreadcrumbReported.State.STOP);
+      MetricsUtils.assertBucketTimePresent(data.getBucketInfo(bucketCount-1));
+      assertEquals(data.getBucketInfo(bucketCount - 1).getAtomCount(), 1);
+      assertEquals(
+          data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getLabel(), 2);
+      assertEquals(
+          data.getBucketInfo(bucketCount - 1).getAtom(0).getAppBreadcrumbReported().getState(),
+          AppBreadcrumbReported.State.STOP);
   }
+
+  public void testPulledGaugeMetricWithActivation() throws Exception {
+      if (statsdDisabled()) {
+        return;
+      }
+      // Add AtomMatcher's.
+      int activationAtomMatcherId = 1;
+      int activationAtomMatcherLabel = 1;
+
+      int systemUptimeMatcherId = 2;
+      AtomMatcher activationAtomMatcher =
+              MetricsUtils.appBreadcrumbMatcherWithLabel(
+                      activationAtomMatcherId, activationAtomMatcherLabel);
+      AtomMatcher systemUptimeMatcher =
+              AtomMatcher.newBuilder()
+                      .setId(systemUptimeMatcherId)
+                      .setSimpleAtomMatcher(
+                              SimpleAtomMatcher.newBuilder().setAtomId(Atom.SYSTEM_UPTIME_FIELD_NUMBER))
+                      .build();
+
+      StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+      builder.addAtomMatcher(activationAtomMatcher);
+      builder.addAtomMatcher(systemUptimeMatcher);
+
+      // Add GaugeMetric.
+      builder.addGaugeMetric(
+              StatsdConfigProto.GaugeMetric.newBuilder()
+                      .setId(MetricsUtils.GAUGE_METRIC_ID)
+                      .setWhat(systemUptimeMatcherId)
+                      .setGaugeFieldsFilter(
+                              FieldFilter.newBuilder().setIncludeAll(true).build())
+                      .setBucket(StatsdConfigProto.TimeUnit.CTS)
+                      .build());
+
+      // Add activation.
+      builder.addMetricActivation(MetricActivation.newBuilder()
+              .setMetricId(MetricsUtils.GAUGE_METRIC_ID)
+              .setActivationType(ActivationType.ACTIVATE_IMMEDIATELY)
+              .addEventActivation(EventActivation.newBuilder()
+                    .setAtomMatcherId(activationAtomMatcherId)
+                    .setTtlSeconds(5)));
+
+      // Upload config.
+      uploadConfig(builder);
+
+      // Plenty of time to pull, but we should not keep the data since we are not active.
+      Thread.sleep(20_000);
+
+      StatsLogReport metricReport = getStatsLogReport();
+      LogUtil.CLog.d("Got the following gauge metric data: " + metricReport.toString());
+      assertEquals(MetricsUtils.GAUGE_METRIC_ID, metricReport.getMetricId());
+      assertFalse(metricReport.hasGaugeMetrics());
+  }
+
+
 }
