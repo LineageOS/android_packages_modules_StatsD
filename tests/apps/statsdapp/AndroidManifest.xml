@@ -57,6 +57,12 @@
 
         <activity android:name=".DaveyActivity" android:exported="true" />
         <activity android:name=".HiddenApiUsedActivity" android:exported="true" />
+        <activity
+          android:name=".ANRActivity"
+          android:label="ANR Test Activity"
+          android:launchMode="singleInstance"
+          android:process=":ANRProcess"
+          />
 
         <service android:name=".StatsdAuthenticator"
             android:exported="false">
