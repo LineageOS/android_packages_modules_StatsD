@@ -15,6 +15,16 @@
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
+LOCAL_MODULE := liblmkhelper
+LOCAL_SRC_FILES := \
+    jni/alloc_stress_activity.cpp
+LOCAL_CFLAGS += -Wall -Werror
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_NDK_STL_VARIANT := c++_static
+LOCAL_SDK_VERSION := current
+include $(BUILD_SHARED_LIBRARY)
+
+include $(CLEAR_VARS)
 
 LOCAL_PACKAGE_NAME := CtsStatsdApp
 LOCAL_PRIVATE_PLATFORM_APIS := true
@@ -37,7 +47,12 @@ LOCAL_STATIC_JAVA_LIBRARIES := \
     androidx.legacy_legacy-support-v4 \
     androidx.test.rules
 
+LOCAL_JNI_SHARED_LIBRARIES := \
+	liblmkhelper
+
 # tag this module as a cts test artifact
 LOCAL_COMPATIBILITY_SUITE := cts vts general-tests
+
+LOCAL_MULTILIB := both
 
 include $(BUILD_CTS_PACKAGE)

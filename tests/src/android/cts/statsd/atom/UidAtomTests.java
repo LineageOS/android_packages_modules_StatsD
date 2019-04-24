@@ -40,6 +40,7 @@ import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.HiddenApiUsed;
 import com.android.os.AtomsProto.LooperStats;
+import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
@@ -80,6 +81,32 @@ public class UidAtomTests extends DeviceAtomTestCase {
     protected void tearDown() throws Exception {
         resetBatteryStatus();
         super.tearDown();
+    }
+
+    public void testLmkKillOccurred() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder conf = createConfigBuilder()
+                .addAllowedLogSource("AID_LMKD");
+        final int atomTag = Atom.LMK_KILL_OCCURRED_FIELD_NUMBER;
+        addAtomEvent(conf, atomTag, false);
+        uploadConfig(conf);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runActivity("LmkActivity", null, null, 5000);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertEquals(1, data.size());
+        assertTrue(data.get(0).getAtom().hasLmkKillOccurred());
+        LmkKillOccurred atom = data.get(0).getAtom().getLmkKillOccurred();
+        assertEquals(getUid(), atom.getUid());
+        assertEquals(DEVICE_SIDE_TEST_PACKAGE + ":LmkProcess", atom.getProcessName());
+        assertEquals(0, atom.getOomAdjScore());
     }
 
     public void testAppCrashOccurred() throws Exception {
