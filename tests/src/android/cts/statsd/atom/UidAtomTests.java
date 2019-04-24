@@ -18,10 +18,12 @@ package android.cts.statsd.atom;
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
+import android.server.ErrorSource;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
+import com.android.os.AtomsProto.ANROccurred;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
@@ -1275,5 +1277,33 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         assertTrue(verifiedKnowPermissionState);
+    }
+
+    public void testANROccurred() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        final int atomTag = Atom.ANR_OCCURRED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        try (AutoCloseable a = withActivity("ANRActivity", null, null)) {
+            Thread.sleep(WAIT_TIME_SHORT);
+            getDevice().executeShellCommand(
+                    "am broadcast -a action_anr -p " + DEVICE_SIDE_TEST_PACKAGE);
+            Thread.sleep(11_000);
+        }
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertEquals(1, data.size());
+        assertTrue(data.get(0).getAtom().hasAnrOccurred());
+        ANROccurred atom = data.get(0).getAtom().getAnrOccurred();
+        assertEquals(ANROccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
+        assertEquals(ANROccurred.ForegroundState.FOREGROUND_VALUE,
+                atom.getForegroundState().getNumber());
+        assertEquals(ErrorSource.DATA_APP, atom.getErrorSource());
+        assertEquals(DEVICE_SIDE_TEST_PACKAGE, atom.getPackageName());
     }
 }
