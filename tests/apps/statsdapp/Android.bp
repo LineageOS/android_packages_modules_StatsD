@@ -28,7 +28,10 @@ android_test_helper_app {
     name: "CtsStatsdApp",
     defaults: ["cts_defaults"],
     platform_apis: true,
-    srcs: ["src/**/*.java"],
+    srcs: [
+        "src/**/*.java",
+        ":statslog-statsd-cts-java-gen",
+    ],
     libs: [
         "android.test.runner.stubs",
         "junit",
@@ -49,4 +52,11 @@ android_test_helper_app {
         "general-tests",
     ],
     compile_multilib: "both",
+}
+
+genrule {
+    name: "statslog-statsd-cts-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module cts --javaPackage com.android.server.cts.device.statsd --javaClass StatsLogStatsdCts",
+    out: ["com/android/server/cts/device/statsd/StatsLogStatsdCts.java"],
 }
