@@ -83,6 +83,17 @@ public class MetricsUtils {
           .build();
     }
 
+    public static AtomMatcher appBreadcrumbMatcherWithLabel(int id, int label) {
+        return AtomMatcher.newBuilder()
+                .setId(id)
+                .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                        .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                        .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                                .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
+                                .setEqInt(label)))
+                .build();
+    }
+
     public static long StringToId(String str) {
       return str.hashCode();
     }
