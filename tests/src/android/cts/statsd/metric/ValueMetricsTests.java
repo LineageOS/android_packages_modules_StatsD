@@ -17,37 +17,27 @@ package android.cts.statsd.metric;
 
 import android.cts.statsd.atom.DeviceAtomTestCase;
 
-import com.android.internal.os.StatsdConfigProto;
+import com.android.internal.os.StatsdConfigProto.ActivationType;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
-import com.android.internal.os.StatsdConfigProto.FieldMatcher;
-import com.android.internal.os.StatsdConfigProto.ValueMetric;
-import com.android.os.AtomsProto.AppBreadcrumbReported;
-import com.android.os.AtomsProto.SystemElapsedRealtime;
-
-import com.android.os.AtomsProto.Atom;
-import com.android.os.StatsLog.ValueBucketInfo;
-import com.android.os.StatsLog.ValueMetricData;
-import com.android.os.StatsLog.StatsLogReport;
-import com.android.annotations.Nullable;
-import com.android.internal.os.StatsdConfigProto.AtomMatcher;
-import com.android.internal.os.StatsdConfigProto.EventMetric;
+import com.android.internal.os.StatsdConfigProto.EventActivation;
 import com.android.internal.os.StatsdConfigProto.FieldFilter;
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
-import com.android.internal.os.StatsdConfigProto.GaugeMetric;
+import com.android.internal.os.StatsdConfigProto.MetricActivation;
 import com.android.internal.os.StatsdConfigProto.Predicate;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.internal.os.StatsdConfigProto.SimplePredicate;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.internal.os.StatsdConfigProto.TimeUnit;
-import com.android.os.AtomsProto.Atom;
+import com.android.internal.os.StatsdConfigProto.ValueMetric;
+
 import com.android.os.AtomsProto.AppBreadcrumbReported;
-import com.android.os.AtomsProto.ScreenStateChanged;
-import com.android.os.StatsLog.ConfigMetricsReport;
-import com.android.os.StatsLog.ConfigMetricsReportList;
-import com.android.os.StatsLog.EventMetricData;
-import com.android.os.StatsLog.GaugeMetricData;
+import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.SystemElapsedRealtime;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.os.StatsLog.ValueBucketInfo;
+import com.android.os.StatsLog.ValueMetricData;
+
 import com.android.tradefed.log.LogUtil;
 
 public class ValueMetricsTests extends DeviceAtomTestCase {
@@ -67,7 +57,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     AtomMatcher atomMatcher =
         MetricsUtils.simpleAtomMatcher(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID);
 
-    StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+    StatsdConfig.Builder builder = createConfigBuilder();
     builder.addAtomMatcher(startAtomMatcher);
     builder.addAtomMatcher(stopAtomMatcher);
     builder.addAtomMatcher(atomMatcher);
@@ -77,7 +67,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
         ValueMetric.newBuilder()
             .setId(MetricsUtils.VALUE_METRIC_ID)
             .setWhat(APP_BREADCRUMB_REPORTED_B_MATCH_START_ID)
-            .setBucket(StatsdConfigProto.TimeUnit.CTS)
+            .setBucket(TimeUnit.CTS)
             .setValueField(FieldMatcher.newBuilder()
                                .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
                                .addChild(FieldMatcher.newBuilder().setField(
@@ -135,7 +125,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     AtomMatcher stopAtomMatcher =
             MetricsUtils.stopAtomMatcher(predicateFalseName.hashCode());
 
-    StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+    StatsdConfig.Builder builder = createConfigBuilder();
     builder.addAtomMatcher(startAtomMatcher);
     builder.addAtomMatcher(stopAtomMatcher);
     builder.addPredicate(Predicate.newBuilder()
@@ -158,7 +148,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
             ValueMetric.newBuilder()
                     .setId(MetricsUtils.VALUE_METRIC_ID)
                     .setWhat(atomName.hashCode())
-                    .setBucket(StatsdConfigProto.TimeUnit.ONE_MINUTE)
+                    .setBucket(TimeUnit.ONE_MINUTE)
                     .setValueField(FieldMatcher.newBuilder()
                             .setField(Atom.SYSTEM_ELAPSED_REALTIME_FIELD_NUMBER)
                             .addChild(FieldMatcher.newBuilder().setField(
@@ -215,7 +205,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     AtomMatcher stopAtomMatcher =
             MetricsUtils.stopAtomMatcher(predicateFalseName.hashCode());
 
-    StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
+    StatsdConfig.Builder builder = createConfigBuilder();
     builder.addAtomMatcher(startAtomMatcher);
     builder.addAtomMatcher(stopAtomMatcher);
     builder.addPredicate(Predicate.newBuilder()
@@ -238,7 +228,7 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
             ValueMetric.newBuilder()
                     .setId(MetricsUtils.VALUE_METRIC_ID)
                     .setWhat(atomName.hashCode())
-                    .setBucket(StatsdConfigProto.TimeUnit.ONE_MINUTE)
+                    .setBucket(TimeUnit.ONE_MINUTE)
                     .setValueField(FieldMatcher.newBuilder()
                             .setField(Atom.SYSTEM_ELAPSED_REALTIME_FIELD_NUMBER)
                             .addChild(FieldMatcher.newBuilder().setField(
@@ -283,4 +273,62 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     // At most we lose one full min bucket
     assertTrue(totalValue > (GAP_INTERVAL*NUM_EVENTS - 60_000));
   }
+
+  // Test value metric with pulled atoms and across multiple buckets
+  public void testPullerAcrossBucketsWithActivation() throws Exception {
+    if (statsdDisabled()) {
+      return;
+    }
+
+    StatsdConfig.Builder builder = createConfigBuilder();
+
+    // Add AtomMatcher's.
+    int activationAtomMatcherId = 1;
+    int activationAtomMatcherLabel = 1;
+    AtomMatcher activationAtomMatcher =
+            MetricsUtils.appBreadcrumbMatcherWithLabel(
+                    activationAtomMatcherId, activationAtomMatcherLabel);
+    final String atomName = "SYSTEM_ELAPSED_REALTIME";
+    SimpleAtomMatcher.Builder sam = SimpleAtomMatcher.newBuilder()
+            .setAtomId(Atom.SYSTEM_ELAPSED_REALTIME_FIELD_NUMBER);
+    builder.addAtomMatcher(activationAtomMatcher)
+            .addAtomMatcher(AtomMatcher.newBuilder()
+                    .setId(atomName.hashCode())
+                    .setSimpleAtomMatcher(sam));
+
+    // Add ValueMetric.
+    builder.addValueMetric(
+            ValueMetric.newBuilder()
+                    .setId(MetricsUtils.VALUE_METRIC_ID)
+                    .setWhat(atomName.hashCode())
+                    .setBucket(TimeUnit.ONE_MINUTE)
+                    .setValueField(FieldMatcher.newBuilder()
+                            .setField(Atom.SYSTEM_ELAPSED_REALTIME_FIELD_NUMBER)
+                            .addChild(FieldMatcher.newBuilder().setField(
+                                    SystemElapsedRealtime.TIME_MILLIS_FIELD_NUMBER)))
+                    .build());
+    // Add activation.
+    builder.addMetricActivation(MetricActivation.newBuilder()
+          .setMetricId(MetricsUtils.VALUE_METRIC_ID)
+          .setActivationType(ActivationType.ACTIVATE_IMMEDIATELY)
+          .addEventActivation(EventActivation.newBuilder()
+                  .setAtomMatcherId(activationAtomMatcherId)
+                  .setTtlSeconds(5)));
+
+
+    // Upload config.
+    uploadConfig(builder);
+
+    // Wait for 1 min and 10 sec to capture at least 1 bucket
+    Thread.sleep(60_000 + 10_000);
+
+    // Wait for the metrics to propagate to statsd.
+    Thread.sleep(1_000);
+
+    StatsLogReport metricReport = getStatsLogReport();
+    LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
+    assertEquals(MetricsUtils.VALUE_METRIC_ID, metricReport.getMetricId());
+    assertFalse(metricReport.hasValueMetrics());
+  }
+
 }
