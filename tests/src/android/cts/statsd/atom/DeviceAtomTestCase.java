@@ -74,9 +74,9 @@ public class DeviceAtomTestCase extends AtomTestCase {
         List<EventMetricData> data = doDeviceMethod(methodName, conf);
 
         if (demandExactlyTwo) {
-            assertTrue(data.size() == 2);
+            assertEquals(2, data.size());
         } else {
-            assertTrue(data.size() >= 2);
+            assertTrue("data.size() [" + data.size() + "] should be >= 2", data.size() >= 2);
         }
         assertTimeDiffBetween(data.get(0), data.get(1), minTimeDiffMs, maxTimeDiffMs);
         return data;
