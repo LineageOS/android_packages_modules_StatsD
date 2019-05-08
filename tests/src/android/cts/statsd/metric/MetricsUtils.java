@@ -17,6 +17,7 @@ package android.cts.statsd.metric;
 
 import com.android.internal.os.StatsdConfigProto;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
+import com.android.internal.os.StatsdConfigProto.EventActivation;
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.SimpleAtomMatcher;
 import com.android.os.AtomsProto.Atom;
@@ -92,6 +93,27 @@ public class MetricsUtils {
                                 .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
                                 .setEqInt(label)))
                 .build();
+    }
+
+    public static AtomMatcher simpleAtomMatcher(int id, int label) {
+      return AtomMatcher.newBuilder()
+          .setId(id)
+          .setSimpleAtomMatcher(SimpleAtomMatcher.newBuilder()
+                  .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                  .addFieldValueMatcher(FieldValueMatcher.newBuilder()
+                            .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
+                            .setEqInt(label)
+                  )
+          )
+          .build();
+    }
+
+    public static EventActivation.Builder createEventActivation(int ttlSecs, int matcherId,
+            int cancelMatcherId) {
+        return EventActivation.newBuilder()
+                .setAtomMatcherId(matcherId)
+                .setTtlSeconds(ttlSecs)
+                .setDeactivationAtomMatcherId(cancelMatcherId);
     }
 
     public static long StringToId(String str) {
