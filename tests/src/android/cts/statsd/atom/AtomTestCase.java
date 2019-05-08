@@ -345,12 +345,16 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected StatsLogReport getStatsLogReport() throws Exception {
-        ConfigMetricsReportList reportList = getReportList();
-        assertTrue(reportList.getReportsCount() == 1);
-        ConfigMetricsReport report = reportList.getReports(0);
+        ConfigMetricsReport report = getConfigMetricsReport();
         assertTrue(report.hasUidMap());
         assertEquals(1, report.getMetricsCount());
         return report.getMetrics(0);
+    }
+
+    protected ConfigMetricsReport getConfigMetricsReport() throws Exception {
+        ConfigMetricsReportList reportList = getReportList();
+        assertEquals(1, reportList.getReportsCount());
+        return reportList.getReports(0);
     }
 
     /** Gets the statsd report. Note that this also deletes that report from statsd. */
@@ -795,6 +799,10 @@ public class AtomTestCase extends BaseTestCase {
 
     public void doAppBreadcrumbReportedStop(int label) throws Exception {
         doAppBreadcrumbReported(label, AppBreadcrumbReported.State.STOP.ordinal());
+    }
+
+    public void doAppBreadcrumbReported(int label) throws Exception {
+        doAppBreadcrumbReported(label, AppBreadcrumbReported.State.UNSPECIFIED.ordinal());
     }
 
     public void doAppBreadcrumbReported(int label, int state) throws Exception {
