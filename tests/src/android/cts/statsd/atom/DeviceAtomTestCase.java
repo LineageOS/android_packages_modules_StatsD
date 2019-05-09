@@ -264,4 +264,10 @@ public class DeviceAtomTestCase extends AtomTestCase {
     protected void commitProcStatsToDisk() throws Exception {
         getDevice().executeShellCommand("dumpsys procstats --commit");
     }
+
+    protected void rebootDeviceAndWaitUntilReady() throws Exception {
+        rebootDevice();
+        // Wait for 2 mins.
+        assertTrue("Device failed to boot", getDevice().waitForBootComplete(120_000));
+    }
 }
