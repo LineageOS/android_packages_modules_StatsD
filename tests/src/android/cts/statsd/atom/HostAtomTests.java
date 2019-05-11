@@ -452,7 +452,7 @@ public class HostAtomTests extends AtomTestCase {
         Atom atom = data.get(0);
         assertTrue(atom.getBatteryCycleCount().hasCycleCount());
         if (hasBattery()) {
-            assertTrue(atom.getBatteryCycleCount().getCycleCount() > 0);
+            assertTrue(atom.getBatteryCycleCount().getCycleCount() >= 0);
         }
     }
 
