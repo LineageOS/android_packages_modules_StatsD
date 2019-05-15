@@ -27,6 +27,7 @@ import com.android.os.AtomsProto.ANROccurred;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.AttributionNode;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
@@ -49,6 +50,7 @@ import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
+import com.android.os.AtomsProto.TestAtomReported;
 import com.android.os.AtomsProto.VibratorStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
 import com.android.os.AtomsProto.WakeupAlarmOccurred;
@@ -1333,4 +1335,94 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertEquals(ErrorSource.DATA_APP, atom.getErrorSource());
         assertEquals(DEVICE_SIDE_TEST_PACKAGE, atom.getPackageName());
     }
+
+    public void testWriteRawTestAtom() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        final int atomTag = Atom.TEST_ATOM_REPORTED_FIELD_NUMBER;
+        createAndUploadConfig(atomTag, true);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testWriteRawTestAtom");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+        assertEquals(data.size(), 4);
+
+        TestAtomReported atom = data.get(0).getAtom().getTestAtomReported();
+        List<AttributionNode> attrChain = atom.getAttributionNodeList();
+        assertEquals(2, attrChain.size());
+        assertEquals(1234, attrChain.get(0).getUid());
+        assertEquals("tag1", attrChain.get(0).getTag());
+        assertEquals(getUid(), attrChain.get(1).getUid());
+        assertEquals("tag2", attrChain.get(1).getTag());
+
+        assertEquals(42, atom.getIntField());
+        assertEquals(Long.MAX_VALUE, atom.getLongField());
+        assertEquals(3.14f, atom.getFloatField());
+        assertEquals("This is a basic test!", atom.getStringField());
+        assertEquals(false, atom.getBooleanField());
+        assertEquals(TestAtomReported.State.ON_VALUE, atom.getState().getNumber());
+        List<Long> expIds = atom.getBytesField().getExperimentIdList();
+        assertEquals(3, expIds.size());
+        assertEquals(1L, (long) expIds.get(0));
+        assertEquals(2L, (long) expIds.get(1));
+        assertEquals(3L, (long) expIds.get(2));
+
+        atom = data.get(1).getAtom().getTestAtomReported();
+        attrChain = atom.getAttributionNodeList();
+        assertEquals(2, attrChain.size());
+        assertEquals(9999, attrChain.get(0).getUid());
+        assertEquals("tag9999", attrChain.get(0).getTag());
+        assertEquals(getUid(), attrChain.get(1).getUid());
+        assertEquals("", attrChain.get(1).getTag());
+
+        assertEquals(100, atom.getIntField());
+        assertEquals(Long.MIN_VALUE, atom.getLongField());
+        assertEquals(-2.5f, atom.getFloatField());
+        assertEquals("Test null uid", atom.getStringField());
+        assertEquals(true, atom.getBooleanField());
+        assertEquals(TestAtomReported.State.UNKNOWN_VALUE, atom.getState().getNumber());
+        expIds = atom.getBytesField().getExperimentIdList();
+        assertEquals(3, expIds.size());
+        assertEquals(1L, (long) expIds.get(0));
+        assertEquals(2L, (long) expIds.get(1));
+        assertEquals(3L, (long) expIds.get(2));
+
+        atom = data.get(2).getAtom().getTestAtomReported();
+        attrChain = atom.getAttributionNodeList();
+        assertEquals(1, attrChain.size());
+        assertEquals(getUid(), attrChain.get(0).getUid());
+        assertEquals("tag1", attrChain.get(0).getTag());
+
+        assertEquals(-256, atom.getIntField());
+        assertEquals(-1234567890L, atom.getLongField());
+        assertEquals(42.01f, atom.getFloatField());
+        assertEquals("Test non chained", atom.getStringField());
+        assertEquals(true, atom.getBooleanField());
+        assertEquals(TestAtomReported.State.OFF_VALUE, atom.getState().getNumber());
+        expIds = atom.getBytesField().getExperimentIdList();
+        assertEquals(3, expIds.size());
+        assertEquals(1L, (long) expIds.get(0));
+        assertEquals(2L, (long) expIds.get(1));
+        assertEquals(3L, (long) expIds.get(2));
+
+        atom = data.get(3).getAtom().getTestAtomReported();
+        attrChain = atom.getAttributionNodeList();
+        assertEquals(1, attrChain.size());
+        assertEquals(getUid(), attrChain.get(0).getUid());
+        assertEquals("", attrChain.get(0).getTag());
+
+        assertEquals(0, atom.getIntField());
+        assertEquals(0L, atom.getLongField());
+        assertEquals(0f, atom.getFloatField());
+        assertEquals("", atom.getStringField());
+        assertEquals(true, atom.getBooleanField());
+        assertEquals(TestAtomReported.State.OFF_VALUE, atom.getState().getNumber());
+        expIds = atom.getBytesField().getExperimentIdList();
+        assertEquals(0, expIds.size());
+    }
+
 }
