@@ -86,7 +86,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testLmkKillOccurred() throws Exception {
-        if (statsdDisabled()) {
+        if (statsdDisabled() || !"true".equals(getProperty("ro.lmk.log_stats"))) {
             return;
         }
 
@@ -98,7 +98,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("LmkActivity", null, null, 12_000);
+        runActivity("LmkActivity", null, null, 5_000);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
@@ -1320,7 +1320,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             Thread.sleep(WAIT_TIME_SHORT);
             getDevice().executeShellCommand(
                     "am broadcast -a action_anr -p " + DEVICE_SIDE_TEST_PACKAGE);
-            Thread.sleep(30_000);
+            Thread.sleep(11_000);
         }
 
         // Sorted list of events in order in which they occurred.
