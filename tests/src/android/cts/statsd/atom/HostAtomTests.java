@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import android.os.BatteryPluggedStateEnum;
 import android.os.BatteryStatusEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
@@ -634,11 +636,11 @@ public class HostAtomTests extends AtomTestCase {
         turnOnAirplaneMode();
         turnOffAirplaneMode();
         // wait for long enough for device to restore connection
-        Thread.sleep(10_000);
+        Thread.sleep(13_000);
 
         List<EventMetricData> data = getEventMetricDataList();
         // at least 1 disconnect and 1 connect
-        assertTrue(data.size() >= 2);
+        assertThat(data.size()).isAtLeast(2);
         boolean foundDisconnectEvent = false;
         boolean foundConnectEvent = false;
         for (EventMetricData d : data) {

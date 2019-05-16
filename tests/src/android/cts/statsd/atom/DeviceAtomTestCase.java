@@ -269,5 +269,22 @@ public class DeviceAtomTestCase extends AtomTestCase {
         rebootDevice();
         // Wait for 2 mins.
         assertTrue("Device failed to boot", getDevice().waitForBootComplete(120_000));
+        assertTrue("Stats service failed to start", waitForStatsServiceStart(60_000));
+        Thread.sleep(2_000);
+    }
+
+    protected boolean waitForStatsServiceStart(final long waitTime) throws Exception {
+        LogUtil.CLog.i("Waiting %d ms for stats service to start", waitTime);
+        int counter = 1;
+        long startTime = System.currentTimeMillis();
+        while ((System.currentTimeMillis() - startTime) < waitTime) {
+            if ("running".equals(getProperty("init.svc.statsd"))) {
+                return true;
+            }
+            Thread.sleep(Math.min(200 * counter, 2_000));
+            counter++;
+        }
+        LogUtil.CLog.w("Stats service did not start after %d ms", waitTime);
+        return false;
     }
 }
