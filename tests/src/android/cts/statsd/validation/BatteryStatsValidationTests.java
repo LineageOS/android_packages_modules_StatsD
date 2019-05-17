@@ -66,7 +66,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         turnOnAirplaneMode();
         turnOffAirplaneMode();
         // wait for long enough for device to restore connection
-        Thread.sleep(10_000);
+        Thread.sleep(13_000);
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
         List<CountMetricData> countMetricData = getCountMetricDataList();
