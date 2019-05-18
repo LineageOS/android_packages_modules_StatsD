@@ -61,14 +61,16 @@
             android:label="Lmk Test Activity"
             android:launchMode="singleInstance"
             android:process=":LmkProcess"
+            android:exported="true"
             />
         <activity android:name=".DaveyActivity" android:exported="true" />
         <activity android:name=".HiddenApiUsedActivity" android:exported="true" />
         <activity
-          android:name=".ANRActivity"
-          android:label="ANR Test Activity"
-          android:launchMode="singleInstance"
-          android:process=":ANRProcess"
+            android:name=".ANRActivity"
+            android:label="ANR Test Activity"
+            android:launchMode="singleInstance"
+            android:process=":ANRProcess"
+            android:exported="true"
           />
 
         <service android:name=".StatsdAuthenticator"
