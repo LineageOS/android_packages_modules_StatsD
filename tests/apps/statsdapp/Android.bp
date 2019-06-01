@@ -28,6 +28,7 @@ android_test_helper_app {
     name: "CtsStatsdApp",
     defaults: ["cts_defaults"],
     platform_apis: true,
+    min_sdk_version: "24",
     srcs: [
         "src/**/*.java",
         ":statslog-statsd-cts-java-gen",
