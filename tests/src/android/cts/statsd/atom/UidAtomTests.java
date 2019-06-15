@@ -1299,6 +1299,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
                     assertTrue(permissionState.getIsGranted());
+                    // FLAG_PERMISSION_USER_SET = 1 << 0;
+                    assertEquals(1, permissionState.getPermissionFlags());
 
                     verifiedKnowPermissionState = true;
                 }
