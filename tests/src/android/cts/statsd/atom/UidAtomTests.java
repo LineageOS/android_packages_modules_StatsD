@@ -98,7 +98,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("LmkActivity", null, null, 5_000);
+        executeBackgroundService(ACTION_LMK);
+        Thread.sleep(5_000);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
@@ -107,8 +108,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertTrue(data.get(0).getAtom().hasLmkKillOccurred());
         LmkKillOccurred atom = data.get(0).getAtom().getLmkKillOccurred();
         assertEquals(getUid(), atom.getUid());
-        assertEquals(DEVICE_SIDE_TEST_PACKAGE + ":LmkProcess", atom.getProcessName());
-        assertEquals(0, atom.getOomAdjScore());
+        assertEquals(DEVICE_SIDE_TEST_PACKAGE, atom.getProcessName());
+        assertTrue(500 <= atom.getOomAdjScore());
     }
 
     public void testAppCrashOccurred() throws Exception {

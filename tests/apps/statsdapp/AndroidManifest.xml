@@ -56,13 +56,6 @@
             </intent-filter>
         </activity>
 
-        <activity
-            android:name=".LmkActivity"
-            android:label="Lmk Test Activity"
-            android:launchMode="singleInstance"
-            android:process=":LmkProcess"
-            android:exported="true"
-            />
         <activity android:name=".DaveyActivity" android:exported="true" />
         <activity android:name=".HiddenApiUsedActivity" android:exported="true" />
         <activity
