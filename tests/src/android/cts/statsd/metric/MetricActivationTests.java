@@ -46,34 +46,13 @@ public class MetricActivationTests extends DeviceAtomTestCase {
     private final int metric3MatcherId = 3;
 
     private final int act1MatcherId = 10;
-    private final int act1TtlSecs = 40;
     private final int act1CancelMatcherId = -10;
 
     private final int act2MatcherId = 20;
-    private final int act2TtlSecs = 60;
     private final int act2CancelMatcherId = -20;
 
 
-    /**
-     * Metric 1:
-     *     Activation 1:
-     *         - Ttl: 40 seconds
-     *         - Type: IMMEDIATE
-     *     Activation 2:
-     *         - Ttl: 60 seconds
-     *         - Type: ON_BOOT
-     *
-     * Metric 2:
-     *     Activation 1:
-     *         - Ttl: 40 seconds
-     *         - Type: ON_BOOT
-     *     Activation 2:
-     *         - Ttl: 60 seconds
-     *         - Type: IMMEDIATE
-     *
-     * Metric 3: No activations; always active
-     **/
-    private StatsdConfig.Builder createConfig() {
+    private StatsdConfig.Builder createConfig(final int act1TtlSecs, final int act2TtlSecs) {
         AtomMatcher metric1Matcher =
                 MetricsUtils.simpleAtomMatcher(metric1MatcherId, metric1MatcherId);
         AtomMatcher metric2Matcher =
@@ -151,16 +130,33 @@ public class MetricActivationTests extends DeviceAtomTestCase {
                 .addMetricActivation(metric2Activation);
     }
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
-        uploadConfig(createConfig());
-    }
-
+    /**
+     * Metric 1:
+     *     Activation 1:
+     *         - Ttl: 5 seconds
+     *         - Type: IMMEDIATE
+     *     Activation 2:
+     *         - Ttl: 8 seconds
+     *         - Type: ON_BOOT
+     *
+     * Metric 2:
+     *     Activation 1:
+     *         - Ttl: 5 seconds
+     *         - Type: ON_BOOT
+     *     Activation 2:
+     *         - Ttl: 8 seconds
+     *         - Type: IMMEDIATE
+     *
+     * Metric 3: No activations; always active
+     **/
     public void testCancellation() throws Exception {
         if (statsdDisabled()) {
             return;
         }
+
+        final int act1TtlSecs = 5;
+        final int act2TtlSecs = 8;
+        uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
 
         // Ignored, metric not active.
         doAppBreadcrumbReported(metric1MatcherId);
@@ -235,14 +231,37 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         verifyMetrics(report, 4, 0, 1);
     }
 
+    /**
+     * Metric 1:
+     *     Activation 1:
+     *         - Ttl: 100 seconds
+     *         - Type: IMMEDIATE
+     *     Activation 2:
+     *         - Ttl: 200 seconds
+     *         - Type: ON_BOOT
+     *
+     * Metric 2:
+     *     Activation 1:
+     *         - Ttl: 100 seconds
+     *         - Type: ON_BOOT
+     *     Activation 2:
+     *         - Ttl: 200 seconds
+     *         - Type: IMMEDIATE
+     *
+     * Metric 3: No activations; always active
+     **/
     public void testRestart() throws Exception {
         if (statsdDisabled()) {
             return;
         }
 
+        final int act1TtlSecs = 100;
+        final int act2TtlSecs = 200;
+        uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
+
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 30 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -255,9 +274,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 30 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 30 seconds
+        // Metric 2 Activation 1: 100 seconds
         // Metric 2 Activation 2: 0 seconds
         rebootDeviceAndWaitUntilReady();
 
@@ -271,7 +290,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds
         // Metric 2 Activation 2: 0 seconds
-        Thread.sleep(30_000L);
+        Thread.sleep(act1TtlSecs * 1000L);
 
         // Metric 1 event ignored, Activation 1 expired.
         // Metric 2 event ignored, Activation 1 expired.
@@ -283,7 +302,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 1 Activation 1: 0 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds
-        // Metric 2 Activation 2: 50 seconds
+        // Metric 2 Activation 2: 200 seconds
         doAppBreadcrumbReported(act2MatcherId);
         Thread.sleep(10L);
 
@@ -294,10 +313,10 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 30 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
-        // Metric 2 Activation 2: 50 seconds
+        // Metric 2 Activation 2: 200 seconds
         doAppBreadcrumbReported(act1MatcherId);
         Thread.sleep(10L);
 
@@ -307,17 +326,17 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 20 seconds
+        // Metric 1 Activation 1: 50 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
-        // Metric 2 Activation 2: 40 seconds
-        Thread.sleep(10_000L);
+        // Metric 2 Activation 2: 150 seconds
+        Thread.sleep(act1TtlSecs * 1000L / 2);
 
         // Time remaining:
-        // Metric 1 Activation 1: 20 seconds
-        // Metric 1 Activation 2: 50 seconds
-        // Metric 2 Activation 1: 30 seconds
-        // Metric 2 Activation 2: 40 seconds
+        // Metric 1 Activation 1: 50 seconds
+        // Metric 1 Activation 2: 200 seconds
+        // Metric 2 Activation 1: 100 seconds
+        // Metric 2 Activation 2: 150 seconds
         rebootDeviceAndWaitUntilReady();
 
         // Fourth logged event for Metric 1.
@@ -328,10 +347,10 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Expire Metric 1 Activation 1.
         // Time remaining:
         // Metric 1 Activation 1: 0 seconds
-        // Metric 1 Activation 2: 30 seconds
-        // Metric 2 Activation 1: 10 seconds
-        // Metric 2 Activation 2: 20 seconds
-        Thread.sleep(20_000L);
+        // Metric 1 Activation 2: 150 seconds
+        // Metric 2 Activation 1: 50 seconds
+        // Metric 2 Activation 2: 100 seconds
+        Thread.sleep(act1TtlSecs * 1000L / 2);
 
         // Fifth logged event for Metric 1.
         // Fifth logged event for Metric 2.
@@ -344,7 +363,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds
         // Metric 2 Activation 2: 0 seconds
-        Thread.sleep(30_000L);
+        Thread.sleep(act2TtlSecs * 1000L);
 
         // Metric 1 event ignored.
         // Metric 2 event ignored.
@@ -367,14 +386,37 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         verifyMetrics(report, 2, 2, 3);
     }
 
+    /**
+     * Metric 1:
+     *     Activation 1:
+     *         - Ttl: 100 seconds
+     *         - Type: IMMEDIATE
+     *     Activation 2:
+     *         - Ttl: 200 seconds
+     *         - Type: ON_BOOT
+     *
+     * Metric 2:
+     *     Activation 1:
+     *         - Ttl: 100 seconds
+     *         - Type: ON_BOOT
+     *     Activation 2:
+     *         - Ttl: 200 seconds
+     *         - Type: IMMEDIATE
+     *
+     * Metric 3: No activations; always active
+     **/
     public void testMultipleActivations() throws Exception {
         if (statsdDisabled()) {
             return;
         }
 
+        final int act1TtlSecs = 100;
+        final int act2TtlSecs = 200;
+        uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
+
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 40 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -387,11 +429,11 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 30 seconds
+        // Metric 1 Activation 1: 50 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
-        Thread.sleep(10_000L);
+        Thread.sleep(act1TtlSecs * 1000L / 2);
 
         // Second logged event for Metric 1.
         // Metric 2 event ignored, will activate after boot.
@@ -400,7 +442,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 30 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -413,9 +455,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 40 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 40 seconds
+        // Metric 2 Activation 1: 100 seconds
         // Metric 2 Activation 2: 0 seconds
         rebootDeviceAndWaitUntilReady();
 
@@ -426,9 +468,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 40 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 40 seconds
+        // Metric 2 Activation 1: 100 seconds
         // Metric 2 Activation 2: 0 seconds
         doAppBreadcrumbReported(act1MatcherId);
         Thread.sleep(10L);
@@ -444,7 +486,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds
         // Metric 2 Activation 2: 0 seconds
-        Thread.sleep(40_000);
+        Thread.sleep(act1TtlSecs * 1000L);
 
         // Metric 1 event ignored.
         // Metric 2 event ignored.
