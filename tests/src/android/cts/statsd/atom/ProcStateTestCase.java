@@ -35,15 +35,12 @@ public class ProcStateTestCase extends DeviceAtomTestCase {
 
   private static final String TAG = "Statsd.ProcStateTestCase";
 
-  private static final String DEVICE_SIDE_BG_SERVICE_COMPONENT
-          = "com.android.server.cts.device.statsd/.StatsdCtsBackgroundService";
   private static final String DEVICE_SIDE_FG_ACTIVITY_COMPONENT
           = "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity";
   private static final String DEVICE_SIDE_FG_SERVICE_COMPONENT
           = "com.android.server.cts.device.statsd/.StatsdCtsForegroundService";
 
   // Constants from the device-side tests (not directly accessible here).
-  public static final String KEY_ACTION = "action";
   public static final String ACTION_END_IMMEDIATELY = "action.end_immediately";
   public static final String ACTION_BACKGROUND_SLEEP = "action.background_sleep";
   public static final String ACTION_SLEEP_WHILE_TOP = "action.sleep_top";
@@ -56,17 +53,6 @@ public class ProcStateTestCase extends DeviceAtomTestCase {
   public static final int SLEEP_OF_ACTION_BACKGROUND_SLEEP = 2_000;
   public static final int SLEEP_OF_FOREGROUND_SERVICE = 2_000;
 
-  /**
-   * Runs a (background) service to perform the given action.
-   * @param actionValue the action code constants indicating the desired action to perform.
-   */
-  protected void executeBackgroundService(String actionValue) throws Exception {
-    allowBackgroundServices();
-    getDevice().executeShellCommand(String.format(
-            "am startservice -n '%s' -e %s %s",
-            DEVICE_SIDE_BG_SERVICE_COMPONENT,
-            KEY_ACTION, actionValue));
-  }
 
   /**
    * Runs an activity (in the foreground) to perform the given action.
