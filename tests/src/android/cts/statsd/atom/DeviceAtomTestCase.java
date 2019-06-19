@@ -35,8 +35,14 @@ public class DeviceAtomTestCase extends AtomTestCase {
             "com.android.server.cts.device.statsd";
     public static final String DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME =
             "com.android.server.cts.device.statsd.StatsdCtsForegroundService";
+    private static final String DEVICE_SIDE_BG_SERVICE_COMPONENT =
+            "com.android.server.cts.device.statsd/.StatsdCtsBackgroundService";
     public static final long DEVICE_SIDE_TEST_PKG_HASH =
             Long.parseUnsignedLong("15694052924544098582");
+
+    // Constants from device side tests (not directly accessible here).
+    public static final String KEY_ACTION = "action";
+    public static final String ACTION_LMK = "action.lmk";
 
     public static final String CONFIG_NAME = "cts_config";
 
@@ -188,6 +194,19 @@ public class DeviceAtomTestCase extends AtomTestCase {
         getDevice().executeShellCommand(String.format(
                 "cmd deviceidle tempwhitelist %s", DEVICE_SIDE_TEST_PACKAGE));
     }
+
+    /**
+     * Runs a (background) service to perform the given action.
+     * @param actionValue the action code constants indicating the desired action to perform.
+     */
+    protected void executeBackgroundService(String actionValue) throws Exception {
+        allowBackgroundServices();
+        getDevice().executeShellCommand(String.format(
+                "am startservice -n '%s' -e %s %s",
+                DEVICE_SIDE_BG_SERVICE_COMPONENT,
+                KEY_ACTION, actionValue));
+    }
+
 
     /** Make the test app standby-active so it can run syncs and jobs immediately. */
     protected void allowImmediateSyncs() throws Exception {
