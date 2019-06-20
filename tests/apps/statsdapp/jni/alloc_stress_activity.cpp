@@ -33,7 +33,7 @@ using namespace std;
 size_t s = 4 * (1 << 20); // 4 MB
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_android_server_cts_device_statsd_LmkActivity_cmain(JNIEnv* , jobject /* this */)
+Java_com_android_server_cts_device_statsd_StatsdCtsBackgroundService_cmain(JNIEnv* , jobject /* this */)
 {
     long long allocCount = 0;
     while (1) {
