@@ -634,8 +634,10 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         turnOnAirplaneMode();
+        // wait long enough for airplane mode events to propagate.
+        Thread.sleep(1_200);
         turnOffAirplaneMode();
-        // wait for long enough for device to restore connection
+        // wait long enough for the device to restore connection
         Thread.sleep(13_000);
 
         List<EventMetricData> data = getEventMetricDataList();
