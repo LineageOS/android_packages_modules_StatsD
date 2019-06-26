@@ -1273,6 +1273,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
+        final int FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED =  1 << 8;
+        final int FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED =  1 << 9;
+
         // Set up what to collect
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
@@ -1300,8 +1303,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
                     assertTrue(permissionState.getIsGranted());
-                    // FLAG_PERMISSION_USER_SET = 1 << 0;
-                    assertEquals(1, permissionState.getPermissionFlags());
+                    assertEquals(0, permissionState.getPermissionFlags() & (~(
+                            FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED
+                                    | FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED)));
 
                     verifiedKnowPermissionState = true;
                 }
