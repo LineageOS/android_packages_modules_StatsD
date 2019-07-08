@@ -370,6 +370,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
         Set<Integer> entered = new HashSet<>(

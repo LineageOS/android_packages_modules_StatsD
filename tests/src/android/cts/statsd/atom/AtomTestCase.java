@@ -19,6 +19,7 @@ import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
 import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
 
 import android.os.BatteryStatsProto;
+import android.service.battery.BatteryServiceDumpProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.view.DisplayStateEnum;
 
@@ -70,6 +71,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public static final String UPDATE_CONFIG_CMD = "cmd stats config update";
     public static final String DUMP_REPORT_CMD = "cmd stats dump-report";
+    public static final String DUMP_BATTERY_CMD = "dumpsys battery";
     public static final String DUMP_BATTERYSTATS_CMD = "dumpsys batterystats";
     public static final String REMOVE_CONFIG_CMD = "cmd stats config remove";
     public static final String CONFIG_UID = "1000";
@@ -502,6 +504,14 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected void unplugDevice() throws Exception {
+        // On batteryless devices on Android P or above, the 'unplug' command
+        // alone does not simulate the really unplugged state.
+        //
+        // This is because charging state is left as "unknown". Unless a valid
+        // state like 3 = BatteryManager.BATTERY_STATUS_DISCHARGING is set,
+        // framework does not consider the device as running on battery.
+        setChargingState(3);
+
         getDevice().executeShellCommand("cmd battery unplug");
     }
 
@@ -590,7 +600,7 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected void turnBatterySaverOn() throws Exception {
-        getDevice().executeShellCommand("cmd battery unplug");
+        unplugDevice();
         getDevice().executeShellCommand("settings put global low_power 1");
     }
 
@@ -652,6 +662,21 @@ public class AtomTestCase extends BaseTestCase {
                     + featureName);
         }
         return hasIt == requiredAnswer;
+    }
+
+    /**
+     * Determines if the device has a battery.
+     */
+    protected boolean hasBattery() throws Exception {
+        try {
+            BatteryServiceDumpProto batteryProto = getDump(BatteryServiceDumpProto.parser(),
+                    String.join(" ", DUMP_BATTERY_CMD, "--proto"));
+            LogUtil.CLog.d("Got battery service dump:\n " + batteryProto.toString());
+            return batteryProto.getIsPresent();
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump batteryservice proto");
+            throw (e);
+        }
     }
 
     /**
