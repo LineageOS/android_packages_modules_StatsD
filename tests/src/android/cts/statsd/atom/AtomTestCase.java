@@ -147,6 +147,8 @@ public class AtomTestCase extends BaseTestCase {
         return StatsdConfig.newBuilder().setId(CONFIG_ID)
                 .addAllowedLogSource("AID_SYSTEM")
                 .addAllowedLogSource("AID_BLUETOOTH")
+                // TODO(b/134091167): Fix bluetooth source name issue in Auto platform.
+                .addAllowedLogSource("com.android.bluetooth")
                 .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
     }
 
