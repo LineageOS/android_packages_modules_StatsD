@@ -32,5 +32,8 @@ java_test_host {
         "platformprotos",
         "truth-host-prebuilt",
     ],
-    data: ["**/*.pbtxt"],
+    data: [
+        "**/*.pbtxt",
+        ":CtsStatsdApp",
+    ],
 }

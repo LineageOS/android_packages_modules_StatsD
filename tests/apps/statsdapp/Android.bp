@@ -46,12 +46,6 @@ android_test_helper_app {
         "androidx.test.rules",
     ],
     jni_libs: ["liblmkhelper"],
-    // tag this module as a cts test artifact
-    test_suites: [
-        "cts",
-        "vts",
-        "general-tests",
-    ],
     compile_multilib: "both",
 }
 
