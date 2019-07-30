@@ -1104,8 +1104,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
             Thread.sleep(WAIT_TIME_SHORT);
-            // Trigger new pull.
+            // Trigger a pull and wait for new pull before killing the process.
             setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
         }
 
         // Assert about ProcessMemoryState for the test app.
@@ -1145,6 +1146,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         // Trigger new pull.
         setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
 
         // Assert about NativeProcessMemoryState for statsd.
         List<Atom> atoms = getGaugeMetricDataList();
@@ -1181,8 +1183,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
             setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
         }
-        Thread.sleep(WAIT_TIME_SHORT);
 
         // Assert about ProcessMemoryHighWaterMark for the test app, statsd and system server.
         List<Atom> atoms = getGaugeMetricDataList();
