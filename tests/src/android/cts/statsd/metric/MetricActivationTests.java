@@ -32,6 +32,8 @@ import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.log.LogUtil;
 
+import java.util.List;
+
 /**
  * Test Statsd Metric activations and deactivations
  */
@@ -226,8 +228,8 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         Thread.sleep(10L);
 
         ConfigMetricsReportList reportList = getReportList();
-        assertEquals(1, reportList.getReportsCount());
-        ConfigMetricsReport report = reportList.getReports(0);
+        List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
+        ConfigMetricsReport report = reports.get(0);
         verifyMetrics(report, 4, 0, 1);
     }
 
@@ -371,18 +373,19 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         ConfigMetricsReportList reportList = getReportList();
-        assertEquals(3, reportList.getReportsCount());
+        List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
+        assertEquals(3, reports.size());
 
         // Report before restart.
-        ConfigMetricsReport report = reportList.getReports(0);
+        ConfigMetricsReport report = reports.get(0);
         verifyMetrics(report, 1, 0, 1);
 
         // Report after first restart.
-        report = reportList.getReports(1);
+        report = reports.get(1);
         verifyMetrics(report, 2, 3, 4);
 
         // Report after second restart.
-        report = reportList.getReports(2);
+        report = reports.get(2);
         verifyMetrics(report, 2, 2, 3);
     }
 
@@ -506,18 +509,19 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         ConfigMetricsReportList reportList = getReportList();
-        assertEquals(3, reportList.getReportsCount());
+        List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
+        assertEquals(3, reports.size());
 
         // Report before restart.
-        ConfigMetricsReport report = reportList.getReports(0);
+        ConfigMetricsReport report = reports.get(0);
         verifyMetrics(report, 3, 0, 3);
 
         // Report after first restart.
-        report = reportList.getReports(1);
+        report = reports.get(1);
         verifyMetrics(report, 2, 2, 3);
 
         // Report after second restart.
-        report = reportList.getReports(2);
+        report = reports.get(2);
         verifyMetrics(report, 0, 0, 1);
     }
 
