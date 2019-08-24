@@ -66,6 +66,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Base class for testing Statsd atoms.
@@ -236,6 +237,16 @@ public class AtomTestCase extends BaseTestCase {
     protected List<EventMetricData> getEventMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
         return getEventMetricDataList(reportList);
+    }
+
+    /**
+     *  Gets a List of sorted ConfigMetricsReports from ConfigMetricsReportList.
+     */
+    protected List<ConfigMetricsReport> getSortedConfigMetricsReports(
+            ConfigMetricsReportList configMetricsReportList) {
+        return configMetricsReportList.getReportsList().stream()
+                .sorted(Comparator.comparing(ConfigMetricsReport::getCurrentReportWallClockNanos))
+                .collect(Collectors.toList());
     }
 
     /**
