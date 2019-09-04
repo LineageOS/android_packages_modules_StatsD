@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,28 @@
  * limitations under the License.
  */
 
-#include "logd/LogReader.h"
+#pragma once
 
-#include <log/log_read.h>
-
-#include <utils/Errors.h>
-
-#include <time.h>
-#include <unistd.h>
-
-using namespace android;
-using namespace std;
+#include "StatsPuller.h"
 
 namespace android {
 namespace os {
 namespace statsd {
 
-LogListener::LogListener() {
-}
+/**
+ * Pull GpuStats from GpuService.
+ */
+class GpuStatsPuller : public StatsPuller {
+public:
+    explicit GpuStatsPuller(const int tagId);
+    bool PullInternal(std::vector<std::shared_ptr<LogEvent>>* data) override;
+};
 
-LogListener::~LogListener() {
-}
+// convert a int64_t vector into a byte string for proto message like:
+// message RepeatedInt64Wrapper {
+//   repeated int64 value = 1;
+// }
+std::string int64VectorToProtoByteString(const std::vector<int64_t>& value);
 
 }  // namespace statsd
 }  // namespace os

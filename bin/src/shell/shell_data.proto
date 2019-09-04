@@ -14,24 +14,16 @@
  * limitations under the License.
  */
 
-#pragma once
+syntax = "proto2";
 
-#include <utils/String16.h>
-#include "StatsPuller.h"
+package android.os.statsd;
 
-namespace android {
-namespace os {
-namespace statsd {
+option java_package = "com.android.os.statsd";
+option java_outer_classname = "ShellDataProto";
 
-/**
- * Reads IThermal.hal
- */
-class ResourceThermalManagerPuller : public StatsPuller {
-public:
-    ResourceThermalManagerPuller();
-    bool PullInternal(vector<std::shared_ptr<LogEvent>>* data) override;
-};
+import "frameworks/base/cmds/statsd/src/atoms.proto";
 
-}  // namespace statsd
-}  // namespace os
-}  // namespace android
+// The output of shell subscription, including both pulled and pushed subscriptions.
+message ShellData {
+    repeated Atom atom = 1;
+}

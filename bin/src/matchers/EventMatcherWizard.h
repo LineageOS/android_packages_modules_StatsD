@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@
 
 #pragma once
 
-#include "logd/LogEvent.h"
-
-#include <utils/RefBase.h>
-#include <vector>
+#include "LogMatchingTracker.h"
 
 namespace android {
 namespace os {
 namespace statsd {
 
-/**
- * Callback for LogReader
- */
-class LogListener : public virtual android::RefBase {
+class EventMatcherWizard : public virtual android::RefBase {
 public:
-    LogListener();
-    virtual ~LogListener();
+    EventMatcherWizard(){};  // for testing
+    EventMatcherWizard(const std::vector<sp<LogMatchingTracker>>& eventTrackers)
+        : mAllEventMatchers(eventTrackers){};
 
-    virtual void OnLogEvent(LogEvent* msg, bool reconnectionStarts) = 0;
+    virtual ~EventMatcherWizard(){};
+
+    MatchingState matchLogEvent(const LogEvent& event, int matcher_index);
+
+private:
+    std::vector<sp<LogMatchingTracker>> mAllEventMatchers;
 };
 
 }  // namespace statsd
