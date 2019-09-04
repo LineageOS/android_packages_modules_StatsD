@@ -16,6 +16,8 @@
 
 package android.cts.statsd.atom;
 
+import android.cts.statsd.validation.ValidationTestUtil;
+
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.ddmlib.testrunner.RemoteAndroidTestRunner;
 import com.android.ddmlib.testrunner.TestResult.TestStatus;
@@ -58,6 +60,19 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
         mCtsBuild = buildInfo;
     }
 
+    public IBuildInfo getBuild() {
+        return mCtsBuild;
+    }
+
+    /**
+     * Create and return {@link ValidationTestUtil} and give it the current build.
+     */
+    public ValidationTestUtil createValidationUtil() {
+        ValidationTestUtil util = new ValidationTestUtil();
+        util.setBuild(getBuild());
+        return util;
+    }
+
     /**
      * Call onto the device with an adb shell command and get the results of
      * that as a proto of the given type.
@@ -90,6 +105,10 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
         final String result = getDevice().installPackage(
                 buildHelper.getTestFile(appFileName), true, grantPermissions);
         assertNull("Failed to install " + appFileName + ": " + result, result);
+    }
+
+    protected CompatibilityBuildHelper getBuildHelper() {
+        return new CompatibilityBuildHelper(mCtsBuild);
     }
 
     /**

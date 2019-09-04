@@ -12,11 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+cc_library_shared {
+    name: "liblmkhelper",
+    srcs: ["jni/alloc_stress_activity.cpp"],
+    cflags: [
+        "-Wall",
+        "-Werror",
+    ],
+    shared_libs: ["liblog"],
+    stl: "c++_static",
+    sdk_version: "current",
+}
+
 android_test_helper_app {
     name: "CtsStatsdApp",
     defaults: ["cts_defaults"],
     platform_apis: true,
-    srcs: ["src/**/*.java"],
+    min_sdk_version: "24",
+    srcs: [
+        "src/**/*.java",
+        ":statslog-statsd-cts-java-gen",
+    ],
     libs: [
         "android.test.runner.stubs",
         "junit",
@@ -29,10 +45,19 @@ android_test_helper_app {
         "androidx.legacy_legacy-support-v4",
         "androidx.test.rules",
     ],
+    jni_libs: ["liblmkhelper"],
     // tag this module as a cts test artifact
     test_suites: [
         "cts",
         "vts",
         "general-tests",
     ],
+    compile_multilib: "both",
+}
+
+genrule {
+    name: "statslog-statsd-cts-java-gen",
+    tools: ["stats-log-api-gen"],
+    cmd: "$(location stats-log-api-gen) --java $(out) --module cts --javaPackage com.android.server.cts.device.statsd --javaClass StatsLogStatsdCts",
+    out: ["com/android/server/cts/device/statsd/StatsLogStatsdCts.java"],
 }

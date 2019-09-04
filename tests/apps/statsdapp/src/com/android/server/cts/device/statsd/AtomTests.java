@@ -38,6 +38,7 @@ import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
@@ -53,6 +54,8 @@ import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
@@ -335,6 +338,16 @@ public class AtomTests {
     }
 
     @Test
+    public void testVibratorState() {
+        Context context = InstrumentationRegistry.getContext();
+        Vibrator vib = context.getSystemService(Vibrator.class);
+        if (vib.hasVibrator()) {
+            vib.vibrate(VibrationEffect.createOneShot(
+                    500 /* ms */, VibrationEffect.DEFAULT_AMPLITUDE));
+        }
+    }
+
+    @Test
     public void testWakelockState() {
         Context context = InstrumentationRegistry.getContext();
         PowerManager pm = context.getSystemService(PowerManager.class);
@@ -371,10 +384,22 @@ public class AtomTests {
     }
 
     @Test
-    public void testWifiLock() {
+    public void testWifiLockHighPerf() {
         Context context = InstrumentationRegistry.getContext();
         WifiManager wm = context.getSystemService(WifiManager.class);
-        WifiManager.WifiLock lock = wm.createWifiLock("StatsdCTSWifiLock");
+        WifiManager.WifiLock lock =
+                wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "StatsdCTSWifiLock");
+        lock.acquire();
+        sleep(500);
+        lock.release();
+    }
+
+    @Test
+    public void testWifiLockLowLatency() {
+        Context context = InstrumentationRegistry.getContext();
+        WifiManager wm = context.getSystemService(WifiManager.class);
+        WifiManager.WifiLock lock =
+                wm.createWifiLock(WifiManager.WIFI_MODE_FULL_LOW_LATENCY, "StatsdCTSWifiLock");
         lock.acquire();
         sleep(500);
         lock.release();
@@ -415,6 +440,40 @@ public class AtomTests {
             timestamp += i;
         }
         Log.i(TAG, "The answer is " + timestamp);
+    }
+
+    @Test
+    public void testWriteRawTestAtom() throws Exception {
+        Context context = InstrumentationRegistry.getTargetContext();
+        ApplicationInfo appInfo = context.getPackageManager()
+                .getApplicationInfo(context.getPackageName(), 0);
+        int[] uids = {1234, appInfo.uid};
+        String[] tags = {"tag1", "tag2"};
+        byte[] experimentIds = {8, 1, 8, 2, 8, 3}; // Corresponds to 1, 2, 3.
+        StatsLogStatsdCts.write(StatsLogStatsdCts.TEST_ATOM_REPORTED, uids, tags, 42,
+                Long.MAX_VALUE, 3.14f, "This is a basic test!", false,
+                StatsLogStatsdCts.TEST_ATOM_REPORTED__STATE__ON, experimentIds);
+
+        // All nulls. Should get dropped since cts app is not in the attribution chain.
+        StatsLogStatsdCts.write(StatsLogStatsdCts.TEST_ATOM_REPORTED, null, null, 0, 0,
+                0f, null, false, StatsLogStatsdCts.TEST_ATOM_REPORTED__STATE__ON, null);
+
+        // Null tag in attribution chain.
+        int[] uids2 = {9999, appInfo.uid};
+        String[] tags2 = {"tag9999", null};
+        StatsLogStatsdCts.write(StatsLogStatsdCts.TEST_ATOM_REPORTED, uids2, tags2, 100,
+                Long.MIN_VALUE, -2.5f, "Test null uid", true,
+                StatsLogStatsdCts.TEST_ATOM_REPORTED__STATE__UNKNOWN, experimentIds);
+
+        // Non chained non-null
+        StatsLogStatsdCts.write_non_chained(StatsLogStatsdCts.TEST_ATOM_REPORTED,
+                appInfo.uid, "tag1", -256, -1234567890L, 42.01f, "Test non chained", true,
+                StatsLogStatsdCts.TEST_ATOM_REPORTED__STATE__OFF, experimentIds);
+
+        // Non chained all null
+        StatsLogStatsdCts.write_non_chained(StatsLogStatsdCts.TEST_ATOM_REPORTED, appInfo.uid, null,
+                0, 0, 0f, null, true, StatsLogStatsdCts.TEST_ATOM_REPORTED__STATE__OFF, null);
+
     }
 
     // ------- Helper methods

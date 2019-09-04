@@ -19,6 +19,7 @@ package com.android.server.cts.device.statsd;
 import static org.junit.Assert.assertTrue;
 
 import android.net.wifi.WifiManager;
+import android.os.Vibrator;
 
 import androidx.test.InstrumentationRegistry;
 
@@ -29,6 +30,12 @@ import org.junit.Test;
  */
 public class Checkers {
     private static final String TAG = Checkers.class.getSimpleName();
+
+    @Test
+    public void checkVibratorSupported() {
+        Vibrator v = InstrumentationRegistry.getContext().getSystemService(Vibrator.class);
+        assertTrue(v.hasVibrator());
+    }
 
     @Test
     public void checkWifiEnhancedPowerReportingSupported() {
