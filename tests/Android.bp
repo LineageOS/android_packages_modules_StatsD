@@ -14,18 +14,23 @@
 
 java_test_host {
     name: "CtsStatsdHostTestCases",
+
     srcs: ["src/**/*.java"],
+
     // tag this module as a cts test artifact
     test_suites: [
         "cts",
         "vts",
         "general-tests",
     ],
+
     libs: [
         "cts-tradefed",
         "tradefed",
         "compatibility-host-util",
         "host-libprotobuf-java-full",
         "platformprotos",
+        "truth-host-prebuilt",
     ],
+    data: ["**/*.pbtxt"],
 }
