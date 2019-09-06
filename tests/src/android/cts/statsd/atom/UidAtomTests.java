@@ -17,7 +17,6 @@ package android.cts.statsd.atom;
 
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
-import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.ErrorSource;
 
 import com.android.internal.os.StatsdConfigProto.FieldMatcher;
@@ -33,7 +32,6 @@ import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
-import com.android.os.AtomsProto.CpuActiveTime;
 import com.android.os.AtomsProto.DangerousPermissionState;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
 import com.android.os.AtomsProto.FlashlightStateChanged;
@@ -365,42 +363,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 assertTrue(atom.getCpuTimePerUid().getSysTimeMicros() > 0);
             }
         }
-        assertTrue("found uid " + uid, found);
-    }
-
-    @RestrictedBuildTest
-    public void testCpuActiveTime() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
-        FieldMatcher.Builder dimension = FieldMatcher.newBuilder()
-                .setField(Atom.CPU_ACTIVE_TIME_FIELD_NUMBER)
-                .addChild(FieldMatcher.newBuilder()
-                        .setField(CpuActiveTime.UID_FIELD_NUMBER));
-        addGaugeAtomWithDimensions(config, Atom.CPU_ACTIVE_TIME_FIELD_NUMBER, dimension);
-
-        uploadConfig(config);
-
-        Thread.sleep(WAIT_TIME_LONG);
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
-        Thread.sleep(WAIT_TIME_SHORT);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> atomList = getGaugeMetricDataList();
-
-        boolean found = false;
-        int uid = getUid();
-        long timeSpent = 0;
-        for (Atom atom : atomList) {
-            if (atom.getCpuActiveTime().getUid() == uid) {
-                found = true;
-                timeSpent += atom.getCpuActiveTime().getTimeMillis();
-            }
-        }
-        assertTrue(timeSpent > 0);
         assertTrue("found uid " + uid, found);
     }
 
