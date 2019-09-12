@@ -316,7 +316,19 @@ public class AnomalyDetectionTests extends AtomTestCase {
         assertEquals("Expected 1 anomaly", 1, data.size());
         AnomalyDetected a = data.get(0).getAtom().getAnomalyDetected();
         assertEquals("Wrong alert_id", ALERT_ID, a.getAlertId());
-        if (PERFETTO_TESTS_ENABLED) assertTrue(isSystemTracingEnabled());
+
+        // Pool a few times to allow for statsd <-> traced <-> traced_probes communication to happen.
+        if (PERFETTO_TESTS_ENABLED) {
+                boolean tracingEnabled = false;
+                for (int i = 0; i < 5; i++) {
+                        if (isSystemTracingEnabled()) {
+                                tracingEnabled = true;
+                                break;
+                        }
+                        Thread.sleep(1000);
+                }
+                assertTrue(tracingEnabled);
+        }
     }
 
     // Tests that anomaly detection for gauge works.
