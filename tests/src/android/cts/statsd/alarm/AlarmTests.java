@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.alarm;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import android.cts.statsd.atom.AtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
@@ -59,7 +61,7 @@ public class AlarmTests extends AtomTestCase {
         String markTime = getCurrentLogcatDate();
         Thread.sleep(9_000);
 
-        if (INCIDENTD_TESTS_ENABLED) assertTrue("No incident", didIncidentdFireSince(markTime));
+        if (INCIDENTD_TESTS_ENABLED) assertThat(didIncidentdFireSince(markTime)).isTrue();
     }
 
 

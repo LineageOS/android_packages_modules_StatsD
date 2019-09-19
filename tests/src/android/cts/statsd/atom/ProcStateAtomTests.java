@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.atom;
 
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import android.app.ProcessStateEnum; // From enums.proto for atoms.proto's UidProcessStateChanged.
 
 import com.android.os.AtomsProto.Atom;
@@ -248,8 +250,8 @@ public class ProcStateAtomTests extends ProcStateTestCase {
         if (statsdDisabled()) {
             return;
         }
-        assertFalse("UNKNOWN_TO_PROTO should not be a valid state",
-                ALL_STATES.contains(ProcessStateEnum.PROCESS_STATE_UNKNOWN_TO_PROTO_VALUE));
+        assertWithMessage("UNKNOWN_TO_PROTO should not be a valid state")
+            .that(ALL_STATES).doesNotContain(ProcessStateEnum.PROCESS_STATE_UNKNOWN_TO_PROTO_VALUE);
     }
 
     /** Returns the a set containing elements of a that are not elements of b. */
