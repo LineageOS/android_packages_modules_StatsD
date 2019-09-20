@@ -48,6 +48,7 @@ import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
+import com.android.os.AtomsProto.ProcessMemorySnapshot;
 import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SyncStateChanged;
@@ -1024,7 +1025,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                         .isIn(Range.open(0L, 1000000L));
                     assertThat(stats.getRecordedTotalCpuMicros()).isIn(Range.open(0L, 1000000L));
                     assertThat(stats.getRecordedMaxLatencyMicros()).isIn(Range.open(0L, 1000000L));
-                    assertThat(stats.getRecordedMaxCpuMicros()).isIn(Range.open(0L, 1000000L)); 
+                    assertThat(stats.getRecordedMaxCpuMicros()).isIn(Range.open(0L, 1000000L));
                     assertThat(stats.getRecordedDelayMessageCount()).isGreaterThan(0L);
                     assertThat(stats.getRecordedTotalDelayMillis())
                         .isIn(Range.closedOpen(0L, 5000L));
@@ -1122,13 +1123,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        // Get ProcessMemoryState as a simple gauge metric.
+        // Get ProcessMemoryHighWaterMark as a simple gauge metric.
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_HIGH_WATER_MARK_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
 
-        // Start test app and trigger a pull while its running.
+        // Start test app and trigger a pull while it is running.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
             setAppBreadcrumbPredicate();
@@ -1154,6 +1155,56 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 foundSystemServer = true;
                 assertThat(state.getRssHighWaterMarkInBytes()).isGreaterThan(0L);
             }
+        }
+        assertWithMessage(String.format("Did not find a matching atom for test app uid=%d",uid))
+            .that(foundTestApp).isTrue();
+        assertWithMessage("Did not find a matching atom for statsd").that(foundStatsd).isTrue();
+        assertWithMessage("Did not find a matching atom for system server")
+            .that(foundSystemServer).isTrue();
+    }
+
+    public void testProcessMemorySnapshot() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Get ProcessMemorySnapshot as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_SNAPSHOT_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Start test app and trigger a pull while it is running.
+        try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
+                "action.show_notification")) {
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
+        }
+
+        // Assert about ProcessMemorySnapshot for the test app, statsd and system server.
+        List<Atom> atoms = getGaugeMetricDataList();
+        int uid = getUid();
+        boolean foundTestApp = false;
+        boolean foundStatsd = false;
+        boolean foundSystemServer = false;
+        for (Atom atom : atoms) {
+          ProcessMemorySnapshot snapshot = atom.getProcessMemorySnapshot();
+          if (snapshot.getUid() == uid) {
+              foundTestApp = true;
+              assertThat(snapshot.getProcessName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+          } else if (snapshot.getProcessName().contains("/statsd")) {
+              foundStatsd = true;
+          } else if (snapshot.getProcessName().equals("system")) {
+              foundSystemServer = true;
+          }
+
+          assertThat(snapshot.getPid()).isGreaterThan(0);
+          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isGreaterThan(0);
+          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isEqualTo(
+                  snapshot.getAnonRssInKilobytes() + snapshot.getSwapInKilobytes());
+          assertThat(snapshot.getRssInKilobytes()).isAtLeast(0);
+          assertThat(snapshot.getAnonRssInKilobytes()).isAtLeast(0);
+          assertThat(snapshot.getSwapInKilobytes()).isAtLeast(0);
         }
         assertWithMessage(String.format("Did not find a matching atom for test app uid=%d",uid))
             .that(foundTestApp).isTrue();
@@ -1326,7 +1377,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atom.getState().getNumber()).isEqualTo(TestAtomReported.State.ON_VALUE);
         assertThat(atom.getBytesField().getExperimentIdList())
             .containsExactly(1L, 2L, 3L).inOrder();
-        
+
 
         atom = data.get(1).getAtom().getTestAtomReported();
         attrChain = atom.getAttributionNodeList();
