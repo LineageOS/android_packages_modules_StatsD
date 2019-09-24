@@ -16,6 +16,9 @@
 
 package android.cts.statsd.atom;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import android.cts.statsd.validation.ValidationTestUtil;
 
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
@@ -52,7 +55,7 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        assertNotNull(mCtsBuild);
+        assertThat(mCtsBuild).isNotNull();
     }
 
     @Override
@@ -104,7 +107,8 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(mCtsBuild);
         final String result = getDevice().installPackage(
                 buildHelper.getTestFile(appFileName), true, grantPermissions);
-        assertNull("Failed to install " + appFileName + ": " + result, result);
+        assertWithMessage(String.format("Failed to install %s: %s", appFileName, result))
+            .that(result).isNull();
     }
 
     protected CompatibilityBuildHelper getBuildHelper() {
@@ -135,7 +139,7 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
         }
 
         CollectingTestListener listener = new CollectingTestListener();
-        assertTrue(getDevice().runInstrumentationTests(testRunner, listener));
+        assertThat(getDevice().runInstrumentationTests(testRunner, listener)).isTrue();
 
         final TestRunResult result = listener.getCurrentRunResults();
         if (result.isRunFailure()) {

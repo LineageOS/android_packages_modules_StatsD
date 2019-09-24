@@ -18,6 +18,9 @@ package android.cts.statsd.atom;
 import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_APK;
 import static android.cts.statsd.atom.DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import android.os.BatteryStatsProto;
 import android.os.StatsDataDumpProto;
 import android.service.battery.BatteryServiceDumpProto;
@@ -54,6 +57,7 @@ import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
 
+import com.google.common.collect.Range;
 import com.google.common.io.Files;
 import com.google.protobuf.ByteString;
 
@@ -255,7 +259,7 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected List<EventMetricData> getEventMetricDataList(ConfigMetricsReportList reportList)
             throws Exception {
-        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<EventMetricData> data = new ArrayList<>();
@@ -273,15 +277,16 @@ public class AtomTestCase extends BaseTestCase {
 
     protected List<Atom> getGaugeMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Expected one report.", reportList.getReportsCount() == 1);
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
+
         // only config
         ConfigMetricsReport report = reportList.getReports(0);
-        assertEquals("Expected one metric in the report.", 1, report.getMetricsCount());
+        assertThat(report.getMetricsCount()).isEqualTo(1);
 
         List<Atom> data = new ArrayList<>();
         for (GaugeMetricData gaugeMetricData :
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
-            assertTrue("Expected one bucket.", gaugeMetricData.getBucketInfoCount() == 1);
+            assertThat(gaugeMetricData.getBucketInfoCount()).isEqualTo(1);
             for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
                 data.add(atom);
             }
@@ -300,7 +305,7 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected List<DurationMetricData> getDurationMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<DurationMetricData> data = new ArrayList<>();
@@ -321,7 +326,7 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected List<CountMetricData> getCountMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<CountMetricData> data = new ArrayList<>();
@@ -342,7 +347,7 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected List<ValueMetricData> getValueMetricDataList() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertTrue("Expected one report", reportList.getReportsCount() == 1);
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
         ConfigMetricsReport report = reportList.getReports(0);
 
         List<ValueMetricData> data = new ArrayList<>();
@@ -359,14 +364,14 @@ public class AtomTestCase extends BaseTestCase {
 
     protected StatsLogReport getStatsLogReport() throws Exception {
         ConfigMetricsReport report = getConfigMetricsReport();
-        assertTrue(report.hasUidMap());
-        assertEquals(1, report.getMetricsCount());
+        assertThat(report.hasUidMap()).isTrue();
+        assertThat(report.getMetricsCount()).isEqualTo(1);
         return report.getMetrics(0);
     }
 
     protected ConfigMetricsReport getConfigMetricsReport() throws Exception {
         ConfigMetricsReportList reportList = getReportList();
-        assertEquals(1, reportList.getReportsCount());
+        assertThat(reportList.getReportsCount()).isEqualTo(1);
         return reportList.getReports(0);
     }
 
@@ -624,7 +629,7 @@ public class AtomTestCase extends BaseTestCase {
             int wait, Function<Atom, Integer> getStateFromAtom) {
         // Sometimes, there are more events than there are states.
         // Eg: When the screen turns off, it may go into OFF and then DOZE immediately.
-        assertTrue("Too few states found (" + data.size() + ")", data.size() >= stateSets.size());
+        assertWithMessage("Too few states found").that(data.size()).isAtLeast(stateSets.size());
         int stateSetIndex = 0; // Tracks which state set we expect the data to be in.
         for (int dataIndex = 0; dataIndex < data.size(); dataIndex++) {
             Atom atom = data.get(dataIndex).getAtom();
@@ -641,19 +646,18 @@ public class AtomTestCase extends BaseTestCase {
                 LogUtil.CLog.i("Assert that the following atom at dataIndex=" + dataIndex + " is"
                         + " in stateSetIndex " + stateSetIndex + ":\n"
                         + data.get(dataIndex).getAtom().toString());
-                assertTrue("Missed first state", dataIndex != 0); // should not be on first data
-                assertTrue("Too many states (" + (stateSetIndex + 1) + ")",
-                        stateSetIndex < stateSets.size());
-                assertTrue("Is in wrong state (" + state + ")",
-                        stateSets.get(stateSetIndex).contains(state));
+                assertWithMessage("Missed first state").that(dataIndex).isNotEqualTo(0); 
+                assertWithMessage("Too many states").that(stateSetIndex)
+                    .isLessThan(stateSets.size());
+                assertWithMessage(String.format("Is in wrong state (%d)", state))
+                    .that(stateSets.get(stateSetIndex)).contains(state);
                 if (wait > 0) {
                     assertTimeDiffBetween(data.get(dataIndex - 1), data.get(dataIndex),
                             wait / 2, wait * 5);
                 }
             }
         }
-        assertTrue("Too few states (" + (stateSetIndex + 1) + ")",
-                stateSetIndex == stateSets.size() - 1);
+        assertWithMessage("Too few states").that(stateSetIndex).isEqualTo(stateSets.size() - 1);
     }
 
     /**
@@ -899,8 +903,8 @@ public class AtomTestCase extends BaseTestCase {
     public static void assertTimeDiffBetween(EventMetricData d0, EventMetricData d1,
             int minDiffMs, int maxDiffMs) {
         long diffMs = (d1.getElapsedTimestampNanos() - d0.getElapsedTimestampNanos()) / 1_000_000;
-        assertTrue("Illegal time difference (" + diffMs + "ms)", minDiffMs <= diffMs);
-        assertTrue("Illegal time difference (" + diffMs + "ms)", diffMs <= maxDiffMs);
+        assertWithMessage("Illegal time difference")
+            .that(diffMs).isIn(Range.closed((long) minDiffMs, (long) maxDiffMs));
     }
 
     protected String getCurrentLogcatDate() throws Exception {

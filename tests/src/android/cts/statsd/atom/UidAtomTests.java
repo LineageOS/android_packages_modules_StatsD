@@ -15,6 +15,9 @@
  */
 package android.cts.statsd.atom;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
@@ -57,6 +60,8 @@ import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
+
+import com.google.common.collect.Range;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -102,12 +107,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        assertEquals(1, data.size());
-        assertTrue(data.get(0).getAtom().hasLmkKillOccurred());
+        assertThat(data).hasSize(1);
+        assertThat(data.get(0).getAtom().hasLmkKillOccurred()).isTrue();
         LmkKillOccurred atom = data.get(0).getAtom().getLmkKillOccurred();
-        assertEquals(getUid(), atom.getUid());
-        assertEquals(DEVICE_SIDE_TEST_PACKAGE, atom.getProcessName());
-        assertTrue(500 <= atom.getOomAdjScore());
+        assertThat(atom.getUid()).isEqualTo(getUid());
+        assertThat(atom.getProcessName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+        assertThat(atom.getOomAdjScore()).isAtLeast(500);
     }
 
     public void testAppCrashOccurred() throws Exception {
@@ -125,11 +130,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         AppCrashOccurred atom = data.get(0).getAtom().getAppCrashOccurred();
-        assertEquals("crash", atom.getEventType());
-        assertEquals(AppCrashOccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
-        assertEquals(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE,
-                atom.getForegroundState().getNumber());
-        assertEquals("com.android.server.cts.device.statsd", atom.getPackageName());
+        assertThat(atom.getEventType()).isEqualTo("crash");
+        assertThat(atom.getIsInstantApp().getNumber())
+            .isEqualTo(AppCrashOccurred.InstantApp.FALSE_VALUE);
+        assertThat(atom.getForegroundState().getNumber())
+            .isEqualTo(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE);
+        assertThat(atom.getPackageName()).isEqualTo("com.android.server.cts.device.statsd");
     }
 
     public void testAppStartOccurred() throws Exception {
@@ -147,12 +153,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
-        assertEquals("com.android.server.cts.device.statsd", atom.getPkgName());
-        assertEquals("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity",
-                atom.getActivityName());
-        assertFalse(atom.getIsInstantApp());
-        assertTrue(atom.getActivityStartMillis() > 0);
-        assertTrue(atom.getTransitionDelayMillis() > 0);
+        assertThat(atom.getPkgName()).isEqualTo("com.android.server.cts.device.statsd");
+        assertThat(atom.getActivityName())
+            .isEqualTo("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity");
+        assertThat(atom.getIsInstantApp()).isFalse();
+        assertThat(atom.getActivityStartMillis()).isGreaterThan(0L);
+        assertThat(atom.getTransitionDelayMillis()).isGreaterThan(0);
     }
 
     public void testAudioState() throws Exception {
@@ -204,8 +210,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         BleScanStateChanged a0 = data.get(0).getAtom().getBleScanStateChanged();
         BleScanStateChanged a1 = data.get(1).getAtom().getBleScanStateChanged();
-        assertTrue(a0.getState().getNumber() == stateOn);
-        assertTrue(a1.getState().getNumber() == stateOff);
+        assertThat(a0.getState().getNumber()).isEqualTo(stateOn);
+        assertThat(a1.getState().getNumber()).isEqualTo(stateOff);
     }
 
     public void testBleUnoptimizedScan() throws Exception {
@@ -225,15 +231,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
         BleScanStateChanged a0 = data.get(0).getAtom().getBleScanStateChanged();
-        assertTrue(a0.getState().getNumber() == stateOn);
-        assertFalse(a0.getIsFiltered());
-        assertFalse(a0.getIsFirstMatch());
-        assertFalse(a0.getIsOpportunistic());
+        assertThat(a0.getState().getNumber()).isEqualTo(stateOn);
+        assertThat(a0.getIsFiltered()).isFalse();
+        assertThat(a0.getIsFirstMatch()).isFalse();
+        assertThat(a0.getIsOpportunistic()).isFalse();
         BleScanStateChanged a1 = data.get(1).getAtom().getBleScanStateChanged();
-        assertTrue(a1.getState().getNumber() == stateOff);
-        assertFalse(a1.getIsFiltered());
-        assertFalse(a1.getIsFirstMatch());
-        assertFalse(a1.getIsOpportunistic());
+        assertThat(a1.getState().getNumber()).isEqualTo(stateOff);
+        assertThat(a1.getIsFiltered()).isFalse();
+        assertThat(a1.getIsFirstMatch()).isFalse();
+        assertThat(a1.getIsOpportunistic()).isFalse();
 
 
         // Now repeat the test for opportunistic scanning and make sure it is reported correctly.
@@ -241,15 +247,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, true);
 
         a0 = data.get(0).getAtom().getBleScanStateChanged();
-        assertTrue(a0.getState().getNumber() == stateOn);
-        assertFalse(a0.getIsFiltered());
-        assertFalse(a0.getIsFirstMatch());
-        assertTrue(a0.getIsOpportunistic());  // This scan is opportunistic.
+        assertThat(a0.getState().getNumber()).isEqualTo(stateOn);
+        assertThat(a0.getIsFiltered()).isFalse();
+        assertThat(a0.getIsFirstMatch()).isFalse();
+        assertThat(a0.getIsOpportunistic()).isTrue();  // This scan is opportunistic.
         a1 = data.get(1).getAtom().getBleScanStateChanged();
-        assertTrue(a1.getState().getNumber() == stateOff);
-        assertFalse(a1.getIsFiltered());
-        assertFalse(a1.getIsFirstMatch());
-        assertTrue(a1.getIsOpportunistic());
+        assertThat(a1.getState().getNumber()).isEqualTo(stateOff);
+        assertThat(a1.getIsFiltered()).isFalse();
+        assertThat(a1.getIsFirstMatch()).isFalse();
+        assertThat(a1.getIsOpportunistic()).isTrue();
     }
 
     public void testBleScanResult() throws Exception {
@@ -265,9 +271,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         addAtomEvent(conf, atom, createFvm(field).setGteInt(0));
         List<EventMetricData> data = doDeviceMethod("testBleScanResult", conf);
 
-        assertTrue(data.size() >= 1);
+        assertThat(data.size()).isAtLeast(1);
         BleScanResultReceived a0 = data.get(0).getAtom().getBleScanResultReceived();
-        assertTrue(a0.getNumResults() >= 1);
+        assertThat(a0.getNumResults()).isAtLeast(1);
     }
 
     public void testHiddenApiUsed() throws Exception {
@@ -289,15 +295,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
 
             List<EventMetricData> data = getEventMetricDataList();
-            assertTrue(data.size() == 1);
+            assertThat(data).hasSize(1);
 
             HiddenApiUsed atom = data.get(0).getAtom().getHiddenApiUsed();
 
             int uid = getUid();
-            assertEquals(uid, atom.getUid());
-            assertFalse(atom.getAccessDenied());
-            assertEquals("Landroid/app/Activity;->mWindow:Landroid/view/Window;",
-                    atom.getSignature());
+            assertThat(atom.getUid()).isEqualTo(uid);
+            assertThat(atom.getAccessDenied()).isFalse();
+            assertThat(atom.getSignature())
+                .isEqualTo("Landroid/app/Activity;->mWindow:Landroid/view/Window;");
         } finally {
             if (!oldRate.equals("null")) {
                 getDevice().executeShellCommand(
@@ -359,11 +365,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : atomList) {
             if (atom.getCpuTimePerUid().getUid() == uid) {
                 found = true;
-                assertTrue(atom.getCpuTimePerUid().getUserTimeMicros() > 0);
-                assertTrue(atom.getCpuTimePerUid().getSysTimeMicros() > 0);
+                assertThat(atom.getCpuTimePerUid().getUserTimeMicros()).isGreaterThan(0L);
+                assertThat(atom.getCpuTimePerUid().getSysTimeMicros()).isGreaterThan(0L);
             }
         }
-        assertTrue("found uid " + uid, found);
+        assertWithMessage(String.format("did not find uid %d", uid)).that(found).isTrue();
     }
 
     public void testDeviceCalculatedPowerUse() throws Exception {
@@ -384,7 +390,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_LONG);
 
         Atom atom = getGaugeMetricDataList().get(0);
-        assertTrue(atom.getDeviceCalculatedPowerUse().getComputedPowerNanoAmpSecs() > 0);
+        assertThat(atom.getDeviceCalculatedPowerUse().getComputedPowerNanoAmpSecs())
+            .isGreaterThan(0L);
     }
 
 
@@ -413,13 +420,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : atomList) {
             DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
                 if (item.getUid() == uid) {
-                assertFalse("Found multiple power values for uid " + uid, uidFound);
+                assertWithMessage(String.format("Found multiple power values for uid %d", uid))
+                    .that(uidFound).isFalse();
                 uidFound = true;
                 uidPower = item.getPowerNanoAmpSecs();
             }
         }
-        assertTrue("No power value for uid " + uid, uidFound);
-        assertTrue("Non-positive power value for uid " + uid, uidPower > 0);
+        assertWithMessage(String.format("No power value for uid %d", uid)).that(uidFound).isTrue();
+        assertWithMessage(String.format("Non-positive power value for uid %d", uid))
+            .that(uidPower).isGreaterThan(0L);
     }
 
     public void testDavey() throws Exception {
@@ -435,12 +444,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         runActivity("DaveyActivity", null, null);
 
         List<EventMetricData> data = getEventMetricDataList();
-        assertTrue(data.size() == 1);
+        assertThat(data).hasSize(1);
         long duration = data.get(0).getAtom().getDaveyOccurred().getJankDurationMillis();
-        assertTrue("Jank duration of " + duration + "ms was less than " + MIN_DURATION + "ms",
-                duration >= MIN_DURATION);
-        assertTrue("Jank duration of " + duration + "ms was longer than " + MAX_DURATION + "ms",
-                duration <= MAX_DURATION);
+        assertWithMessage("Incorrect jank duration")
+            .that(duration).isIn(Range.closed(MIN_DURATION, MAX_DURATION));
     }
 
     public void testFlashlightState() throws Exception {
@@ -526,8 +533,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
             GpsScanStateChanged a0 = data.get(0).getAtom().getGpsScanStateChanged();
             GpsScanStateChanged a1 = data.get(1).getAtom().getGpsScanStateChanged();
-            assertTrue(a0.getState().getNumber() == stateOn);
-            assertTrue(a1.getState().getNumber() == stateOff);
+            assertThat(a0.getState().getNumber()).isEqualTo(stateOn);
+            assertThat(a1.getState().getNumber()).isEqualTo(stateOff);
         } finally {
             if ("null".equals(origWhitelist) || "".equals(origWhitelist)) {
                 getDevice().executeShellCommand(
@@ -657,7 +664,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getScheduledJobStateChanged().getState().getNumber());
 
         for (EventMetricData e : data) {
-            assertTrue(e.getAtom().getScheduledJobStateChanged().getJobName().equals(expectedName));
+            assertThat(e.getAtom().getScheduledJobStateChanged().getJobName())
+                .isEqualTo(expectedName);
         }
     }
 
@@ -783,10 +791,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (EventMetricData event: data) {
             String tag = event.getAtom().getWakelockStateChanged().getTag();
             WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getType();
-            assertTrue("Expected tag: " + EXPECTED_TAG + ", but got tag: " + tag,
-                    tag.equals(EXPECTED_TAG));
-            assertTrue("Expected wakelock type: " + EXPECTED_LEVEL  + ", but got level: " + type,
-                    type == EXPECTED_LEVEL);
+            assertThat(tag).isEqualTo(EXPECTED_TAG);
+            assertThat(type).isEqualTo(EXPECTED_LEVEL);
         }
     }
 
@@ -803,11 +809,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         addAtomEvent(config, atomTag, true);  // True: uses attribution.
 
         List<EventMetricData> data = doDeviceMethod("testWakeupAlarm", config);
-        assertTrue(data.size() >= 1);
+        assertThat(data.size()).isAtLeast(1);
         for (int i = 0; i < data.size(); i++) {
             WakeupAlarmOccurred wao = data.get(i).getAtom().getWakeupAlarmOccurred();
-            assertEquals("*walarm*:android.cts.statsd.testWakeupAlarm", wao.getTag());
-            assertEquals(DEVICE_SIDE_TEST_PACKAGE, wao.getPackageName());
+            assertThat(wao.getTag()).isEqualTo("*walarm*:android.cts.statsd.testWakeupAlarm");
+            assertThat(wao.getPackageName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
         }
     }
 
@@ -836,8 +842,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getWifiLockStateChanged().getState().getNumber());
 
         for (EventMetricData event : data) {
-            assertEquals(WifiModeEnum.WIFI_MODE_FULL_HIGH_PERF,
-                         event.getAtom().getWifiLockStateChanged().getMode());
+            assertThat(event.getAtom().getWifiLockStateChanged().getMode())
+                .isEqualTo(WifiModeEnum.WIFI_MODE_FULL_HIGH_PERF);
         }
     }
 
@@ -866,8 +872,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getWifiLockStateChanged().getState().getNumber());
 
         for (EventMetricData event : data) {
-            assertEquals(WifiModeEnum.WIFI_MODE_FULL_LOW_LATENCY,
-                         event.getAtom().getWifiLockStateChanged().getMode());
+            assertThat(event.getAtom().getWifiLockStateChanged().getMode())
+                .isEqualTo(WifiModeEnum.WIFI_MODE_FULL_LOW_LATENCY);
         }
     }
 
@@ -901,7 +907,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         for (EventMetricData event: data) {
             String tag = event.getAtom().getWifiMulticastLockStateChanged().getTag();
-            assertEquals("Wrong tag.", EXPECTED_TAG, tag);
+            assertThat(tag).isEqualTo(EXPECTED_TAG);
         }
     }
 
@@ -922,12 +928,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = doDeviceMethodOnOff("testWifiScan", atom, key,
                 stateOn, stateOff, minTimeDiffMillis, maxTimeDiffMillis, demandExactlyTwo);
 
-        assertTrue(data.size() >= 2);
-        assertTrue(data.size() <= 4);
+        assertThat(data.size()).isIn(Range.closed(2, 4));
         WifiScanStateChanged a0 = data.get(0).getAtom().getWifiScanStateChanged();
         WifiScanStateChanged a1 = data.get(1).getAtom().getWifiScanStateChanged();
-        assertTrue(a0.getState().getNumber() == stateOn);
-        assertTrue(a1.getState().getNumber() == stateOff);
+        assertThat(a0.getState().getNumber()).isEqualTo(stateOn);
+        assertThat(a1.getState().getNumber()).isEqualTo(stateOff);
     }
 
     public void testBinderStats() throws Exception {
@@ -963,20 +968,16 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
                 if (calls.getUid() == uid && classMatches && methodMatches) {
                     found = true;
-                    assertTrue("Call count should not be negative or equal to 0.",
-                            calls.getRecordedCallCount() > 0);
-                    assertTrue("Call count should not be negative or equal to 0.",
-                            calls.getCallCount() > 0);
-                    assertTrue("Wrong latency",
-                            calls.getRecordedTotalLatencyMicros() > 0
-                            && calls.getRecordedTotalLatencyMicros() < 1000000);
-                    assertTrue("Wrong cpu usage",
-                            calls.getRecordedTotalCpuMicros() > 0
-                            && calls.getRecordedTotalCpuMicros() < 1000000);
+                    assertThat(calls.getRecordedCallCount()).isGreaterThan(0L);
+                    assertThat(calls.getCallCount()).isGreaterThan(0L);
+                    assertThat(calls.getRecordedTotalLatencyMicros())
+                        .isIn(Range.open(0L, 1000000L));
+                    assertThat(calls.getRecordedTotalCpuMicros()).isIn(Range.open(0L, 1000000L));
                 }
             }
 
-            assertTrue("Did not find a matching atom for uid " + uid, found);
+            assertWithMessage(String.format("Did not find a matching atom for uid %d", uid))
+                .that(found).isTrue();
 
         } finally {
             disableBinderStats();
@@ -1017,34 +1018,21 @@ public class UidAtomTests extends DeviceAtomTestCase {
                                 notificationServiceFullName + "$EnqueueNotificationRunnable");
                 if (atom.getLooperStats().getUid() == uid && handlerMatches && messageMatches) {
                     found = true;
-                    assertTrue(stats.getMessageCount() > 0);
-                    assertTrue("Message count should be non-negative.",
-                            stats.getMessageCount() > 0);
-                    assertTrue("Recorded message count should be non-negative.",
-                            stats.getRecordedMessageCount() > 0);
-                    assertTrue("Wrong latency",
-                            stats.getRecordedTotalLatencyMicros() > 0
-                                    && stats.getRecordedTotalLatencyMicros() < 1000000);
-                    assertTrue("Wrong cpu usage",
-                            stats.getRecordedTotalCpuMicros() > 0
-                                    && stats.getRecordedTotalCpuMicros() < 1000000);
-                    assertTrue("Wrong max latency",
-                            stats.getRecordedMaxLatencyMicros() > 0
-                                    && stats.getRecordedMaxLatencyMicros() < 1000000);
-                    assertTrue("Wrong max cpu usage",
-                            stats.getRecordedMaxCpuMicros() > 0
-                                    && stats.getRecordedMaxCpuMicros() < 1000000);
-                    assertTrue("Recorded delay message count should be non-negative.",
-                            stats.getRecordedDelayMessageCount() > 0);
-                    assertTrue("Wrong delay",
-                            stats.getRecordedTotalDelayMillis() >= 0
-                                    && stats.getRecordedTotalDelayMillis() < 5000);
-                    assertTrue("Wrong max delay",
-                            stats.getRecordedMaxDelayMillis() >= 0
-                                    && stats.getRecordedMaxDelayMillis() < 5000);
+                    assertThat(stats.getMessageCount()).isGreaterThan(0L);
+                    assertThat(stats.getRecordedMessageCount()).isGreaterThan(0L);
+                    assertThat(stats.getRecordedTotalLatencyMicros())
+                        .isIn(Range.open(0L, 1000000L));
+                    assertThat(stats.getRecordedTotalCpuMicros()).isIn(Range.open(0L, 1000000L));
+                    assertThat(stats.getRecordedMaxLatencyMicros()).isIn(Range.open(0L, 1000000L));
+                    assertThat(stats.getRecordedMaxCpuMicros()).isIn(Range.open(0L, 1000000L)); 
+                    assertThat(stats.getRecordedDelayMessageCount()).isGreaterThan(0L);
+                    assertThat(stats.getRecordedTotalDelayMillis())
+                        .isIn(Range.closedOpen(0L, 5000L));
+                    assertThat(stats.getRecordedMaxDelayMillis()).isIn(Range.closedOpen(0L, 5000L));
                 }
             }
-            assertTrue("Did not find a matching atom for uid " + uid, found);
+            assertWithMessage(String.format("Did not find a matching atom for uid %d", uid))
+                .that(found).isTrue();
         } finally {
             cleanUpLooperStats();
             plugInAc();
@@ -1081,18 +1069,18 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 continue;
             }
             found = true;
-            assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
-            assertTrue("oom_score should not be negative", state.getOomAdjScore() >= 0);
-            assertTrue("page_fault should not be negative", state.getPageFault() >= 0);
-            assertTrue("page_major_fault should not be negative", state.getPageMajorFault() >= 0);
-            assertTrue("rss_in_bytes should be positive", state.getRssInBytes() > 0);
-            assertTrue("cache_in_bytes should not be negative", state.getCacheInBytes() >= 0);
-            assertTrue("swap_in_bytes should not be negative", state.getSwapInBytes() >= 0);
-            assertTrue("start_time_nanos should be positive", state.getStartTimeNanos() > 0);
-            assertTrue("start_time_nanos should be in the past",
-                    state.getStartTimeNanos() < System.nanoTime());
+            assertThat(state.getProcessName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+            assertThat(state.getOomAdjScore()).isAtLeast(0);
+            assertThat(state.getPageFault()).isAtLeast(0L);
+            assertThat(state.getPageMajorFault()).isAtLeast(0L);
+            assertThat(state.getRssInBytes()).isGreaterThan(0L);
+            assertThat(state.getCacheInBytes()).isAtLeast(0L);
+            assertThat(state.getSwapInBytes()).isAtLeast(0L);
+            assertThat(state.getStartTimeNanos()).isGreaterThan(0L);
+            assertThat(state.getStartTimeNanos()).isLessThan(System.nanoTime());
         }
-        assertTrue("Did not find a matching atom for uid=" + uid, found);
+        assertWithMessage(String.format("Did not find a matching atom for uid %d", uid))
+            .that(found).isTrue();
     }
 
     public void testNativeProcessMemoryState() throws Exception {
@@ -1119,15 +1107,14 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 continue;
             }
             found = true;
-            assertTrue("uid is below 10000", state.getUid() < 10000);
-            assertTrue("page_fault should not be negative", state.getPageFault() >= 0);
-            assertTrue("page_major_fault should not be negative", state.getPageMajorFault() >= 0);
-            assertTrue("rss_in_bytes should be positive", state.getRssInBytes() > 0);
-            assertTrue("start_time_nanos should be positive", state.getStartTimeNanos() > 0);
-            assertTrue("start_time_nanos should be in the past",
-                    state.getStartTimeNanos() < System.nanoTime());
+            assertThat(state.getUid()).isLessThan(10000);
+            assertThat(state.getPageFault()).isAtLeast(0L);
+            assertThat(state.getPageMajorFault()).isAtLeast(0L);
+            assertThat(state.getRssInBytes()).isGreaterThan(0L);
+            assertThat(state.getStartTimeNanos()).isGreaterThan(0L);
+            assertThat(state.getStartTimeNanos()).isLessThan(System.nanoTime());
         }
-        assertTrue("Did not find a matching atom for statsd", found);
+        assertWithMessage("Did not find a matching atom for statsd").that(found).isTrue();
     }
 
     public void testProcessMemoryHighWaterMark() throws Exception {
@@ -1158,22 +1145,21 @@ public class UidAtomTests extends DeviceAtomTestCase {
             ProcessMemoryHighWaterMark state = atom.getProcessMemoryHighWaterMark();
             if (state.getUid() == uid) {
                 foundTestApp = true;
-                assertEquals(DEVICE_SIDE_TEST_PACKAGE, state.getProcessName());
-                assertTrue("rss_high_water_mark_in_bytes should be positive",
-                        state.getRssHighWaterMarkInBytes() > 0);
+                assertThat(state.getProcessName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+                assertThat(state.getRssHighWaterMarkInBytes()).isGreaterThan(0L);
             } else if (state.getProcessName().contains("/statsd")) {
                 foundStatsd = true;
-                assertTrue("rss_high_water_mark_in_bytes should be positive",
-                        state.getRssHighWaterMarkInBytes() > 0);
+                assertThat(state.getRssHighWaterMarkInBytes()).isGreaterThan(0L);
             } else if (state.getProcessName().equals("system")) {
                 foundSystemServer = true;
-                assertTrue("rss_high_water_mark_in_bytes should be positive",
-                        state.getRssHighWaterMarkInBytes() > 0);
+                assertThat(state.getRssHighWaterMarkInBytes()).isGreaterThan(0L);
             }
         }
-        assertTrue("Did not find a matching atom for test app uid=" + uid, foundTestApp);
-        assertTrue("Did not find a matching atom for statsd", foundStatsd);
-        assertTrue("Did not find a matching atom for system server", foundSystemServer);
+        assertWithMessage(String.format("Did not find a matching atom for test app uid=%d",uid))
+            .that(foundTestApp).isTrue();
+        assertWithMessage("Did not find a matching atom for statsd").that(foundStatsd).isTrue();
+        assertWithMessage("Did not find a matching atom for system server")
+            .that(foundSystemServer).isTrue();
     }
 
     /**
@@ -1216,20 +1202,20 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : getGaugeMetricDataList()) {
             AtomsProto.RoleHolder roleHolder = atom.getRoleHolder();
 
-            assertNotNull(roleHolder.getPackageName());
-            assertTrue(roleHolder.getUid() >= 0);
-            assertNotNull(roleHolder.getRole());
+            assertThat(roleHolder.getPackageName()).isNotNull();
+            assertThat(roleHolder.getUid()).isAtLeast(0);
+            assertThat(roleHolder.getRole()).isNotNull();
 
             if (roleHolder.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
-                assertEquals(testAppId, getAppId(roleHolder.getUid()));
-                assertEquals(DEVICE_SIDE_TEST_PACKAGE, roleHolder.getPackageName());
-                assertEquals(callScreenAppRole, roleHolder.getRole());
+                assertThat(getAppId(roleHolder.getUid())).isEqualTo(testAppId);
+                assertThat(roleHolder.getPackageName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+                assertThat(roleHolder.getRole()).isEqualTo(callScreenAppRole);
 
                 verifiedKnowRoleState = true;
             }
         }
 
-        assertTrue(verifiedKnowRoleState);
+        assertThat(verifiedKnowRoleState).isTrue();
     }
 
     public void testDangerousPermissionState() throws Exception {
@@ -1257,26 +1243,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         for (Atom atom : getGaugeMetricDataList()) {
             DangerousPermissionState permissionState = atom.getDangerousPermissionState();
 
-            assertNotNull(permissionState.getPermissionName());
-            assertTrue(permissionState.getUid() >= 0);
-            assertNotNull(permissionState.getPackageName());
+            assertThat(permissionState.getPermissionName()).isNotNull();
+            assertThat(permissionState.getUid()).isAtLeast(0);
+            assertThat(permissionState.getPackageName()).isNotNull();
 
             if (permissionState.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
-                assertEquals(testAppId, getAppId(permissionState.getUid()));
+                assertThat(getAppId(permissionState.getUid())).isEqualTo(testAppId);
 
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
-                    assertTrue(permissionState.getIsGranted());
-                    assertEquals(0, permissionState.getPermissionFlags() & (~(
+                    assertThat(permissionState.getIsGranted()).isTrue();
+                    assertThat(permissionState.getPermissionFlags() & (~(
                             FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED
-                                    | FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED)));
+                            | FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED)))
+                        .isEqualTo(0);
 
                     verifiedKnowPermissionState = true;
                 }
             }
         }
 
-        assertTrue(verifiedKnowPermissionState);
+        assertThat(verifiedKnowPermissionState).isTrue();
     }
 
     public void testANROccurred() throws Exception {
@@ -1297,14 +1284,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        assertEquals(1, data.size());
-        assertTrue(data.get(0).getAtom().hasAnrOccurred());
+        assertThat(data).hasSize(1);
+        assertThat(data.get(0).getAtom().hasAnrOccurred()).isTrue();
         ANROccurred atom = data.get(0).getAtom().getAnrOccurred();
-        assertEquals(ANROccurred.InstantApp.FALSE_VALUE, atom.getIsInstantApp().getNumber());
-        assertEquals(ANROccurred.ForegroundState.FOREGROUND_VALUE,
-                atom.getForegroundState().getNumber());
-        assertEquals(ErrorSource.DATA_APP, atom.getErrorSource());
-        assertEquals(DEVICE_SIDE_TEST_PACKAGE, atom.getPackageName());
+        assertThat(atom.getIsInstantApp().getNumber())
+            .isEqualTo(ANROccurred.InstantApp.FALSE_VALUE);
+        assertThat(atom.getForegroundState().getNumber())
+            .isEqualTo(ANROccurred.ForegroundState.FOREGROUND_VALUE);
+        assertThat(atom.getErrorSource()).isEqualTo(ErrorSource.DATA_APP);
+        assertThat(atom.getPackageName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
     }
 
     public void testWriteRawTestAtom() throws Exception {
@@ -1320,80 +1308,71 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
-        assertEquals(data.size(), 4);
+        assertThat(data).hasSize(4);
 
         TestAtomReported atom = data.get(0).getAtom().getTestAtomReported();
         List<AttributionNode> attrChain = atom.getAttributionNodeList();
-        assertEquals(2, attrChain.size());
-        assertEquals(1234, attrChain.get(0).getUid());
-        assertEquals("tag1", attrChain.get(0).getTag());
-        assertEquals(getUid(), attrChain.get(1).getUid());
-        assertEquals("tag2", attrChain.get(1).getTag());
+        assertThat(attrChain).hasSize(2);
+        assertThat(attrChain.get(0).getUid()).isEqualTo(1234);
+        assertThat(attrChain.get(0).getTag()).isEqualTo("tag1");
+        assertThat(attrChain.get(1).getUid()).isEqualTo(getUid());
+        assertThat(attrChain.get(1).getTag()).isEqualTo("tag2");
 
-        assertEquals(42, atom.getIntField());
-        assertEquals(Long.MAX_VALUE, atom.getLongField());
-        assertEquals(3.14f, atom.getFloatField());
-        assertEquals("This is a basic test!", atom.getStringField());
-        assertEquals(false, atom.getBooleanField());
-        assertEquals(TestAtomReported.State.ON_VALUE, atom.getState().getNumber());
-        List<Long> expIds = atom.getBytesField().getExperimentIdList();
-        assertEquals(3, expIds.size());
-        assertEquals(1L, (long) expIds.get(0));
-        assertEquals(2L, (long) expIds.get(1));
-        assertEquals(3L, (long) expIds.get(2));
+        assertThat(atom.getIntField()).isEqualTo(42);
+        assertThat(atom.getLongField()).isEqualTo(Long.MAX_VALUE);
+        assertThat(atom.getFloatField()).isEqualTo(3.14f);
+        assertThat(atom.getStringField()).isEqualTo("This is a basic test!");
+        assertThat(atom.getBooleanField()).isFalse();
+        assertThat(atom.getState().getNumber()).isEqualTo(TestAtomReported.State.ON_VALUE);
+        assertThat(atom.getBytesField().getExperimentIdList())
+            .containsExactly(1L, 2L, 3L).inOrder();
+        
 
         atom = data.get(1).getAtom().getTestAtomReported();
         attrChain = atom.getAttributionNodeList();
-        assertEquals(2, attrChain.size());
-        assertEquals(9999, attrChain.get(0).getUid());
-        assertEquals("tag9999", attrChain.get(0).getTag());
-        assertEquals(getUid(), attrChain.get(1).getUid());
-        assertEquals("", attrChain.get(1).getTag());
+        assertThat(attrChain).hasSize(2);
+        assertThat(attrChain.get(0).getUid()).isEqualTo(9999);
+        assertThat(attrChain.get(0).getTag()).isEqualTo("tag9999");
+        assertThat(attrChain.get(1).getUid()).isEqualTo(getUid());
+        assertThat(attrChain.get(1).getTag()).isEmpty();
 
-        assertEquals(100, atom.getIntField());
-        assertEquals(Long.MIN_VALUE, atom.getLongField());
-        assertEquals(-2.5f, atom.getFloatField());
-        assertEquals("Test null uid", atom.getStringField());
-        assertEquals(true, atom.getBooleanField());
-        assertEquals(TestAtomReported.State.UNKNOWN_VALUE, atom.getState().getNumber());
-        expIds = atom.getBytesField().getExperimentIdList();
-        assertEquals(3, expIds.size());
-        assertEquals(1L, (long) expIds.get(0));
-        assertEquals(2L, (long) expIds.get(1));
-        assertEquals(3L, (long) expIds.get(2));
+        assertThat(atom.getIntField()).isEqualTo(100);
+        assertThat(atom.getLongField()).isEqualTo(Long.MIN_VALUE);
+        assertThat(atom.getFloatField()).isEqualTo(-2.5f);
+        assertThat(atom.getStringField()).isEqualTo("Test null uid");
+        assertThat(atom.getBooleanField()).isTrue();
+        assertThat(atom.getState().getNumber()).isEqualTo(TestAtomReported.State.UNKNOWN_VALUE);
+        assertThat(atom.getBytesField().getExperimentIdList())
+            .containsExactly(1L, 2L, 3L).inOrder();
 
         atom = data.get(2).getAtom().getTestAtomReported();
         attrChain = atom.getAttributionNodeList();
-        assertEquals(1, attrChain.size());
-        assertEquals(getUid(), attrChain.get(0).getUid());
-        assertEquals("tag1", attrChain.get(0).getTag());
+        assertThat(attrChain).hasSize(1);
+        assertThat(attrChain.get(0).getUid()).isEqualTo(getUid());
+        assertThat(attrChain.get(0).getTag()).isEqualTo("tag1");
 
-        assertEquals(-256, atom.getIntField());
-        assertEquals(-1234567890L, atom.getLongField());
-        assertEquals(42.01f, atom.getFloatField());
-        assertEquals("Test non chained", atom.getStringField());
-        assertEquals(true, atom.getBooleanField());
-        assertEquals(TestAtomReported.State.OFF_VALUE, atom.getState().getNumber());
-        expIds = atom.getBytesField().getExperimentIdList();
-        assertEquals(3, expIds.size());
-        assertEquals(1L, (long) expIds.get(0));
-        assertEquals(2L, (long) expIds.get(1));
-        assertEquals(3L, (long) expIds.get(2));
+        assertThat(atom.getIntField()).isEqualTo(-256);
+        assertThat(atom.getLongField()).isEqualTo(-1234567890L);
+        assertThat(atom.getFloatField()).isEqualTo(42.01f);
+        assertThat(atom.getStringField()).isEqualTo("Test non chained");
+        assertThat(atom.getBooleanField()).isTrue();
+        assertThat(atom.getState().getNumber()).isEqualTo(TestAtomReported.State.OFF_VALUE);
+        assertThat(atom.getBytesField().getExperimentIdList())
+            .containsExactly(1L, 2L, 3L).inOrder();
 
         atom = data.get(3).getAtom().getTestAtomReported();
         attrChain = atom.getAttributionNodeList();
-        assertEquals(1, attrChain.size());
-        assertEquals(getUid(), attrChain.get(0).getUid());
-        assertEquals("", attrChain.get(0).getTag());
+        assertThat(attrChain).hasSize(1);
+        assertThat(attrChain.get(0).getUid()).isEqualTo(getUid());
+        assertThat(attrChain.get(0).getTag()).isEmpty();
 
-        assertEquals(0, atom.getIntField());
-        assertEquals(0L, atom.getLongField());
-        assertEquals(0f, atom.getFloatField());
-        assertEquals("", atom.getStringField());
-        assertEquals(true, atom.getBooleanField());
-        assertEquals(TestAtomReported.State.OFF_VALUE, atom.getState().getNumber());
-        expIds = atom.getBytesField().getExperimentIdList();
-        assertEquals(0, expIds.size());
+        assertThat(atom.getIntField()).isEqualTo(0);
+        assertThat(atom.getLongField()).isEqualTo(0L);
+        assertThat(atom.getFloatField()).isEqualTo(0f);
+        assertThat(atom.getStringField()).isEmpty();
+        assertThat(atom.getBooleanField()).isTrue();
+        assertThat(atom.getState().getNumber()).isEqualTo(TestAtomReported.State.OFF_VALUE);
+        assertThat(atom.getBytesField().getExperimentIdList()).isEmpty();
     }
 
 }

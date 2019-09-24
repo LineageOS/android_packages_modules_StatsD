@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.os.BatteryPluggedStateEnum;
 import android.os.BatteryStatusEnum;
@@ -31,6 +32,8 @@ import com.android.os.AtomsProto.BuildInformation;
 import com.android.os.AtomsProto.ConnectivityStateChanged;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
+
+import com.google.common.collect.Range;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -349,11 +352,12 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         Atom atom = data.get(0);
-        assertTrue(atom.getRemainingBatteryCapacity().hasChargeMicroAmpereHour());
+        assertThat(atom.getRemainingBatteryCapacity().hasChargeMicroAmpereHour()).isTrue();
         if (hasBattery()) {
-            assertTrue(atom.getRemainingBatteryCapacity().getChargeMicroAmpereHour() > 0);
+            assertThat(atom.getRemainingBatteryCapacity().getChargeMicroAmpereHour())
+                .isGreaterThan(0);
         }
     }
 
@@ -375,11 +379,11 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         Atom atom = data.get(0);
-        assertTrue(atom.getFullBatteryCapacity().hasCapacityMicroAmpereHour());
+        assertThat(atom.getFullBatteryCapacity().hasCapacityMicroAmpereHour()).isTrue();
         if (hasBattery()) {
-            assertTrue(atom.getFullBatteryCapacity().getCapacityMicroAmpereHour() > 0);
+            assertThat(atom.getFullBatteryCapacity().getCapacityMicroAmpereHour()).isGreaterThan(0);
         }
     }
 
@@ -399,11 +403,11 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         Atom atom = data.get(0);
-        assertTrue(atom.getBatteryVoltage().hasVoltageMillivolt());
+        assertThat(atom.getBatteryVoltage().hasVoltageMillivolt()).isTrue();
         if (hasBattery()) {
-            assertTrue(atom.getBatteryVoltage().getVoltageMillivolt() > 0);
+            assertThat(atom.getBatteryVoltage().getVoltageMillivolt()).isGreaterThan(0);
         }
     }
 
@@ -424,12 +428,11 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         Atom atom = data.get(0);
-        assertTrue(atom.getBatteryLevel().hasBatteryLevel());
+        assertThat(atom.getBatteryLevel().hasBatteryLevel()).isTrue();
         if (hasBattery()) {
-            assertTrue(atom.getBatteryLevel().getBatteryLevel() > 0);
-            assertTrue(atom.getBatteryLevel().getBatteryLevel() <= 100);
+            assertThat(atom.getBatteryLevel().getBatteryLevel()).isIn(Range.openClosed(0, 100));
         }
     }
 
@@ -450,11 +453,11 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         Atom atom = data.get(0);
-        assertTrue(atom.getBatteryCycleCount().hasCycleCount());
+        assertThat(atom.getBatteryCycleCount().hasCycleCount()).isTrue();
         if (hasBattery()) {
-            assertTrue(atom.getBatteryCycleCount().getCycleCount() >= 0);
+            assertThat(atom.getBatteryCycleCount().getCycleCount()).isAtLeast(0);
         }
     }
 
@@ -474,11 +477,11 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> data = getGaugeMetricDataList();
 
         Atom atom = data.get(0);
-        assertTrue(!atom.getKernelWakelock().getName().equals(""));
-        assertTrue(atom.getKernelWakelock().hasCount());
-        assertTrue(atom.getKernelWakelock().hasVersion());
-        assertTrue(atom.getKernelWakelock().getVersion() > 0);
-        assertTrue(atom.getKernelWakelock().hasTimeMicros());
+        assertThat(atom.getKernelWakelock().getName()).isNotEmpty();
+        assertThat(atom.getKernelWakelock().hasCount()).isTrue();
+        assertThat(atom.getKernelWakelock().hasVersion()).isTrue();
+        assertThat(atom.getKernelWakelock().getVersion()).isGreaterThan(0);
+        assertThat(atom.getKernelWakelock().hasTimeMicros()).isTrue();
     }
 
     // Returns true iff either |WAKE_LOCK_FILE| or |WAKE_SOURCES_FILE| exists.
@@ -510,12 +513,12 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getWifiActivityInfo().getTimestampMillis() > 0);
-            assertTrue(atom.getWifiActivityInfo().getStackState() >= 0);
-            assertTrue(atom.getWifiActivityInfo().getControllerIdleTimeMillis() > 0);
-            assertTrue(atom.getWifiActivityInfo().getControllerTxTimeMillis() >= 0);
-            assertTrue(atom.getWifiActivityInfo().getControllerRxTimeMillis() >= 0);
-            assertTrue(atom.getWifiActivityInfo().getControllerEnergyUsed() >= 0);
+            assertThat(atom.getWifiActivityInfo().getTimestampMillis()).isGreaterThan(0L);
+            assertThat(atom.getWifiActivityInfo().getStackState()).isAtLeast(0);
+            assertThat(atom.getWifiActivityInfo().getControllerIdleTimeMillis()).isGreaterThan(0L);
+            assertThat(atom.getWifiActivityInfo().getControllerTxTimeMillis()).isAtLeast(0L);
+            assertThat(atom.getWifiActivityInfo().getControllerRxTimeMillis()).isAtLeast(0L);
+            assertThat(atom.getWifiActivityInfo().getControllerEnergyUsed()).isAtLeast(0L);
         }
     }
 
@@ -533,16 +536,17 @@ public class HostAtomTests extends AtomTestCase {
         Thread.sleep(WAIT_TIME_LONG);
 
         List<Atom> data = getGaugeMetricDataList();
-        assertTrue(data.size() > 0);
+        assertThat(data).isNotEmpty();
         BuildInformation atom = data.get(0).getBuildInformation();
-        assertEquals(getProperty("ro.product.brand"),             atom.getBrand());
-        assertEquals(getProperty("ro.product.name"),              atom.getProduct());
-        assertEquals(getProperty("ro.product.device"),            atom.getDevice());
-        assertEquals(getProperty("ro.build.version.release"),     atom.getVersionRelease());
-        assertEquals(getProperty("ro.build.id"),                  atom.getId());
-        assertEquals(getProperty("ro.build.version.incremental"), atom.getVersionIncremental());
-        assertEquals(getProperty("ro.build.type"),                atom.getType());
-        assertEquals(getProperty("ro.build.tags"),                atom.getTags());
+        assertThat(getProperty("ro.product.brand")).isEqualTo(atom.getBrand());
+        assertThat(getProperty("ro.product.name")).isEqualTo(atom.getProduct());
+        assertThat(getProperty("ro.product.device")).isEqualTo(atom.getDevice());
+        assertThat(getProperty("ro.build.version.release")).isEqualTo(atom.getVersionRelease());
+        assertThat(getProperty("ro.build.id")).isEqualTo(atom.getId());
+        assertThat(getProperty("ro.build.version.incremental"))
+            .isEqualTo(atom.getVersionIncremental());
+        assertThat(getProperty("ro.build.type")).isEqualTo(atom.getType());
+        assertThat(getProperty("ro.build.tags")).isEqualTo(atom.getTags());
     }
 
     public void testOnDevicePowerMeasurement() throws Exception {
@@ -563,8 +567,9 @@ public class HostAtomTests extends AtomTestCase {
         List<Atom> dataList = getGaugeMetricDataList();
 
         for (Atom atom: dataList) {
-            assertTrue(atom.getOnDevicePowerMeasurement().getMeasurementTimestampMillis() >= 0);
-            assertTrue(atom.getOnDevicePowerMeasurement().getEnergyMicrowattSecs() >= 0);
+            assertThat(atom.getOnDevicePowerMeasurement().getMeasurementTimestampMillis())
+                .isAtLeast(0L);
+            assertThat(atom.getOnDevicePowerMeasurement().getEnergyMicrowattSecs()).isAtLeast(0L);
         }
     }
 
@@ -582,8 +587,8 @@ public class HostAtomTests extends AtomTestCase {
 
         List<EventMetricData> data = getEventMetricDataList();
         AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+        assertThat(atom.getLabel()).isEqualTo(1);
+        assertThat(atom.getState().getNumber()).isEqualTo(AppBreadcrumbReported.State.START_VALUE);
     }
 
     // Test dumpsys stats --proto.
@@ -600,7 +605,7 @@ public class HostAtomTests extends AtomTestCase {
 
         // Get the stats incident section.
         List<ConfigMetricsReportList> listList = getReportsFromStatsDataDumpProto();
-        assertTrue(listList.size() > 0);
+        assertThat(listList).isNotEmpty();
 
         // Extract the relevent report from the incident section.
         ConfigMetricsReportList ourList = null;
@@ -612,14 +617,14 @@ public class HostAtomTests extends AtomTestCase {
                 break;
             }
         }
-        assertNotNull("Could not find list for uid=" + hostUid
-                + " id=" + CONFIG_ID, ourList);
+        assertWithMessage(String.format("Could not find list for uid=%d id=%d", hostUid, CONFIG_ID))
+            .that(ourList).isNotNull();
 
         // Make sure that the report is correct.
         List<EventMetricData> data = getEventMetricDataList(ourList);
         AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
-        assertTrue(atom.getLabel() == 1);
-        assertTrue(atom.getState().getNumber() == AppBreadcrumbReported.State.START_VALUE);
+        assertThat(atom.getLabel()).isEqualTo(1);
+        assertThat(atom.getState().getNumber()).isEqualTo(AppBreadcrumbReported.State.START_VALUE);
     }
 
     public void testConnectivityStateChange() throws Exception {
@@ -656,6 +661,7 @@ public class HostAtomTests extends AtomTestCase {
                 foundConnectEvent = true;
             }
         }
-        assertTrue(foundConnectEvent && foundDisconnectEvent);
+        assertThat(foundConnectEvent).isTrue();
+        assertThat(foundDisconnectEvent).isTrue();
     }
 }

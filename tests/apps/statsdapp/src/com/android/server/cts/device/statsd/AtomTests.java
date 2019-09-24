@@ -18,7 +18,7 @@ package com.android.server.cts.device.statsd;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
 
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
@@ -325,7 +325,7 @@ public class AtomTests {
 
         Context context = InstrumentationRegistry.getContext();
         JobScheduler js = context.getSystemService(JobScheduler.class);
-        assertTrue("JobScheduler service not available", js != null);
+        assertWithMessage("JobScheduler service not available").that(js).isNotNull();
 
         JobInfo.Builder builder = new JobInfo.Builder(1, name);
         builder.setOverrideDeadline(0);

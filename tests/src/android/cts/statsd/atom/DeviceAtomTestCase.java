@@ -15,6 +15,9 @@
  */
 package android.cts.statsd.atom;
 
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.MessageMatcher;
 import com.android.internal.os.StatsdConfigProto.Position;
@@ -80,9 +83,9 @@ public class DeviceAtomTestCase extends AtomTestCase {
         List<EventMetricData> data = doDeviceMethod(methodName, conf);
 
         if (demandExactlyTwo) {
-            assertEquals(2, data.size());
+            assertThat(data).hasSize(2);
         } else {
-            assertTrue("data.size() [" + data.size() + "] should be >= 2", data.size() >= 2);
+            assertThat(data.size()).isAtLeast(2);
         }
         assertTimeDiffBetween(data.get(0), data.get(1), minTimeDiffMs, maxTimeDiffMs);
         return data;
@@ -165,9 +168,9 @@ public class DeviceAtomTestCase extends AtomTestCase {
                 + currentUser + " " + DEVICE_SIDE_TEST_PACKAGE);
         String[] uidLineParts = uidLine.split(":");
         // 3rd entry is package uid
-        assertTrue(uidLineParts.length > 2);
+        assertThat(uidLineParts.length).isGreaterThan(2);
         int uid = Integer.parseInt(uidLineParts[2].trim());
-        assertTrue(uid > 10000);
+        assertThat(uid).isGreaterThan(10000);
         return uid;
     }
 
@@ -287,8 +290,10 @@ public class DeviceAtomTestCase extends AtomTestCase {
     protected void rebootDeviceAndWaitUntilReady() throws Exception {
         rebootDevice();
         // Wait for 2 mins.
-        assertTrue("Device failed to boot", getDevice().waitForBootComplete(120_000));
-        assertTrue("Stats service failed to start", waitForStatsServiceStart(60_000));
+        assertWithMessage("Device failed to boot")
+            .that(getDevice().waitForBootComplete(120_000)).isTrue();
+        assertWithMessage("Stats service failed to start")
+            .that(waitForStatsServiceStart(60_000)).isTrue();
         Thread.sleep(2_000);
     }
 
