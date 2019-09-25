@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.subscriber;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import com.android.compatibility.common.util.CpuFeatures;
 import com.android.internal.os.StatsdConfigProto;
 import com.android.os.AtomsProto;
@@ -79,7 +81,7 @@ public class ShellSubscriberTest extends DeviceTestCase {
         startSubscription(config, receiver, 10);
         byte[] output = receiver.getOutput();
         // There should be at lease some data returned.
-        assertTrue(output.length > sizetBytes);
+        assertThat(output.length).isGreaterThan(sizetBytes);
 
         int atomCount = 0;
         int i = 0;
@@ -98,8 +100,8 @@ public class ShellSubscriberTest extends DeviceTestCase {
                 ShellDataProto.ShellData data =
                         ShellDataProto.ShellData.parseFrom(
                                 Arrays.copyOfRange(output, i + sizetBytes, i + sizetBytes + len));
-                assertTrue(data.getAtomCount() > 0);
-                assertTrue(data.getAtom(0).hasSystemUptime());
+                assertThat(data.getAtomCount()).isGreaterThan(0);
+                assertThat(data.getAtom(0).hasSystemUptime()).isTrue();
                 atomCount++;
                 LogUtil.CLog.d("Received " + data.toString());
             } catch (InvalidProtocolBufferException e) {
@@ -108,7 +110,7 @@ public class ShellSubscriberTest extends DeviceTestCase {
             i += (sizetBytes + len);
         }
 
-        assertTrue(atomCount > 0);
+        assertThat(atomCount).isGreaterThan(0);
     }
 
     private void startSubscription(ShellConfig.ShellSubscription config,

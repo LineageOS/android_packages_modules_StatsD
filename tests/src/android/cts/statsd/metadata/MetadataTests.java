@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.metadata;
 
+import static com.google.common.truth.Truth.assertWithMessage;
+
 import android.cts.statsd.atom.AtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
@@ -61,13 +63,14 @@ public class MetadataTests extends MetadataTestCase {
         for (ConfigStats stats: report.getConfigStatsList()) {
             if (stats.getId() == CONFIG_ID && stats.getUid() == getHostUid()) {
                 if(!stats.hasDeletionTimeSec()) {
-                    assertTrue("Found multiple active CTS configs!", foundActiveConfig == false);
+                    assertWithMessage("Found multiple active CTS configs!")
+                            .that(foundActiveConfig).isFalse();
                     foundActiveConfig = true;
                     creationTime = stats.getCreationTimeSec();
                 }
             }
         }
-        assertTrue("Did not find an active CTS config", foundActiveConfig);
+        assertWithMessage("Did not find an active CTS config").that(foundActiveConfig).isTrue();
 
         while(System.currentTimeMillis() - startTime < 8_000) {
             Thread.sleep(10);
@@ -81,26 +84,29 @@ public class MetadataTests extends MetadataTestCase {
             if (stats.getId() == CONFIG_ID && stats.getUid() == getHostUid()) {
                 // Original config should be TTL'd
                 if (stats.getCreationTimeSec() == creationTime) {
-                    assertTrue("Config should have TTL'd but is still active",
-                            stats.hasDeletionTimeSec());
-                    assertTrue("Config deletion time should be about " + TTL_TIME_SEC +
-                            " after creation",
-                            Math.abs(stats.getDeletionTimeSec() - expectedTime) <= 2);
+                    assertWithMessage("Config should have TTL'd but is still active")
+                            .that(stats.hasDeletionTimeSec()).isTrue();
+                    assertWithMessage(
+                            "Config deletion time should be about %s after creation", TTL_TIME_SEC
+                    ).that(Math.abs(stats.getDeletionTimeSec() - expectedTime)).isAtMost(2);
                 }
                 // There should still be one active config, that is marked as reset.
                 if(!stats.hasDeletionTimeSec()) {
-                    assertTrue("Found multiple active CTS configs!", foundActiveConfig == false);
+                    assertWithMessage("Found multiple active CTS configs!")
+                            .that(foundActiveConfig).isFalse();
                     foundActiveConfig = true;
                     creationTime = stats.getCreationTimeSec();
-                    assertTrue("Active config after TTL should be marked as reset",
-                            stats.hasResetTimeSec());
-                    assertEquals("Reset time and creation time should be equal for TTl'd configs",
-                            stats.getResetTimeSec(), stats.getCreationTimeSec());
-                    assertTrue("Reset config should be created when the original config TTL'd",
-                            Math.abs(stats.getCreationTimeSec() - expectedTime) <= 2);
+                    assertWithMessage("Active config after TTL should be marked as reset")
+                            .that(stats.hasResetTimeSec()).isTrue();
+                    assertWithMessage("Reset and creation time should be equal for TTl'd configs")
+                            .that(stats.getResetTimeSec()).isEqualTo(stats.getCreationTimeSec());
+                    assertWithMessage(
+                            "Reset config should be created when the original config TTL'd"
+                    ).that(Math.abs(stats.getCreationTimeSec() - expectedTime)).isAtMost(2);
                 }
             }
         }
-        assertTrue("Did not find an active CTS config after the TTL", foundActiveConfig);
+        assertWithMessage("Did not find an active CTS config after the TTL")
+                .that(foundActiveConfig).isTrue();
     }
 }

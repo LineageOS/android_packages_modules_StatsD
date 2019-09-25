@@ -15,7 +15,7 @@
  */
 package android.cts.statsd.validation;
 
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
 
 import android.cts.statsd.atom.ProcStateTestCase;
 import android.service.procstats.ProcessState;
@@ -113,8 +113,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             }
         }
         // Verify that duration is within 1% difference
-        assertTrue(Math.abs(durationInTopStatsd - durationInTopProcStats) / durationInTopProcStats
-                < 0.1);
+        assertThat(Math.abs(durationInTopStatsd - durationInTopProcStats) / durationInTopProcStats)
+                .isLessThan(0.01);
     }
 
     public void testProcessStateCachedEmptyDuration() throws Exception {
@@ -178,8 +178,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             }
         }
         // Verify that duration is within 1% difference
-        assertTrue(Math.abs(durationInStatsd - durationInProcStats) / durationInProcStats
-                < 0.1);
+        assertThat(Math.abs(durationInStatsd - durationInProcStats) / durationInProcStats)
+                .isLessThan(0.01);
     }
 
     public void testProcessStatePssValue() throws Exception {
@@ -240,8 +240,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                 }
             }
         }
-        assertTrue(valueInProcStats > 0);
-        assertTrue(valueInStatsd == valueInProcStats);
+        assertThat(valueInProcStats).isGreaterThan(0d);
+        assertThat(valueInStatsd).isWithin(1e-10).of(valueInProcStats);
     }
 
     public void testProcessStateByPulling() throws Exception {
@@ -342,11 +342,11 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         }
 
         LogUtil.CLog.d("avg pss from procstats is " + pssAvgProcstats);
-        assertTrue(durationStatsd > 0);
-        assertTrue(durationStatsd == durationProcstats);
-        assertTrue(pssAvgStatsd == pssAvgProcstats);
-        assertTrue(ussAvgStatsd == ussAvgProcstats);
-        assertTrue(rssAvgStatsd == rssAvgProcstats);
+        assertThat(durationStatsd).isGreaterThan(0L);
+        assertThat(durationStatsd).isEqualTo(durationProcstats);
+        assertThat(pssAvgStatsd).isEqualTo(pssAvgProcstats);
+        assertThat(ussAvgStatsd).isEqualTo(ussAvgProcstats);
+        assertThat(rssAvgStatsd).isEqualTo(rssAvgProcstats);
     }
 
     public void testProcStatsPkgProcStats() throws Exception {
@@ -390,8 +390,11 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         List<Atom> statsdData = getGaugeMetricDataList();
-        assertTrue(statsdData.size() > 0);
-        assertTrue(statsdData.get(0).getProcStatsPkgProc().getProcStatsSection().getAvailablePagesList().size() > 0);
+        assertThat(statsdData).isNotEmpty();
+        assertThat(
+                statsdData.get(0).getProcStatsPkgProc().getProcStatsSection()
+                        .getAvailablePagesList()
+        ).isNotEmpty();
 
         List<ProcessStatsPackageProto> processStatsPackageProtoList = getAllProcStatsProto();
 
@@ -421,8 +424,8 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                         }
                     }
                 }
-                assertTrue(pkg.getServiceStatsCount() == 0);
-                assertTrue(pkg.getAssociationStatsCount() == 0);
+                assertThat(pkg.getServiceStatsCount()).isEqualTo(0L);
+                assertThat(pkg.getAssociationStatsCount()).isEqualTo(0L);
             }
         }
 
@@ -453,14 +456,14 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             serviceStatsCount += pkg.getServiceStatsCount();
             associationStatsCount += pkg.getAssociationStatsCount();
         }
-        assertTrue(serviceStatsCount > 0);
-        assertTrue(associationStatsCount > 0);
+        assertThat(serviceStatsCount).isGreaterThan(0);
+        assertThat(associationStatsCount).isGreaterThan(0);
 
         LogUtil.CLog.d("avg pss from procstats is " + pssAvgProcstats);
-        assertTrue(durationStatsd > 0);
-        assertTrue(durationStatsd == durationProcstats);
-        assertTrue(pssAvgStatsd == pssAvgProcstats);
-        assertTrue(ussAvgStatsd == ussAvgProcstats);
-        assertTrue(rssAvgStatsd == rssAvgProcstats);
+        assertThat(durationStatsd).isGreaterThan(0L);
+        assertThat(durationStatsd).isEqualTo(durationProcstats);
+        assertThat(pssAvgStatsd).isEqualTo(pssAvgProcstats);
+        assertThat(ussAvgStatsd).isEqualTo(ussAvgProcstats);
+        assertThat(rssAvgStatsd).isEqualTo(rssAvgProcstats);
     }
 }

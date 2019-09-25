@@ -15,7 +15,8 @@
  */
 package android.cts.statsd.validation;
 
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.cts.statsd.atom.DeviceAtomTestCase;
 import android.os.BatteryPluggedStateEnum;
@@ -47,6 +48,8 @@ import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.StatsLogReport;
 import com.android.tradefed.log.LogUtil.CLog;
+
+import com.google.common.collect.Range;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -118,10 +121,8 @@ public class ValidationTests extends DeviceAtomTestCase {
         for (EventMetricData event : data) {
             String tag = event.getAtom().getWakelockStateChanged().getTag();
             WakeLockLevelEnum type = event.getAtom().getWakelockStateChanged().getType();
-            assertTrue("Expected tag: " + EXPECTED_TAG + ", but got tag: " + tag,
-                    tag.equals(EXPECTED_TAG));
-            assertTrue("Expected wakelock level: " + EXPECTED_LEVEL + ", but got level: " + type,
-                    type == EXPECTED_LEVEL);
+            assertThat(tag).isEqualTo(EXPECTED_TAG);
+            assertThat(type).isEqualTo(EXPECTED_LEVEL);
         }
 
         //=================== verify that batterystats is correct ===============//
@@ -129,12 +130,10 @@ public class ValidationTests extends DeviceAtomTestCase {
         android.os.TimerProto wl =
                 getBatteryStatsPartialWakelock(batterystatsProto, uid, EXPECTED_TAG);
 
-        assertNotNull(wl);
-        assertTrue(wl.getDurationMs() > 0);
-        assertTrue(wl.getMaxDurationMs() >= 400);
-        assertTrue(wl.getMaxDurationMs() < 700);
-        assertTrue(wl.getTotalDurationMs() >= 400);
-        assertTrue(wl.getTotalDurationMs() < 700);
+        assertThat(wl).isNotNull();
+        assertThat(wl.getDurationMs()).isGreaterThan(0L);
+        assertThat(wl.getMaxDurationMs()).isIn(Range.closedOpen(400L, 700L));
+        assertThat(wl.getTotalDurationMs()).isIn(Range.closedOpen(400L, 700L));
 
         setAodState(aodState); // restores AOD to initial state.
     }
@@ -174,36 +173,34 @@ public class ValidationTests extends DeviceAtomTestCase {
         // Get the batterystats wakelock time and make sure it's reasonable.
         android.os.TimerProto bsWakelock =
                 getBatteryStatsPartialWakelock(batterystatsProto, EXPECTED_UID, EXPECTED_TAG);
-        assertNotNull("Could not find any partial wakelocks with uid " + EXPECTED_UID +
-                " and tag " + EXPECTED_TAG + " in BatteryStats", bsWakelock);
+        assertWithMessage(
+                "No partial wakelocks with uid %s and tag %s in BatteryStats",
+                EXPECTED_UID, EXPECTED_TAG
+        ).that(bsWakelock).isNotNull();
         long bsDurationMs = bsWakelock.getTotalDurationMs();
-        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
-                + EXPECTED_TAG + "was too short. Expected " + MIN_DURATION +
-                ", received " + bsDurationMs, bsDurationMs >= MIN_DURATION);
-        assertTrue("Wakelock in batterystats with uid " + EXPECTED_UID + " and tag "
-                + EXPECTED_TAG + "was too long. Expected " + MAX_DURATION +
-                ", received " + bsDurationMs, bsDurationMs <= MAX_DURATION);
+        assertWithMessage(
+                "Wakelock in batterystats with uid %s and tag %s was too short or too long",
+                EXPECTED_UID, EXPECTED_TAG
+        ).that(bsDurationMs).isIn(Range.closed((long) MIN_DURATION, (long) MAX_DURATION));
 
         // Get the statsd wakelock time and make sure it's reasonable.
-        assertTrue("Could not find any wakelocks with uid " + EXPECTED_UID + " in statsd",
-                statsdWakelockData.containsKey(EXPECTED_UID));
-        assertTrue("Did not find any wakelocks with tag " + EXPECTED_TAG + " in statsd",
-                statsdWakelockData.get(EXPECTED_UID).containsKey(EXPECTED_TAG_HASH));
+        assertWithMessage("No wakelocks with uid %s in statsd", EXPECTED_UID)
+                .that(statsdWakelockData).containsKey(EXPECTED_UID);
+        assertWithMessage("No wakelocks with tag %s in statsd", EXPECTED_TAG)
+                .that(statsdWakelockData.get(EXPECTED_UID)).containsKey(EXPECTED_TAG_HASH);
         long statsdDurationMs = statsdWakelockData.get(EXPECTED_UID)
                 .get(EXPECTED_TAG_HASH) / 1_000_000;
-        assertTrue("Wakelock in statsd with uid " + EXPECTED_UID + " and tag " + EXPECTED_TAG +
-                        "was too short. Expected " + MIN_DURATION + ", received " +
-                        statsdDurationMs,
-                statsdDurationMs >= MIN_DURATION);
-        assertTrue("Wakelock in statsd with uid " + EXPECTED_UID + " and tag " + EXPECTED_TAG +
-                        "was too long. Expected " + MAX_DURATION + ", received " + statsdDurationMs,
-                statsdDurationMs <= MAX_DURATION);
+        assertWithMessage(
+                "Wakelock in statsd with uid %s and tag %s was too short or too long", 
+                EXPECTED_UID, EXPECTED_TAG
+        ).that(statsdDurationMs).isIn(Range.closed((long) MIN_DURATION, (long) MAX_DURATION));
 
         // Compare batterystats with statsd.
         long difference = Math.abs(statsdDurationMs - bsDurationMs);
-        assertTrue("For uid=" + EXPECTED_UID + " tag=" + EXPECTED_TAG + " had " +
-                        "BatteryStats=" + bsDurationMs + "ms but statsd=" + statsdDurationMs + "ms",
-                difference <= Math.max(bsDurationMs / 10, 10L));
+        assertWithMessage(
+                "For uid=%s tag=%s had BatteryStats=%s ms but statsd=%s ms",
+                EXPECTED_UID, EXPECTED_TAG, bsDurationMs, statsdDurationMs
+        ).that(difference).isAtMost(Math.max(bsDurationMs / 10, 10L));
 
         setAodState(aodState); // restores AOD to initial state.
     }
@@ -304,7 +301,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         for (DurationMetricData data : report.getDurationMetrics().getDataList()) {
             // Gets tag and uid.
             List<DimensionsValue> dims = data.getDimensionLeafValuesInWhatList();
-            assertTrue("Expected 2 dimensions, received " + dims.size(), dims.size() == 2);
+            assertThat(dims).hasSize(2);
             boolean hasTag = false;
             long tag = 0;
             int uid = -1;
@@ -317,8 +314,8 @@ public class ValidationTests extends DeviceAtomTestCase {
                     tag = dim.getValueStrHash();
                 }
             }
-            assertTrue("Did not receive a tag for the wakelock", hasTag);
-            assertTrue("Did not receive a uid for the wakelock", uid != -1);
+            assertWithMessage("Did not receive a tag for the wakelock").that(hasTag).isTrue();
+            assertWithMessage("Did not receive a uid for the wakelock").that(uid).isNotEqualTo(-1);
 
             // Gets duration.
             for (DurationBucketInfo bucketInfo : data.getBucketInfoList()) {

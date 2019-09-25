@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.metric;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import android.cts.statsd.atom.DeviceAtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
@@ -374,7 +376,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         ConfigMetricsReportList reportList = getReportList();
         List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
-        assertEquals(3, reports.size());
+        assertThat(reports).hasSize(3);
 
         // Report before restart.
         ConfigMetricsReport report = reports.get(0);
@@ -510,7 +512,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         ConfigMetricsReportList reportList = getReportList();
         List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
-        assertEquals(3, reports.size());
+        assertThat(reports).hasSize(3);
 
         // Report before restart.
         ConfigMetricsReport report = reports.get(0);
@@ -538,7 +540,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
     private void verifyMetrics(ConfigMetricsReport report, int metric1Count, int metric2Count,
             int metric3Count) throws Exception {
-        assertEquals(3, report.getMetricsCount());
+        assertThat(report.getMetricsCount()).isEqualTo(3);
 
         verifyMetric(
                 report.getMetrics(0),   // StatsLogReport
@@ -563,17 +565,14 @@ public class MetricActivationTests extends DeviceAtomTestCase {
     private void verifyMetric(StatsLogReport metricReport, long metricId, int metricMatcherLabel,
             int dataCount) {
         LogUtil.CLog.d("Got the following event metric data: " + metricReport.toString());
-        assertEquals(metricId, metricReport.getMetricId());
-        if (dataCount > 0) {
-            assertTrue(metricReport.hasEventMetrics());
-        } else {
-            assertFalse(metricReport.hasEventMetrics());
-        }
+        assertThat(metricReport.getMetricId()).isEqualTo(metricId);
+        assertThat(metricReport.hasEventMetrics()).isEqualTo(dataCount > 0);
+
         StatsLogReport.EventMetricDataWrapper eventData = metricReport.getEventMetrics();
-        assertEquals(dataCount, eventData.getDataCount());
+        assertThat(eventData.getDataCount()).isEqualTo(dataCount);
         for (int i = 0; i < eventData.getDataCount(); i++) {
             AppBreadcrumbReported atom = eventData.getData(i).getAtom().getAppBreadcrumbReported();
-            assertEquals(metricMatcherLabel, atom.getLabel());
+            assertThat(atom.getLabel()).isEqualTo(metricMatcherLabel);
         }
     }
 }
