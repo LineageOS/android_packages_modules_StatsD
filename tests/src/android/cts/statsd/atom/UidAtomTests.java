@@ -44,7 +44,6 @@ import com.android.os.AtomsProto.HiddenApiUsed;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
-import com.android.os.AtomsProto.NativeProcessMemoryState;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
@@ -1077,45 +1076,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
             assertThat(state.getRssInBytes()).isGreaterThan(0L);
             assertThat(state.getCacheInBytes()).isAtLeast(0L);
             assertThat(state.getSwapInBytes()).isAtLeast(0L);
-            assertThat(state.getStartTimeNanos()).isGreaterThan(0L);
-            assertThat(state.getStartTimeNanos()).isLessThan(System.nanoTime());
         }
         assertWithMessage(String.format("Did not find a matching atom for uid %d", uid))
             .that(found).isTrue();
-    }
-
-    public void testNativeProcessMemoryState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
-        // Get NativeProcessState as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtomWithDimensions(config, Atom.NATIVE_PROCESS_MEMORY_STATE_FIELD_NUMBER, null);
-        uploadConfig(config);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // Trigger new pull.
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        // Assert about NativeProcessMemoryState for statsd.
-        List<Atom> atoms = getGaugeMetricDataList();
-        boolean found = false;
-        for (Atom atom : atoms) {
-            NativeProcessMemoryState state = atom.getNativeProcessMemoryState();
-            if (!state.getProcessName().contains("/statsd")) {
-                continue;
-            }
-            found = true;
-            assertThat(state.getUid()).isLessThan(10000);
-            assertThat(state.getPageFault()).isAtLeast(0L);
-            assertThat(state.getPageMajorFault()).isAtLeast(0L);
-            assertThat(state.getRssInBytes()).isGreaterThan(0L);
-            assertThat(state.getStartTimeNanos()).isGreaterThan(0L);
-            assertThat(state.getStartTimeNanos()).isLessThan(System.nanoTime());
-        }
-        assertWithMessage("Did not find a matching atom for statsd").that(found).isTrue();
     }
 
     public void testProcessMemoryHighWaterMark() throws Exception {
