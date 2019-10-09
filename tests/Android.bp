@@ -30,7 +30,7 @@ java_test_host {
         "compatibility-host-util",
         "host-libprotobuf-java-full",
         "platformprotos",
-        "truth-host-prebuilt",
+	"truth-prebuilt",
     ],
     data: [
         "**/*.pbtxt",
