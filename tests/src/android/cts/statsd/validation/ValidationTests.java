@@ -146,6 +146,10 @@ public class ValidationTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        // getUid() needs shell command via ADB. turnScreenOff() sometimes let system go to suspend.
+        // ADB disconnection causes failure of getUid(). Move up here before turnScreenOff().
+        final int EXPECTED_UID = getUid();
+
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
         // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
@@ -165,7 +169,6 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         final String EXPECTED_TAG = "StatsdPartialWakelock";
         final long EXPECTED_TAG_HASH = Long.parseUnsignedLong("15814523794762874414");
-        final int EXPECTED_UID = getUid();
         final int MIN_DURATION = 350;
         final int MAX_DURATION = 700;
 
