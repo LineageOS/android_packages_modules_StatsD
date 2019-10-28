@@ -628,6 +628,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
         final int atomTag = Atom.CONNECTIVITY_STATE_CHANGED_FIELD_NUMBER;
         createAndUploadConfig(atomTag);
