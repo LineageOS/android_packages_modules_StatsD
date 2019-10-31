@@ -27,6 +27,7 @@ import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.ANROccurred;
 import com.android.os.AtomsProto.AppCrashOccurred;
+import com.android.os.AtomsProto.AppOps;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AttributionNode;
@@ -1278,6 +1279,31 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         assertThat(verifiedKnowPermissionState).isTrue();
+    }
+
+    public void testAppOps() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Set up what to collect
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.APP_OPS_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Pull a report
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        int accessInstancesRecorded = 0;
+
+        for (Atom atom : getGaugeMetricDataList()) {
+            AppOps appOps = atom.getAppOps();
+            accessInstancesRecorded += appOps.getTrustedForegroundGrantedCount();
+        }
+
+        assertThat(accessInstancesRecorded).isAtLeast(1);
     }
 
     public void testANROccurred() throws Exception {
