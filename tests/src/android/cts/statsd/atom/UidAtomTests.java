@@ -1329,7 +1329,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             Thread.sleep(WAIT_TIME_SHORT);
             getDevice().executeShellCommand(
                     "am broadcast -a action_anr -p " + DEVICE_SIDE_TEST_PACKAGE);
-            Thread.sleep(11_000);
+            Thread.sleep(20_000);
         }
 
         // Sorted list of events in order in which they occurred.
