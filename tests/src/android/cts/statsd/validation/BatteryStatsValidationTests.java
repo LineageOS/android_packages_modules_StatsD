@@ -56,6 +56,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
     public void testConnectivityStateChange() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
+        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
         final String fileName = "BATTERYSTATS_CONNECTIVITY_STATE_CHANGE_COUNT.pbtxt";
         StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
