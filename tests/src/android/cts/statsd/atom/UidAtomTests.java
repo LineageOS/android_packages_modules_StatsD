@@ -1342,8 +1342,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             assertThat(permissionState.getUid()).isAtLeast(0);
             assertThat(permissionState.getPackageName()).isNotNull();
 
-            if (permissionState.getPackageName().equals(DEVICE_SIDE_TEST_PACKAGE)) {
-                assertThat(getAppId(permissionState.getUid())).isEqualTo(testAppId);
+            if (getAppId(permissionState.getUid()) == testAppId) {
 
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
