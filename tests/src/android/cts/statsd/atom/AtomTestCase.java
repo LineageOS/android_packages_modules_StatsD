@@ -78,7 +78,7 @@ public class AtomTestCase extends BaseTestCase {
     /** ID of the config, which evaluates to -1572883457. */
     public static final long CONFIG_ID = "cts_config".hashCode();
 
-    protected static final int WAIT_TIME_SHORT = 500;
+    protected static final int WAIT_TIME_SHORT = 1000;
     protected static final int WAIT_TIME_LONG = 2_000;
 
     protected static final long SCREEN_STATE_CHANGE_TIMEOUT = 4000;
