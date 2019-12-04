@@ -20,16 +20,17 @@ java_test_host {
     // tag this module as a cts test artifact
     test_suites: [
         "cts",
-        "vts",
         "general-tests",
+        "mts",
+        "vts",
     ],
 
     libs: [
-        "cts-tradefed",
-        "tradefed",
         "compatibility-host-util",
+        "cts-tradefed",
         "host-libprotobuf-java-full",
         "platformprotos",
+        "tradefed",
 	"truth-prebuilt",
     ],
     data: [
