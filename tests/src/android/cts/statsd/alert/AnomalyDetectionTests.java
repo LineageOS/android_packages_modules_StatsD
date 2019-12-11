@@ -69,6 +69,23 @@ public class AnomalyDetectionTests extends AtomTestCase {
         }
     }
 
+    @Override
+    protected void tearDown() throws Exception {
+        super.tearDown();
+        if (PERFETTO_TESTS_ENABLED) {
+            //Deadline to finish trace collection
+            final long deadLine = System.currentTimeMillis() + 10000;
+            while (isSystemTracingEnabled()) {
+                if (System.currentTimeMillis() > deadLine) {
+                    CLog.w("/sys/kernel/debug/tracing/tracing_on is still 1 after 10 secs : " + isSystemTracingEnabled());
+                    break;
+                }
+                CLog.d("Waiting to finish collecting traces. ");
+                Thread.sleep(WAIT_TIME_SHORT);
+            }
+        }
+    }
+
     // Tests that anomaly detection for count works.
     // Also tests that anomaly detection works when spanning multiple buckets.
     public void testCountAnomalyDetection() throws Exception {
