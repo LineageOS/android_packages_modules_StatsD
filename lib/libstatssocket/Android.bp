@@ -41,3 +41,9 @@ cc_library {
         "liblog",
     ],
 }
+
+cc_library_headers {
+    name: "libstatssocket_headers",
+    export_include_dirs: ["include"],
+    host_supported: true,
+}
