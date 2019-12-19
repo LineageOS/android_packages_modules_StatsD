@@ -53,6 +53,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         plugInUsb();
     }
 
+    /*
     public void testConnectivityStateChange() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
@@ -77,6 +78,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         assertThat(countMetricData.get(0).getBucketInfo(0).getCount()).isEqualTo(
                 (long) batterystatsProto.getSystem().getMisc().getNumConnectivityChanges());
     }
+    */
 
     public void testPowerUse() throws Exception {
         if (statsdDisabled()) {
