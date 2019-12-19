@@ -681,7 +681,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         createAndUploadConfig(atomTag, false);
 
         runActivity("StatsdCtsForegroundActivity", "action", "action.show_application_overlay",
-                3_000);
+                5_000);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
