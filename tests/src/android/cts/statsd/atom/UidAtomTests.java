@@ -1141,7 +1141,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
-            Thread.sleep(WAIT_TIME_SHORT);
+            Thread.sleep(WAIT_TIME_LONG);
             // Trigger a pull and wait for new pull before killing the process.
             setAppBreadcrumbPredicate();
             Thread.sleep(WAIT_TIME_LONG);
