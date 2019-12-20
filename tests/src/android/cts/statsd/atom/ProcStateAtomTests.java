@@ -40,7 +40,7 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     private static final int WAIT_TIME_FOR_CONFIG_UPDATE_MS = 200;
     // ActivityManager can take a while to register screen state changes, mandating an extra delay.
     private static final int WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS = 1_000;
-    private static final int EXTRA_WAIT_TIME_MS = 1_000; // as buffer when proc state changing.
+    private static final int EXTRA_WAIT_TIME_MS = 5_000; // as buffer when proc state changing.
     private static final int STATSD_REPORT_WAIT_TIME_MS = 500; // make sure statsd finishes log.
 
     private static final String FEATURE_WATCH = "android.hardware.type.watch";

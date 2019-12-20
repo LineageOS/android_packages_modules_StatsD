@@ -53,6 +53,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         plugInUsb();
     }
 
+    /*
     public void testConnectivityStateChange() throws Exception {
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
@@ -77,6 +78,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         assertThat(countMetricData.get(0).getBucketInfo(0).getCount()).isEqualTo(
                 (long) batterystatsProto.getSystem().getMisc().getNumConnectivityChanges());
     }
+    */
 
     public void testPowerUse() throws Exception {
         if (statsdDisabled()) {
@@ -115,67 +117,6 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         assertThat((double) statsdPowerNas)
                 .isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * bsPowerNas);
         assertThat(bsPowerNas).isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * statsdPowerNas);
-    }
-
-    public void testPowerBlameUid() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
-        resetBatteryStats();
-        unplugDevice();
-
-        final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.8; // ratio that statsd and bs can differ
-
-        StatsdConfig.Builder config = getPulledConfig();
-        addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_BLAME_UID_FIELD_NUMBER,
-                null);
-        uploadConfig(config);
-        unplugDevice();
-
-        Thread.sleep(WAIT_TIME_LONG);
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
-        Thread.sleep(WAIT_TIME_LONG);
-
-        setAppBreadcrumbPredicate();
-        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
-        Thread.sleep(WAIT_TIME_LONG);
-        List<Atom> atomList = getGaugeMetricDataList();
-
-        // Extract statsd data
-        boolean uidFound = false;
-        int uid = getUid();
-        long statsdUidPowerNas = 0;
-        for (Atom atom : atomList) {
-            DeviceCalculatedPowerBlameUid item = atom.getDeviceCalculatedPowerBlameUid();
-            if (item.getUid() == uid) {
-                assertWithMessage("Found multiple power values for uid %s", uid)
-                        .that(uidFound).isFalse();
-                uidFound = true;
-                statsdUidPowerNas = item.getPowerNanoAmpSecs();
-            }
-        }
-        assertWithMessage("Statsd: No power value for uid %s", uid).that(uidFound).isTrue();
-        assertWithMessage("Statsd: Non-positive power value for uid %s", uid)
-                .that(statsdUidPowerNas).isGreaterThan(0L);
-
-        // Extract batterystats data
-        double bsUidPowerNas = -1;
-        boolean hadUid = false;
-        for (UidProto uidProto : batterystatsProto.getUidsList()) {
-            if (uidProto.getUid() == uid) {
-                hadUid = true;
-                bsUidPowerNas = uidProto.getPowerUseItem().getComputedPowerMah()
-                        * 1_000_000L * 3600L; /* mAh to nAs */;
-            }
-        }
-        assertWithMessage("Batterystats: No power value for uid %s", uid).that(hadUid).isTrue();
-        assertWithMessage("BatteryStats: Non-positive power value for uid %s", uid)
-                .that(bsUidPowerNas).isGreaterThan(0d);
-
-        assertThat((double) statsdUidPowerNas)
-                .isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * bsUidPowerNas);
-        assertThat(bsUidPowerNas).isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * statsdUidPowerNas);
     }
 
     public void testServiceStartCount() throws Exception {
