@@ -37,6 +37,7 @@ import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.DangerousPermissionState;
+import com.android.os.AtomsProto.DangerousPermissionStateSampled;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
 import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
@@ -64,7 +65,9 @@ import com.android.tradefed.log.LogUtil;
 
 import com.google.common.collect.Range;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -1356,9 +1359,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 if (permissionState.getPermissionName().equals(
                         "android.permission.ACCESS_FINE_LOCATION")) {
                     assertThat(permissionState.getIsGranted()).isTrue();
-                    assertThat(permissionState.getPermissionFlags() & (~(
+                    assertThat(permissionState.getPermissionFlags() & ~(
                             FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED
-                            | FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED)))
+                            | FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED))
                         .isEqualTo(0);
 
                     verifiedKnowPermissionState = true;
@@ -1367,6 +1370,80 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         assertThat(verifiedKnowPermissionState).isTrue();
+    }
+
+    public void testDangerousPermissionStateSampled() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // get full atom for reference
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<DangerousPermissionState> fullDangerousPermissionState = new ArrayList<>();
+        for (Atom atom : getGaugeMetricDataList()) {
+            fullDangerousPermissionState.add(atom.getDangerousPermissionState());
+        }
+
+        removeConfig(CONFIG_ID);
+        getReportList(); // Clears data.
+        List<Atom> gaugeMetricDataList = null;
+
+        // retries in case sampling returns full list or empty list - which should be extremely rare
+        for (int attempt = 0; attempt < 10; attempt++) {
+            // Set up what to collect
+            config = getPulledConfig();
+            addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_SAMPLED_FIELD_NUMBER,
+                    null);
+            uploadConfig(config);
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            // Pull a report
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_SHORT);
+
+            gaugeMetricDataList = getGaugeMetricDataList();
+            if (gaugeMetricDataList.size() > 0
+                    && gaugeMetricDataList.size() < fullDangerousPermissionState.size()) {
+                break;
+            }
+            removeConfig(CONFIG_ID);
+        }
+        assertThat(gaugeMetricDataList.size()).isGreaterThan(0);
+        assertThat(gaugeMetricDataList.size()).isLessThan(fullDangerousPermissionState.size());
+
+        long lastUid = -1;
+        int fullIndex = 0;
+
+        for (Atom atom : getGaugeMetricDataList()) {
+            DangerousPermissionStateSampled permissionState =
+                    atom.getDangerousPermissionStateSampled();
+
+            DangerousPermissionState referenceState = fullDangerousPermissionState.get(fullIndex);
+
+            if (referenceState.getUid() != permissionState.getUid()) {
+                // atoms are sampled on uid basis if uid is present, all related permissions must
+                // be logged.
+                assertThat(permissionState.getUid()).isNotEqualTo(lastUid);
+                continue;
+            }
+
+            lastUid = permissionState.getUid();
+
+            assertThat(permissionState.getPermissionFlags()).isEqualTo(
+                    referenceState.getPermissionFlags());
+            assertThat(permissionState.getIsGranted()).isEqualTo(referenceState.getIsGranted());
+            assertThat(permissionState.getPermissionName()).isEqualTo(
+                    referenceState.getPermissionName());
+
+            fullIndex++;
+        }
     }
 
     public void testAppOps() throws Exception {
@@ -1384,14 +1461,14 @@ public class UidAtomTests extends DeviceAtomTestCase {
         setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
-        int accessInstancesRecorded = 0;
+        long accessInstancesRecorded = 0;
 
         for (Atom atom : getGaugeMetricDataList()) {
             AppOps appOps = atom.getAppOps();
             accessInstancesRecorded += appOps.getTrustedForegroundGrantedCount();
         }
 
-        assertThat(accessInstancesRecorded).isAtLeast(1);
+        assertThat(accessInstancesRecorded).isAtLeast(1l);
     }
 
     public void testANROccurred() throws Exception {
