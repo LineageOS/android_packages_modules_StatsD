@@ -105,7 +105,7 @@ public class AtomTestCase extends BaseTestCase {
     public static final String FEATURE_WATCH = "android.hardware.type.watch";
     public static final String FEATURE_WIFI = "android.hardware.wifi";
 
-    protected static final int WAIT_TIME_SHORT = 500;
+    protected static final int WAIT_TIME_SHORT = 1000;
     protected static final int WAIT_TIME_LONG = 2_000;
 
     protected static final long SCREEN_STATE_CHANGE_TIMEOUT = 4000;
