@@ -552,6 +552,69 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
     }
 
+    public void testGnssStats() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        // Get GnssMetrics as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.GNSS_STATS_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        if (!hasFeature(FEATURE_LOCATION_GPS, true)) return;
+        // Whitelist this app against background location request throttling
+        String origWhitelist = getDevice().executeShellCommand(
+                "settings get global location_background_throttle_package_whitelist").trim();
+        getDevice().executeShellCommand(String.format(
+                "settings put global location_background_throttle_package_whitelist %s",
+                DEVICE_SIDE_TEST_PACKAGE));
+
+        try {
+            runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testGpsStatus");
+
+            Thread.sleep(WAIT_TIME_LONG);
+            // Trigger a pull and wait for new pull before killing the process.
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
+
+            // Assert about GnssMetrics for the test app.
+            List<Atom> atoms = getGaugeMetricDataList();
+
+            boolean found = false;
+            for (Atom atom : atoms) {
+                AtomsProto.GnssStats state = atom.getGnssStats();
+                found = true;
+                assertThat(state.getLocationReports()).isGreaterThan((long) 0);
+                assertThat(state.getLocationFailureReports()).isAtLeast((long) 0);
+                assertThat(state.getTimeToFirstFixReports()).isGreaterThan((long) 0);
+                assertThat(state.getTimeToFirstFixMilliS()).isGreaterThan((long) 0);
+                assertThat(state.getPositionAccuracyReports()).isGreaterThan((long) 0);
+                assertThat(state.getPositionAccuracyMeters()).isGreaterThan((long) 0);
+                assertThat(state.getTopFourAverageCn0Reports()).isGreaterThan((long) 0);
+                assertThat(state.getTopFourAverageCn0DbMhz()).isGreaterThan((long) 0);
+                assertThat(state.getL5TopFourAverageCn0Reports()).isAtLeast((long) 0);
+                assertThat(state.getL5TopFourAverageCn0DbMhz()).isAtLeast((long) 0);
+                assertThat(state.getSvStatusReports()).isGreaterThan((long) 0);
+                assertThat(state.getSvStatusReportsUsedInFix()).isGreaterThan((long) 0);
+                assertThat(state.getL5SvStatusReports()).isAtLeast((long) 0);
+                assertThat(state.getL5SvStatusReportsUsedInFix()).isAtLeast((long) 0);
+            }
+            assertWithMessage(String.format("Did not find a matching atom"))
+                    .that(found).isTrue();
+        } finally {
+            if ("null".equals(origWhitelist) || "".equals(origWhitelist)) {
+                getDevice().executeShellCommand(
+                        "settings delete global location_background_throttle_package_whitelist");
+            } else {
+                getDevice().executeShellCommand(String.format(
+                        "settings put global location_background_throttle_package_whitelist %s",
+                        origWhitelist));
+            }
+        }
+    }
+
     public void testMediaCodecActivity() throws Exception {
         if (statsdDisabled()) {
             return;
