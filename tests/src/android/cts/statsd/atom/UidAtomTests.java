@@ -47,6 +47,9 @@ import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
+import com.android.os.AtomsProto.PackageNotificationPreferences;
+import com.android.os.AtomsProto.PackageNotificationChannelPreferences;
+import com.android.os.AtomsProto.PackageNotificationChannelGroupPreferences;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ProcessMemorySnapshot;
@@ -1500,4 +1503,130 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atom.getBytesField().getExperimentIdList()).isEmpty();
     }
 
+    public void testNotificationPackagePreferenceExtraction() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config,
+                    Atom.PACKAGE_NOTIFICATION_PREFERENCES_FIELD_NUMBER,
+                    null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+        runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification");
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<PackageNotificationPreferences> allPreferences = new ArrayList<>();
+        for (Atom atom : getGaugeMetricDataList()){
+            if(atom.hasPackageNotificationPreferences()) {
+                allPreferences.add(atom.getPackageNotificationPreferences());
+            }
+        }
+        assertThat(allPreferences.size()).isGreaterThan(0);
+
+        boolean foundTestPackagePreferences = false;
+        int uid = getUid();
+        for (PackageNotificationPreferences pref : allPreferences) {
+            assertThat(pref.getUid()).isGreaterThan(0);
+            assertTrue(pref.hasImportance());
+            assertTrue(pref.hasVisibility());
+            assertTrue(pref.hasUserLockedFields());
+            if(pref.getUid() == uid){
+                assertThat(pref.getImportance()).isEqualTo(-1000);  //UNSPECIFIED_IMPORTANCE
+                assertThat(pref.getVisibility()).isEqualTo(-1000);  //UNSPECIFIED_VISIBILITY
+                foundTestPackagePreferences = true;
+            }
+        }
+        assertTrue(foundTestPackagePreferences);
+    }
+
+    public void testNotificationChannelPreferencesExtraction() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config,
+                    Atom.PACKAGE_NOTIFICATION_CHANNEL_PREFERENCES_FIELD_NUMBER,
+                    null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+        runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification");
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<PackageNotificationChannelPreferences> allChannelPreferences = new ArrayList<>();
+        for(Atom atom : getGaugeMetricDataList()) {
+            if (atom.hasPackageNotificationChannelPreferences()) {
+               allChannelPreferences.add(atom.getPackageNotificationChannelPreferences());
+            }
+        }
+        assertThat(allChannelPreferences.size()).isGreaterThan(0);
+
+        boolean foundTestPackagePreferences = false;
+        int uid = getUid();
+        for (PackageNotificationChannelPreferences pref : allChannelPreferences) {
+            assertThat(pref.getUid()).isGreaterThan(0);
+            assertTrue(pref.hasChannelId());
+            assertTrue(pref.hasChannelName());
+            assertTrue(pref.hasDescription());
+            assertTrue(pref.hasImportance());
+            assertTrue(pref.hasUserLockedFields());
+            assertTrue(pref.hasIsDeleted());
+            if(uid == pref.getUid() && pref.getChannelId().equals("StatsdCtsChannel")) {
+                assertThat(pref.getChannelName()).isEqualTo("Statsd Cts");
+                assertThat(pref.getDescription()).isEqualTo("Statsd Cts Channel");
+                assertThat(pref.getImportance()).isEqualTo(3);  // IMPORTANCE_DEFAULT
+                foundTestPackagePreferences = true;
+            }
+        }
+        assertTrue(foundTestPackagePreferences);
+    }
+
+    public void testNotificationChannelGroupPreferencesExtraction() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config,
+                    Atom.PACKAGE_NOTIFICATION_CHANNEL_GROUP_PREFERENCES_FIELD_NUMBER,
+                    null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+        runActivity("StatsdCtsForegroundActivity", "action", "action.create_channel_group");
+        Thread.sleep(WAIT_TIME_SHORT);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<PackageNotificationChannelGroupPreferences> allGroupPreferences = new ArrayList<>();
+        for(Atom atom : getGaugeMetricDataList()) {
+            if (atom.hasPackageNotificationChannelGroupPreferences()) {
+                allGroupPreferences.add(atom.getPackageNotificationChannelGroupPreferences());
+            }
+        }
+        assertThat(allGroupPreferences.size()).isGreaterThan(0);
+
+        boolean foundTestPackagePreferences = false;
+        int uid = getUid();
+        for(PackageNotificationChannelGroupPreferences pref : allGroupPreferences) {
+            assertThat(pref.getUid()).isGreaterThan(0);
+            assertTrue(pref.hasGroupId());
+            assertTrue(pref.hasGroupName());
+            assertTrue(pref.hasDescription());
+            assertTrue(pref.hasIsBlocked());
+            assertTrue(pref.hasUserLockedFields());
+            if(uid == pref.getUid() && pref.getGroupId().equals("StatsdCtsGroup")) {
+                assertThat(pref.getGroupName()).isEqualTo("Statsd Cts Group");
+                assertThat(pref.getDescription()).isEqualTo("StatsdCtsGroup Description");
+                assertThat(pref.getIsBlocked()).isFalse();
+                foundTestPackagePreferences = true;
+            }
+        }
+        assertTrue(foundTestPackagePreferences);
+    }
 }

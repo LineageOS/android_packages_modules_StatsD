@@ -21,6 +21,7 @@ import com.android.server.cts.device.statsd.AtomTests;
 import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
+import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
 import android.content.Intent;
 import android.graphics.Color;
@@ -44,6 +45,7 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
     public static final String ACTION_SHOW_NOTIFICATION = "action.show_notification";
     public static final String ACTION_CRASH = "action.crash";
+    public static final String ACTION_CREATE_CHANNEL_GROUP = "action.create_channel_group";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
     public static final int SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY = 2_000;
@@ -80,6 +82,9 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_CRASH:
                 doCrash();
+                break;
+            case ACTION_CREATE_CHANNEL_GROUP:
+                doCreateChannelGroup();
                 break;
             default:
                 Log.e(TAG, "Intent had invalid action " + action);
@@ -135,20 +140,31 @@ public class StatsdCtsForegroundActivity extends Activity {
 
     private void doShowNotification() {
         final int notificationId = R.layout.activity_main;
-        final String notificationChannel = "StatsdCtsChannel";
+        final String notificationChannelId = "StatsdCtsChannel";
 
         NotificationManager nm = getSystemService(NotificationManager.class);
-        nm.createNotificationChannel(new NotificationChannel(notificationChannel, "Statsd Cts",
-                NotificationManager.IMPORTANCE_DEFAULT));
+        NotificationChannel channel = new NotificationChannel(notificationChannelId, "Statsd Cts",
+                NotificationManager.IMPORTANCE_DEFAULT);
+        channel.setDescription("Statsd Cts Channel");
+        nm.createNotificationChannel(channel);
 
         nm.notify(
                 notificationId,
-                new Notification.Builder(this, notificationChannel)
+                new Notification.Builder(this, notificationChannelId)
                         .setSmallIcon(android.R.drawable.stat_notify_chat)
                         .setContentTitle("StatsdCts")
                         .setContentText("StatsdCts")
                         .build());
         nm.cancel(notificationId);
+        finish();
+    }
+
+    private void doCreateChannelGroup() {
+        NotificationManager nm = getSystemService(NotificationManager.class);
+        NotificationChannelGroup channelGroup = new NotificationChannelGroup("StatsdCtsGroup",
+                "Statsd Cts Group");
+        channelGroup.setDescription("StatsdCtsGroup Description");
+        nm.createNotificationChannelGroup(channelGroup);
         finish();
     }
 
