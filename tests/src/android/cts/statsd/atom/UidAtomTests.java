@@ -22,7 +22,6 @@ import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 
-import com.android.internal.os.StatsdConfigProto.FieldMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.ANROccurred;
@@ -40,12 +39,13 @@ import com.android.os.AtomsProto.DangerousPermissionState;
 import com.android.os.AtomsProto.DangerousPermissionStateSampled;
 import com.android.os.AtomsProto.DeviceCalculatedPowerBlameUid;
 import com.android.os.AtomsProto.FlashlightStateChanged;
+import com.android.os.AtomsProto.ForegroundServiceAppOpSessionEnded;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.HiddenApiUsed;
 import com.android.os.AtomsProto.IonHeapSize;
-import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.LmkKillOccurred;
+import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PackageNotificationPreferences;
@@ -73,7 +73,6 @@ import com.google.common.collect.Range;
 import java.lang.ProcessBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -542,6 +541,51 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Assert that the events happened in the expected order.
         assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
                 atom -> atom.getForegroundServiceStateChanged().getState().getNumber());
+    }
+
+
+    public void testForegroundServiceAccessAppOp() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        final int atomTag = Atom.FOREGROUND_SERVICE_APP_OP_SESSION_ENDED_FIELD_NUMBER;
+        final String name = "testForegroundServiceAccessAppOp";
+
+        createAndUploadConfig(atomTag, false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", name);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertWithMessage("Wrong atom size").that(data.size()).isEqualTo(3);
+        for (int i = 0; i < data.size(); i++) {
+            ForegroundServiceAppOpSessionEnded atom
+                    = data.get(i).getAtom().getForegroundServiceAppOpSessionEnded();
+            final int opName = atom.getAppOpName().getNumber();
+            final int acceptances = atom.getCountOpsAccepted();
+            final int rejections = atom.getCountOpsRejected();
+            final int count = acceptances + rejections;
+            int expectedCount = 0;
+            switch (opName) {
+                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_CAMERA_VALUE:
+                    expectedCount = 2;
+                    break;
+                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_FINE_LOCATION_VALUE:
+                    expectedCount = 1;
+                    break;
+                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_RECORD_AUDIO_VALUE:
+                    expectedCount = 2;
+                    break;
+                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_COARSE_LOCATION_VALUE:
+                    // fall-through
+                default:
+                    fail("Unexpected opName " + opName);
+            }
+            assertWithMessage("Wrong count for " + opName).that(count).isEqualTo(expectedCount);
+
+        }
     }
 
     public void testGpsScan() throws Exception {
