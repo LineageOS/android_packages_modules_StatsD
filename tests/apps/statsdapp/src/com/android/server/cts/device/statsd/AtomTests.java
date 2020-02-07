@@ -22,7 +22,10 @@ import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.app.ActivityManager;
+import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlarmManager;
+import android.app.AppOpsManager;
 import android.app.PendingIntent;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
@@ -60,6 +63,8 @@ import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
 
+import com.android.compatibility.common.util.ShellIdentityUtils;
+
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -69,6 +74,8 @@ import java.util.concurrent.TimeUnit;
 
 public class AtomTests {
     private static final String TAG = AtomTests.class.getSimpleName();
+
+    private static final String MY_PACKAGE_NAME = "com.android.server.cts.device.statsd";
 
     @Test
     public void testAudioState() {
@@ -229,6 +236,58 @@ public class AtomTests {
     }
 
     @Test
+    public void testForegroundServiceAccessAppOp() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        Intent fgsIntent = new Intent(context, StatsdCtsForegroundService.class);
+        AppOpsManager appOpsManager = context.getSystemService(AppOpsManager.class);
+
+        // No foreground service session
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+
+        // Foreground service session 1
+        context.startService(fgsIntent);
+        while (!checkIfServiceRunning(context, StatsdCtsForegroundService.class.getName())) {
+            sleep(50);
+        }
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_FINE_LOCATION, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, false);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, true);
+        context.stopService(fgsIntent);
+
+        // No foreground service session
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+
+        // TODO(b/149098800): Start fgs a second time and log OPSTR_CAMERA again
+    }
+
+    /** @param doNote true if should use noteOp; false if should use startOp. */
+    private void noteAppOp(AppOpsManager appOpsManager, String opStr, boolean doNote) {
+        if (doNote) {
+            ShellIdentityUtils.invokeMethodWithShellPermissions(appOpsManager,
+                    (aom) -> aom.noteOp(opStr, android.os.Process.myUid(), MY_PACKAGE_NAME, null,
+                            "statsdTest"));
+        } else {
+            ShellIdentityUtils.invokeMethodWithShellPermissions(appOpsManager,
+                    (aom) -> aom.startOp(opStr, android.os.Process.myUid(),
+                            MY_PACKAGE_NAME, null, "statsdTest"));
+        }
+        sleep(500);
+    }
+
+    /** Check if service is running. */
+    public boolean checkIfServiceRunning(Context context, String serviceName) {
+        ActivityManager manager = context.getSystemService(ActivityManager.class);
+        for (RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceName.equals(service.service.getClassName()) && service.foreground) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Test
     public void testGpsScan() {
         Context context = InstrumentationRegistry.getContext();
         final LocationManager locManager = context.getSystemService(LocationManager.class);
@@ -320,7 +379,7 @@ public class AtomTests {
 
     @Test
     public void testScheduledJob() throws Exception {
-        final ComponentName name = new ComponentName("com.android.server.cts.device.statsd",
+        final ComponentName name = new ComponentName(MY_PACKAGE_NAME,
                 StatsdJobService.class.getName());
 
         Context context = InstrumentationRegistry.getContext();
