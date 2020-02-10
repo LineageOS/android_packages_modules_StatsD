@@ -97,7 +97,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         executeBackgroundService(ACTION_LMK);
-        Thread.sleep(5_000);
+        Thread.sleep(15_000);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
