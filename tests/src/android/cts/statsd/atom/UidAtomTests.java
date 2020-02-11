@@ -43,6 +43,7 @@ import com.android.os.AtomsProto.FlashlightStateChanged;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.HiddenApiUsed;
+import com.android.os.AtomsProto.IonHeapSize;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
@@ -1187,6 +1188,36 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertWithMessage("Did not find a matching atom for statsd").that(foundStatsd).isTrue();
         assertWithMessage("Did not find a matching atom for system server")
             .that(foundSystemServer).isTrue();
+    }
+
+    public void testIonHeapSize() throws Exception {
+        if (statsdDisabled() || !fileExists("/sys/kernel/ion/total_heaps_kb")) {
+            return;
+        }
+
+        // Get IonHeapSize as a simple gauge metric.
+        StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, Atom.ION_HEAP_SIZE_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Start test app and trigger a pull while it is running.
+        try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
+                "action.show_notification")) {
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
+        }
+
+        List<Atom> atoms = getGaugeMetricDataList();
+        assertThat(atoms).hasSize(1);
+        IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
+        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
+    }
+
+    private boolean fileExists(String path) throws Exception {
+        String commandFormat = "test -f %s && echo \"yes\" || echo \"no\"";
+        String result = getDevice().executeShellCommand(String.format(commandFormat, path));
+        return result.trim().equals("yes");
     }
 
     /**
