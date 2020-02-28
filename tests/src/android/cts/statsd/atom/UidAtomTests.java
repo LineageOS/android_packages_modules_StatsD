@@ -1445,8 +1445,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
             if (getAppId(permissionState.getUid()) == testAppId) {
 
-                if (permissionState.getPermissionName().equals(
-                        "android.permission.ACCESS_FINE_LOCATION")) {
+                if (permissionState.getPermissionName().contains(
+                        "ACCESS_FINE_LOCATION")) {
                     assertThat(permissionState.getIsGranted()).isTrue();
                     assertThat(permissionState.getPermissionFlags() & ~(
                             FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED
