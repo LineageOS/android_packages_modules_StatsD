@@ -60,6 +60,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.util.ArrayMap;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
@@ -70,6 +71,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -77,6 +79,108 @@ public class AtomTests {
     private static final String TAG = AtomTests.class.getSimpleName();
 
     private static final String MY_PACKAGE_NAME = "com.android.server.cts.device.statsd";
+
+    private static final Map<String, Integer> APP_OPS_ENUM_MAP = new ArrayMap<>();
+    static {
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_COARSE_LOCATION, 0);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_FINE_LOCATION, 1);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_GPS, 2);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_VIBRATE, 3);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_CONTACTS, 4);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_CONTACTS, 5);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_CALL_LOG, 6);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_CALL_LOG, 7);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_CALENDAR, 8);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_CALENDAR, 9);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WIFI_SCAN, 10);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_POST_NOTIFICATION, 11);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_NEIGHBORING_CELLS, 12);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_CALL_PHONE, 13);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_SMS, 14);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_SMS, 15);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECEIVE_SMS, 16);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECEIVE_EMERGENCY_BROADCAST, 17);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECEIVE_MMS, 18);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECEIVE_WAP_PUSH, 19);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_SEND_SMS, 20);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_ICC_SMS, 21);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_ICC_SMS, 22);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_SETTINGS, 23);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_SYSTEM_ALERT_WINDOW, 24);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCESS_NOTIFICATIONS, 25);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_CAMERA, 26);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECORD_AUDIO, 27);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PLAY_AUDIO, 28);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_CLIPBOARD, 29);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_CLIPBOARD, 30);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_TAKE_MEDIA_BUTTONS, 31);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_TAKE_AUDIO_FOCUS, 32);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_MASTER_VOLUME, 33);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_VOICE_VOLUME, 34);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_RING_VOLUME, 35);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_MEDIA_VOLUME, 36);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_ALARM_VOLUME, 37);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_NOTIFICATION_VOLUME, 38);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_BLUETOOTH_VOLUME, 39);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WAKE_LOCK, 40);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MONITOR_LOCATION, 41);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MONITOR_HIGH_POWER_LOCATION, 42);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_GET_USAGE_STATS, 43);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MUTE_MICROPHONE, 44);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_TOAST_WINDOW, 45);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PROJECT_MEDIA, 46);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACTIVATE_VPN, 47);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_WALLPAPER, 48);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ASSIST_STRUCTURE, 49);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ASSIST_SCREENSHOT, 50);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_PHONE_STATE, 51);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ADD_VOICEMAIL, 52);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_USE_SIP, 53);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PROCESS_OUTGOING_CALLS, 54);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_USE_FINGERPRINT, 55);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_BODY_SENSORS, 56);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_CELL_BROADCASTS, 57);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MOCK_LOCATION, 58);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_EXTERNAL_STORAGE, 59);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_EXTERNAL_STORAGE, 60);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_TURN_SCREEN_ON, 61);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_GET_ACCOUNTS, 62);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RUN_IN_BACKGROUND, 63);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUDIO_ACCESSIBILITY_VOLUME, 64);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_PHONE_NUMBERS, 65);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_REQUEST_INSTALL_PACKAGES, 66);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PICTURE_IN_PICTURE, 67);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_INSTANT_APP_START_FOREGROUND, 68);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ANSWER_PHONE_CALLS, 69);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RUN_ANY_IN_BACKGROUND, 70);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_CHANGE_WIFI_STATE, 71);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_REQUEST_DELETE_PACKAGES, 72);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_BIND_ACCESSIBILITY_SERVICE, 73);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCEPT_HANDOVER, 74);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_IPSEC_TUNNELS, 75);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_START_FOREGROUND, 76);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_BLUETOOTH_SCAN, 77);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_USE_BIOMETRIC, 78);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACTIVITY_RECOGNITION, 79);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_SMS_FINANCIAL_TRANSACTIONS, 80);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_MEDIA_AUDIO, 81);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_MEDIA_AUDIO, 82);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_MEDIA_VIDEO, 83);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_MEDIA_VIDEO, 84);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_MEDIA_IMAGES, 85);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_WRITE_MEDIA_IMAGES, 86);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_LEGACY_STORAGE, 87);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCESS_ACCESSIBILITY, 88);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_READ_DEVICE_IDENTIFIERS, 89);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCESS_MEDIA_LOCATION, 90);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_QUERY_ALL_PACKAGES, 91);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_EXTERNAL_STORAGE, 92);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_INTERACT_ACROSS_PROFILES, 93);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN, 94);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_LOADER_USAGE_STATS, 95);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCESS_CALL_AUDIO, 96);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED, 97);
+    }
 
     @Test
     public void testAudioState() {
@@ -244,6 +348,7 @@ public class AtomTests {
 
         // No foreground service session
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+        sleep(500);
 
         // Foreground service session 1
         context.startService(fgsIntent);
@@ -255,12 +360,32 @@ public class AtomTests {
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, false);
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, true);
+        sleep(500);
         context.stopService(fgsIntent);
 
         // No foreground service session
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+        sleep(500);
 
         // TODO(b/149098800): Start fgs a second time and log OPSTR_CAMERA again
+    }
+
+    @Test
+    public void testAppOps() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        AppOpsManager appOpsManager = context.getSystemService(AppOpsManager.class);
+
+        String[] opsList = appOpsManager.getOpStrs();
+
+        for (int i = 0; i < opsList.length; i++) {
+            String op = opsList[i];
+            int noteCount = APP_OPS_ENUM_MAP.getOrDefault(op, opsList.length) + 1;
+            for (int j = 0; j < noteCount; j++) {
+                try {
+                    noteAppOp(appOpsManager, opsList[i], true);
+                } catch (SecurityException e) {}
+            }
+        }
     }
 
     /** @param doNote true if should use noteOp; false if should use startOp. */
@@ -274,7 +399,6 @@ public class AtomTests {
                     (aom) -> aom.startOp(opStr, android.os.Process.myUid(),
                             MY_PACKAGE_NAME, null, "statsdTest"));
         }
-        sleep(500);
     }
 
     /** Check if service is running. */
