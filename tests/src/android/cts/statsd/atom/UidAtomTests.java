@@ -1328,11 +1328,28 @@ public class UidAtomTests extends DeviceAtomTestCase {
             .that(foundSystemServer).isTrue();
     }
 
-    public void testIonHeapSize() throws Exception {
+    public void testIonHeapSize_disabled() throws Exception {
+        if (statsdDisabled() || fileExists("/sys/kernel/ion/total_heaps_kb")) {
+            return;
+        }
+
+        List<Atom> atoms = pullIonHeapSizeAsGaugeMetric();
+        assertThat(atoms).isEmpty();
+    }
+
+    public void testIonHeapSize_enabled() throws Exception {
         if (statsdDisabled() || !fileExists("/sys/kernel/ion/total_heaps_kb")) {
             return;
         }
 
+        List<Atom> atoms = pullIonHeapSizeAsGaugeMetric();
+        assertThat(atoms).hasSize(1);
+        IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
+        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
+    }
+
+    /** Returns IonHeapSize atoms pulled as a simple gauge metric while test app is running. */
+    private List<Atom> pullIonHeapSizeAsGaugeMetric() throws Exception {
         // Get IonHeapSize as a simple gauge metric.
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.ION_HEAP_SIZE_FIELD_NUMBER, null);
@@ -1346,10 +1363,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             Thread.sleep(WAIT_TIME_LONG);
         }
 
-        List<Atom> atoms = getGaugeMetricDataList();
-        assertThat(atoms).hasSize(1);
-        IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
-        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
+        return getGaugeMetricDataList();
     }
 
     private boolean fileExists(String path) throws Exception {
