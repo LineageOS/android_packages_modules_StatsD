@@ -1503,6 +1503,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 break;
             }
             removeConfig(CONFIG_ID);
+            getReportList(); // Clears data.
         }
         assertThat(gaugeMetricDataList.size()).isGreaterThan(0);
         assertThat(gaugeMetricDataList.size()).isLessThan(fullDangerousPermissionState.size());
