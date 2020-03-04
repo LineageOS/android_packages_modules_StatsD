@@ -541,7 +541,7 @@ public class HostAtomTests extends AtomTestCase {
         assertThat(getProperty("ro.product.brand")).isEqualTo(atom.getBrand());
         assertThat(getProperty("ro.product.name")).isEqualTo(atom.getProduct());
         assertThat(getProperty("ro.product.device")).isEqualTo(atom.getDevice());
-        assertThat(getProperty("ro.build.version.release")).isEqualTo(atom.getVersionRelease());
+        assertThat(getProperty("ro.build.version.release_or_codename")).isEqualTo(atom.getVersionRelease());
         assertThat(getProperty("ro.build.id")).isEqualTo(atom.getId());
         assertThat(getProperty("ro.build.version.incremental"))
             .isEqualTo(atom.getVersionIncremental());
