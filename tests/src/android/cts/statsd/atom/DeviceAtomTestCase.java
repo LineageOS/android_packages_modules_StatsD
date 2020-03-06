@@ -36,6 +36,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
     public static final String DEVICE_SIDE_TEST_APK = "CtsStatsdApp.apk";
     public static final String DEVICE_SIDE_TEST_PACKAGE =
             "com.android.server.cts.device.statsd";
+    public static final long DEVICE_SIDE_TEST_PACKAGE_VERSION = 10;
     public static final String DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME =
             "com.android.server.cts.device.statsd.StatsdCtsForegroundService";
     private static final String DEVICE_SIDE_BG_SERVICE_COMPONENT =

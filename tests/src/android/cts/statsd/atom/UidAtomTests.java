@@ -15,6 +15,7 @@
  */
 package android.cts.statsd.atom;
 
+import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -43,14 +44,15 @@ import com.android.os.AtomsProto.ForegroundServiceAppOpSessionEnded;
 import com.android.os.AtomsProto.ForegroundServiceStateChanged;
 import com.android.os.AtomsProto.GpsScanStateChanged;
 import com.android.os.AtomsProto.HiddenApiUsed;
+import com.android.os.AtomsProto.IntegrityCheckResultReported;
 import com.android.os.AtomsProto.IonHeapSize;
 import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
 import com.android.os.AtomsProto.OverlayStateChanged;
-import com.android.os.AtomsProto.PackageNotificationPreferences;
-import com.android.os.AtomsProto.PackageNotificationChannelPreferences;
 import com.android.os.AtomsProto.PackageNotificationChannelGroupPreferences;
+import com.android.os.AtomsProto.PackageNotificationChannelPreferences;
+import com.android.os.AtomsProto.PackageNotificationPreferences;
 import com.android.os.AtomsProto.PictureInPictureStateChanged;
 import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ProcessMemorySnapshot;
@@ -70,7 +72,6 @@ import com.android.tradefed.log.LogUtil;
 
 import com.google.common.collect.Range;
 
-import java.lang.ProcessBuilder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1809,5 +1810,30 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
         }
         assertTrue(foundTestPackagePreferences);
+    }
+
+    public void testIntegrityCheckAtomReportedDuringInstall() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        createAndUploadConfig(AtomsProto.Atom.INTEGRITY_CHECK_RESULT_REPORTED_FIELD_NUMBER);
+
+        getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
+        installTestApp();
+
+        List<EventMetricData> data = getEventMetricDataList();
+
+        assertThat(data.size()).isEqualTo(1);
+        assertThat(data.get(0).getAtom().hasIntegrityCheckResultReported()).isTrue();
+        IntegrityCheckResultReported result = data.get(0)
+                .getAtom().getIntegrityCheckResultReported();
+        assertThat(result.getPackageName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+        // we do not assert on certificates since it seem to differ by device.
+        assertThat(result.getInstallerPackageName()).isEqualTo("adb");
+        assertThat(result.getVersionCode()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE_VERSION);
+        assertThat(result.getResponse()).isEqualTo(ALLOWED);
+        assertThat(result.getCausedByAppCertRule()).isFalse();
+        assertThat(result.getCausedByInstallerRule()).isFalse();
     }
 }
