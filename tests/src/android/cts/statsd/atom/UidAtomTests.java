@@ -19,6 +19,7 @@ import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.AL
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
+import android.app.AppOpEnum;
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
@@ -31,6 +32,7 @@ import com.android.os.AtomsProto.AppOps;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AttributionNode;
+import com.android.os.AtomsProto.AttributedAppOps;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
@@ -85,7 +87,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     private static final String TAG = "Statsd.UidAtomTests";
 
+    private static final String TEST_PACKAGE_NAME = "com.android.server.cts.device.statsd";
+
     private static final boolean DAVEY_ENABLED = false;
+
+    private static final int NUM_APP_OPS = AttributedAppOps.getDefaultInstance().getOp().
+            getDescriptorForType().getValues().size() - 1;
 
     @Override
     protected void setUp() throws Exception {
@@ -171,7 +178,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             .isEqualTo(AppCrashOccurred.InstantApp.FALSE_VALUE);
         assertThat(atom.getForegroundState().getNumber())
             .isEqualTo(AppCrashOccurred.ForegroundState.FOREGROUND_VALUE);
-        assertThat(atom.getPackageName()).isEqualTo("com.android.server.cts.device.statsd");
+        assertThat(atom.getPackageName()).isEqualTo(TEST_PACKAGE_NAME);
     }
 
     public void testAppStartOccurred() throws Exception {
@@ -189,7 +196,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
-        assertThat(atom.getPkgName()).isEqualTo("com.android.server.cts.device.statsd");
+        assertThat(atom.getPkgName()).isEqualTo(TEST_PACKAGE_NAME);
         assertThat(atom.getActivityName())
             .isEqualTo("com.android.server.cts.device.statsd.StatsdCtsForegroundActivity");
         assertThat(atom.getIsInstantApp()).isFalse();
@@ -570,22 +577,21 @@ public class UidAtomTests extends DeviceAtomTestCase {
             final int count = acceptances + rejections;
             int expectedCount = 0;
             switch (opName) {
-                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_CAMERA_VALUE:
+                case AppOpEnum.APP_OP_CAMERA_VALUE:
                     expectedCount = 2;
                     break;
-                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_FINE_LOCATION_VALUE:
+                case AppOpEnum.APP_OP_FINE_LOCATION_VALUE:
                     expectedCount = 1;
                     break;
-                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_RECORD_AUDIO_VALUE:
+                case AppOpEnum.APP_OP_RECORD_AUDIO_VALUE:
                     expectedCount = 2;
                     break;
-                case ForegroundServiceAppOpSessionEnded.AppOpName.OP_COARSE_LOCATION_VALUE:
+                case AppOpEnum.APP_OP_COARSE_LOCATION_VALUE:
                     // fall-through
                 default:
                     fail("Unexpected opName " + opName);
             }
             assertWithMessage("Wrong count for " + opName).that(count).isEqualTo(expectedCount);
-
         }
     }
 
@@ -1560,20 +1566,38 @@ public class UidAtomTests extends DeviceAtomTestCase {
         StatsdConfig.Builder config = getPulledConfig();
         addGaugeAtomWithDimensions(config, Atom.APP_OPS_FIELD_NUMBER, null);
         uploadConfig(config);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testAppOps");
         Thread.sleep(WAIT_TIME_SHORT);
 
         // Pull a report
         setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
-        long accessInstancesRecorded = 0;
-
-        for (Atom atom : getGaugeMetricDataList()) {
-            AppOps appOps = atom.getAppOps();
-            accessInstancesRecorded += appOps.getTrustedForegroundGrantedCount();
+        ArrayList<Integer> expectedOps = new ArrayList<>();
+        for (int i = 0; i < NUM_APP_OPS; i++) {
+            expectedOps.add(i);
         }
 
-        assertThat(accessInstancesRecorded).isAtLeast(1l);
+        for (Atom atom : getGaugeMetricDataList()) {
+
+            AppOps appOps = atom.getAppOps();
+            if (appOps.getPackageName().equals(TEST_PACKAGE_NAME)) {
+                if (appOps.getOpId().getNumber() == -1) {
+                    continue;
+                }
+                long totalNoted = appOps.getTrustedForegroundGrantedCount()
+                        + appOps.getTrustedBackgroundGrantedCount()
+                        + appOps.getTrustedForegroundRejectedCount()
+                        + appOps.getTrustedBackgroundRejectedCount();
+                assertWithMessage("Operation in APP_OPS_ENUM_MAP: " + appOps.getOpId().getNumber())
+                        .that(totalNoted - 1).isEqualTo(appOps.getOpId().getNumber());
+                assertWithMessage("Unexpected Op reported").that(expectedOps).contains(
+                        appOps.getOpId().getNumber());
+                expectedOps.remove(expectedOps.indexOf(appOps.getOpId().getNumber()));
+            }
+        }
+        assertWithMessage("Logging app op ids are missing in report.").that(expectedOps).isEmpty();
     }
 
     public void testANROccurred() throws Exception {
