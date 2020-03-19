@@ -32,7 +32,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.util.Log;
-import android.util.Range;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -65,7 +64,8 @@ public class StatsdCtsForegroundActivity extends Activity {
     private static final String HTTPS_HOST_URL =
             "https://connectivitycheck.gstatic.com/generate_204";
     // Minimum and Maximum of iterations of exercise host, @see #doGenerateNetworkTraffic.
-    private static final Range RANGE_EXERCISE_HOST_ITERATIONS = new Range(1, 19);
+    private static final int MIN_EXERCISE_HOST_ITERATIONS = 1;
+    private static final int MAX_EXERCISE_HOST_ITERATIONS = 19;
 
     @Override
     public void onCreate(Bundle bundle) {
@@ -209,22 +209,27 @@ public class StatsdCtsForegroundActivity extends Activity {
                     //   <total packet counts> * <up time> / 2 hour >= 1,
                     // or
                     //   iterations >= 2 hour / (<up time> * <packets per iteration>)
-                    // Thus, iterations can be chose base on the factors above to make this
-                    // function generates enough packets in each direction to accommodate enough
+                    // Thus, iterations can be chosen based on the factors above to make this
+                    // function generate enough packets in each direction to accommodate enough
                     // packet counts for a fraction of history bucket.
-                    final int iterations = (int) (TimeUnit.HOURS.toMillis(2) / startTime / 8);
+                    final double iterations = (TimeUnit.HOURS.toMillis(2) / startTime / 7);
                     // While just enough iterations are going to make the test flaky, add a 20%
-                    // buffer to stabilize it and clamp it to a reasonable range, so it won't
+                    // buffer to stabilize it and make sure it's in a reasonable range, so it won't
                     // consumes more than 100kb of traffic, or generates 0 byte of traffic.
                     final int augmentedIterations =
-                            (int) RANGE_EXERCISE_HOST_ITERATIONS.clamp((int) (iterations * 1.2));
+                            (int) Math.max(iterations * 1.2, MIN_EXERCISE_HOST_ITERATIONS);
+                    if (augmentedIterations > MAX_EXERCISE_HOST_ITERATIONS) {
+                        throw new IllegalStateException("Exceeded max allowed iterations"
+                                + ", iterations=" + augmentedIterations
+                                + ", uptime=" + TimeUnit.MILLISECONDS.toSeconds(startTime) + "s");
+                    }
+
                     for (int i = 0; i < augmentedIterations; i++) {
                         // By observing results of "dumpsys netstats --uid", typically the single
                         // run of the https request below generates 4200/1080 rx/tx bytes with
-                        // around 8/9 rx/tx packets.
-                        // TODO: this blocks the thread of NetworkCallback, thus no other event
-                        //  can be processed before return. Consider use another thread to handle
-                        //  this if other events need to be proceed at the same time.
+                        // around 7/9 rx/tx packets.
+                        // This blocks the thread of NetworkCallback, thus no other event
+                        // can be processed before return.
                         exerciseRemoteHost(cm, network, new URL(HTTPS_HOST_URL));
                     }
                     Log.i(TAG, "exerciseRemoteHost successful in " + (SystemClock.elapsedRealtime()
