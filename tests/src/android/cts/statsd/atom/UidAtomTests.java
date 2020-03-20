@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -32,8 +33,8 @@ import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppOps;
 import com.android.os.AtomsProto.AppStartOccurred;
 import com.android.os.AtomsProto.Atom;
-import com.android.os.AtomsProto.AttributionNode;
 import com.android.os.AtomsProto.AttributedAppOps;
+import com.android.os.AtomsProto.AttributionNode;
 import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
@@ -70,6 +71,7 @@ import com.android.os.AtomsProto.WifiLockStateChanged;
 import com.android.os.AtomsProto.WifiMulticastLockStateChanged;
 import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.server.notification.SmallHash;
 import com.android.tradefed.log.LogUtil;
 
 import com.google.common.collect.Range;
@@ -78,6 +80,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -1814,6 +1817,34 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
         }
         assertTrue(foundTestPackagePreferences);
+    }
+
+    public void testNotificationReported() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        StatsdConfig.Builder config = getPulledConfig();
+        addAtomEvent(config, Atom.NOTIFICATION_REPORTED_FIELD_NUMBER);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+        runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification");
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Sorted list of events in order in which they occurred.
+        List<EventMetricData> data = getEventMetricDataList();
+        assertThat(data).hasSize(1);
+        assertThat(data.get(0).getAtom().hasNotificationReported()).isTrue();
+        AtomsProto.NotificationReported n = data.get(0).getAtom().getNotificationReported();
+        assertThat(n.getPackageName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+        assertThat(n.getUid()).isEqualTo(getUid());
+        assertThat(n.getNotificationIdHash()).isEqualTo(1);  // smallHash(0x7f080001)
+        assertThat(n.getChannelIdHash()).isEqualTo(SmallHash.hash("StatsdCtsChannel"));
+        assertThat(n.getGroupIdHash()).isEqualTo(0);
+        assertFalse(n.getIsGroupSummary());
+        assertThat(n.getCategory()).isEmpty();
+        assertThat(n.getStyle()).isEqualTo(0);
+        assertThat(n.getNumPeople()).isEqualTo(0);
     }
 
     public void testIntegrityCheckAtomReportedDuringInstall() throws Exception {
