@@ -469,6 +469,25 @@ public class AtomTests {
         // This is based on similar location cts test timeout values.
         final int TIMEOUT_IN_MSEC = 85_000;
         final int SLEEP_TIME_IN_MSEC = 5_000;
+
+        final CountDownLatch mLatchNetwork = new CountDownLatch(1);
+
+        final LocationListener locListener = location -> {
+            Log.v(TAG, "onLocationChanged: location has been obtained");
+            mLatchNetwork.countDown();
+        };
+
+        // fetch the networklocation first to make sure the ttff is not flaky
+        if (locManager.getProvider(LocationManager.NETWORK_PROVIDER) != null) {
+            Log.i(TAG, "Request Network Location updates.");
+            locManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,
+                    0 /* minTime*/,
+                    0 /* minDistance */,
+                    locListener,
+                    Looper.getMainLooper());
+        }
+        waitForReceiver(context, TIMEOUT_IN_MSEC, mLatchNetwork, null);
+
         // TTFF could take up to 90 seconds, thus we need to wait till TTFF does occur if it does
         // not occur in the first SLEEP_TIME_IN_MSEC
         final CountDownLatch mLatchTtff = new CountDownLatch(1);
@@ -502,21 +521,6 @@ public class AtomTests {
             // Registration of GnssMeasurements listener has failed, this indicates a platform bug.
             Log.e(TAG, "Failed to start gnss status callback");
         }
-
-        final LocationListener locListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
-                Log.v(TAG, "onLocationChanged: location has been obtained");
-            }
-            public void onProviderDisabled(String provider) {
-                Log.v(TAG, "onProviderDisabled " + provider);
-            }
-            public void onProviderEnabled(String provider) {
-                Log.v(TAG, "onProviderEnabled " + provider);
-            }
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-                Log.v(TAG, "onStatusChanged " + provider + " " + status);
-            }
-        };
 
         locManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
                 0,
