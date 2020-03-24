@@ -23,6 +23,7 @@ import android.app.AppOpEnum;
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
+import android.util.Log;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
@@ -641,6 +642,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
             for (Atom atom : atoms) {
                 AtomsProto.GnssStats state = atom.getGnssStats();
                 found = true;
+                if ((state.getSvStatusReports() > 0 || state.getL5SvStatusReports() > 0)
+                        && state.getLocationReports() == 0) {
+                    // Device is detected to be indoors and not able to acquire location.
+                    // flaky test device
+                    break;
+                }
                 assertThat(state.getLocationReports()).isGreaterThan((long) 0);
                 assertThat(state.getLocationFailureReports()).isAtLeast((long) 0);
                 assertThat(state.getTimeToFirstFixReports()).isGreaterThan((long) 0);
