@@ -192,7 +192,8 @@ public class AtomTestCase extends BaseTestCase {
      */
     protected boolean isSystemTracingEnabled() throws Exception {
         final String path = "/sys/kernel/debug/tracing/tracing_on";
-        String tracing_on = getDevice().executeShellCommand("cat " + path);
+        String tracing_on = getDevice().executeShellCommand("if [ -e " + path + " ] ; then"
+                + " cat " + path + " ; else echo 0 ; fi");
         if (tracing_on.startsWith("0"))
             return false;
         if (tracing_on.startsWith("1"))
