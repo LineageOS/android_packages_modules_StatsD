@@ -50,138 +50,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
 
     private static final int EXTRA_WAIT_TIME_MS = 1_000; // as buffer when proc state changing.
 
-    // Test process state top duration for test package.
-    // TODO: replace this with exclusive state for all states when statsd features are added
-    public void testProcessStateTopDuration() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        final String fileName = "PROCSTATSQ_PROCS_STATE_TOP_DURATION.pbtxt";
-        StatsdConfig config = createValidationUtil().getConfig(fileName);
-        LogUtil.CLog.d("Updating the following config:\n" + config.toString());
-        uploadConfig(config);
-        clearProcStats();
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // foreground service
-        executeForegroundService();
-        Thread.sleep(SLEEP_OF_FOREGROUND_SERVICE + EXTRA_WAIT_TIME_MS);
-        // background
-        executeBackgroundService(ACTION_BACKGROUND_SLEEP);
-        Thread.sleep(SLEEP_OF_ACTION_BACKGROUND_SLEEP + EXTRA_WAIT_TIME_MS);
-        // top
-        executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
-        Thread.sleep(SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS);
-        // Start extremely short-lived activity, so app goes into cache state (#1 - #3 above).
-        executeBackgroundService(ACTION_END_IMMEDIATELY);
-        final int cacheTime = 2_000; // process should be in cached state for up to this long
-        Thread.sleep(cacheTime);
-        // foreground
-        // overlay should take 2 sec to appear. So this makes it 4 sec in TOP
-        executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
-        Thread.sleep(EXTRA_WAIT_TIME_MS + 5_000);
-
-        // Sorted list of events in order in which they occurred.
-        List<DurationMetricData> statsdData = getDurationMetricDataList();
-
-        List<ProcessStatsProto> processStatsProtoList = getProcStatsProto();
-
-        LogUtil.CLog.d("======================");
-
-        String statsdPkgName = "com.android.server.cts.device.statsd";
-        double durationInTopStatsd = 0;
-        for (DurationMetricData d : statsdData) {
-            List<DimensionsValue> dimensionsValuesInWhat = d.getDimensionLeafValuesInWhatList();
-            if (dimensionsValuesInWhat.get(0).getValueStr().equals(statsdPkgName)
-                    && dimensionsValuesInWhat.get(1).getValueStr().equals(statsdPkgName)) {
-                LogUtil.CLog.d(d.toString());
-                for (DurationBucketInfo bucket : d.getBucketInfoList()) {
-                    durationInTopStatsd += bucket.getDurationNanos() / 1000 / 1000;
-                }
-            }
-        }
-
-        double durationInTopProcStats = 0;
-        for (ProcessStatsProto p : processStatsProtoList) {
-            if (p.getProcess().equals(statsdPkgName)) {
-                LogUtil.CLog.d(p.toString());
-                for (ProcessStatsStateProto s : p.getStatesList()) {
-                    if (s.getProcessState() == ProcessState.PROCESS_STATE_TOP) {
-                        durationInTopProcStats += s.getDurationMillis();
-                    }
-                }
-            }
-        }
-        // Verify that duration is within 1% difference
-        assertThat(Math.abs(durationInTopStatsd - durationInTopProcStats) / durationInTopProcStats)
-                .isLessThan(0.01);
-    }
-
-    public void testProcessStateCachedEmptyDuration() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-        final String fileName = "PROCSTATSQ_PROCS_STATE_CACHED_EMPTY_DURATION.pbtxt";
-        StatsdConfig config = createValidationUtil().getConfig(fileName);
-        LogUtil.CLog.d("Updating the following config:\n" + config.toString());
-        uploadConfig(config);
-        clearProcStats();
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // foreground service
-        executeForegroundService();
-        Thread.sleep(SLEEP_OF_FOREGROUND_SERVICE + EXTRA_WAIT_TIME_MS);
-        // background
-        executeBackgroundService(ACTION_BACKGROUND_SLEEP);
-        Thread.sleep(SLEEP_OF_ACTION_BACKGROUND_SLEEP + EXTRA_WAIT_TIME_MS);
-        // top
-        executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
-        Thread.sleep(SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS);
-        // Start extremely short-lived activity, so app goes into cache state (#1 - #3 above).
-        executeBackgroundService(ACTION_END_IMMEDIATELY);
-        final int cacheTime = 2_000; // process should be in cached state for up to this long
-        Thread.sleep(cacheTime);
-        // foreground
-        // overlay should take 2 sec to appear. So this makes it 4 sec in TOP
-        executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
-        Thread.sleep(EXTRA_WAIT_TIME_MS + 5_000);
-
-        // Sorted list of events in order in which they occurred.
-        List<DurationMetricData> statsdData = getDurationMetricDataList();
-
-        List<ProcessStatsProto> processStatsProtoList = getProcStatsProto();
-
-        LogUtil.CLog.d("======================");
-
-        String statsdPkgName = "com.android.server.cts.device.statsd";
-        double durationInStatsd = 0;
-        for (DurationMetricData d : statsdData) {
-            List<DimensionsValue> dimensionsValuesInWhat = d.getDimensionLeafValuesInWhatList();
-            if (dimensionsValuesInWhat.get(0).getValueStr().equals(statsdPkgName)
-                    && dimensionsValuesInWhat.get(1).getValueStr().equals(statsdPkgName)) {
-                LogUtil.CLog.d(d.toString());
-                for (DurationBucketInfo bucket : d.getBucketInfoList()) {
-                    durationInStatsd += bucket.getDurationNanos() / 1000 / 1000;
-                }
-            }
-        }
-
-        double durationInProcStats = 0;
-        for (ProcessStatsProto p : processStatsProtoList) {
-            if (p.getProcess().equals(statsdPkgName)) {
-                LogUtil.CLog.d(p.toString());
-                for (ProcessStatsStateProto s : p.getStatesList()) {
-                    if (s.getProcessState() == ProcessState.PROCESS_STATE_CACHED_EMPTY) {
-                        durationInProcStats += s.getDurationMillis();
-                    }
-                }
-            }
-        }
-        // Verify that duration is within 1% difference
-        assertThat(Math.abs(durationInStatsd - durationInProcStats) / durationInProcStats)
-                .isLessThan(0.01);
-    }
-
     public void testProcessStatePssValue() throws Exception {
         if (statsdDisabled()) {
             return;
@@ -293,10 +161,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         LogUtil.CLog.d("======================");
 
         String statsdPkgName = "com.android.server.cts.device.statsd";
-        long pssAvgStatsd = 0;
-        long ussAvgStatsd = 0;
         long rssAvgStatsd = 0;
-        long durationStatsd = 0;
         for (Atom d : statsdData) {
             for (ProcessStatsPackageProto pkg : d.getProcStats().getProcStatsSection().getPackageStatsList()) {
                 if (pkg.getPackage().equals(statsdPkgName)) {
@@ -306,9 +171,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                         for (ProcessStatsStateProto state : process.getStatesList()) {
                             if (state.getProcessState()
                                     == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                                durationStatsd = state.getDurationMillis();
-                                pssAvgStatsd = state.getPss().getAverage();
-                                ussAvgStatsd = state.getUss().getAverage();
                                 rssAvgStatsd = state.getRss().getAverage();
                             }
                         }
@@ -317,12 +179,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             }
         }
 
-        LogUtil.CLog.d("avg pss from statsd is " + pssAvgStatsd);
-
-        long pssAvgProcstats = 0;
-        long ussAvgProcstats = 0;
         long rssAvgProcstats = 0;
-        long durationProcstats = 0;
         for (ProcessStatsPackageProto pkg : processStatsPackageProtoList) {
             if (pkg.getPackage().equals(statsdPkgName)) {
                 LogUtil.CLog.d("Got proto from procstats dumpsys:");
@@ -331,9 +188,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                     for (ProcessStatsStateProto state : process.getStatesList()) {
                         if (state.getProcessState()
                                 == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                            durationProcstats = state.getDurationMillis();
-                            pssAvgProcstats = state.getPss().getAverage();
-                            ussAvgProcstats = state.getUss().getAverage();
                             rssAvgProcstats = state.getRss().getAverage();
                         }
                     }
@@ -341,11 +195,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             }
         }
 
-        LogUtil.CLog.d("avg pss from procstats is " + pssAvgProcstats);
-        assertThat(durationStatsd).isGreaterThan(0L);
-        assertThat(durationStatsd).isEqualTo(durationProcstats);
-        assertThat(pssAvgStatsd).isEqualTo(pssAvgProcstats);
-        assertThat(ussAvgStatsd).isEqualTo(ussAvgProcstats);
         assertThat(rssAvgStatsd).isEqualTo(rssAvgProcstats);
     }
 
