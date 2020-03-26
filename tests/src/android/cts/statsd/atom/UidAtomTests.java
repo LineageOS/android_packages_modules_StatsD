@@ -690,6 +690,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // assertStatesOccurred had a tighter range on large timeouts.
         final int waitTime = 5000;
 
+        // From {@link VideoPlayerActivity#DELAY_MILLIS}
+        final int videoDuration = 2000;
+
         Set<Integer> onState = new HashSet<>(
                 Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
         Set<Integer> offState = new HashSet<>(
@@ -708,7 +711,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, waitTime,
+        assertStatesOccurred(stateSet, data, videoDuration,
                 atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
