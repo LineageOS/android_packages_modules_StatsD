@@ -60,6 +60,7 @@ import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 
@@ -178,7 +179,7 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_INTERACT_ACROSS_PROFILES, 93);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACTIVATE_PLATFORM_VPN, 94);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_LOADER_USAGE_STATS, 95);
-        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_ACCESS_CALL_AUDIO, 96);
+        // Op 96 was deprecated/removed
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED, 97);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER, 98);
     }
@@ -380,6 +381,10 @@ public class AtomTests {
 
         for (int i = 0; i < opsList.length; i++) {
             String op = opsList[i];
+            if (TextUtils.isEmpty(op)) {
+                // Operation removed/deprecated
+                continue;
+            }
             int noteCount = APP_OPS_ENUM_MAP.getOrDefault(op, opsList.length) + 1;
             for (int j = 0; j < noteCount; j++) {
                 try {
