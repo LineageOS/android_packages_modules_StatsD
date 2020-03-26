@@ -92,7 +92,19 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
             throws DeviceNotAvailableException, InvalidProtocolBufferException {
         final CollectingByteOutputReceiver receiver = new CollectingByteOutputReceiver();
         getDevice().executeShellCommand(command, receiver);
-        return parser.parseFrom(receiver.getOutput());
+        if (false) {
+            CLog.d("Command output while parsing " + parser.getClass().getCanonicalName()
+                    + " for command: " + command + "\n"
+                    + BufferDebug.debugString(receiver.getOutput(), -1));
+        }
+        try {
+            return parser.parseFrom(receiver.getOutput());
+        } catch (Exception ex) {
+            CLog.d("Error parsing " + parser.getClass().getCanonicalName() + " for command: "
+                    + command
+                    + BufferDebug.debugString(receiver.getOutput(), 16384));
+            throw ex;
+        }
     }
 
     /**
