@@ -187,18 +187,27 @@ public class AtomTestCase extends BaseTestCase {
             throw new Exception(String.format("Error while executing %s: %s %s", cmd, cr.getStdout(), cr.getStderr()));
     }
 
+    private String probe(String path) throws Exception {
+        return getDevice().executeShellCommand("if [ -e " + path + " ] ; then"
+                + " cat " + path + " ; else echo 0 ; fi");
+    }
+
     /**
      * Determines whether perfetto enabled the kernel ftrace tracer.
      */
     protected boolean isSystemTracingEnabled() throws Exception {
-        final String path = "/sys/kernel/debug/tracing/tracing_on";
-        String tracing_on = getDevice().executeShellCommand("if [ -e " + path + " ] ; then"
-                + " cat " + path + " ; else echo 0 ; fi");
-        if (tracing_on.startsWith("0"))
-            return false;
-        if (tracing_on.startsWith("1"))
-            return true;
-        throw new Exception(String.format("Unexpected state for %s = %s", path, tracing_on));
+        final String debugFsPath = "/sys/kernel/debug/tracing/tracing_on";
+        final String traceFsPath = "/sys/kernel/tracing/tracing_on";
+        String tracing_on = probe(debugFsPath);
+        if (tracing_on.startsWith("0")) return false;
+        if (tracing_on.startsWith("1")) return true;
+        // fallback to traceFs
+        LogUtil.CLog.d("Unexpected state for %s = %s. Falling back to traceFs", debugFsPath,
+                tracing_on);
+        tracing_on = probe(traceFsPath);
+        if (tracing_on.startsWith("0")) return false;
+        if (tracing_on.startsWith("1")) return true;
+        throw new Exception(String.format("Unexpected state for %s = %s", traceFsPath, tracing_on));
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
