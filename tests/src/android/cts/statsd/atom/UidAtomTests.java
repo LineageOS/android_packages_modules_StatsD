@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -23,7 +24,7 @@ import android.app.AppOpEnum;
 import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
-import android.util.Log;
+import android.telephony.NetworkTypeEnum;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
@@ -1842,5 +1843,99 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(result.getResponse()).isEqualTo(ALLOWED);
         assertThat(result.getCausedByAppCertRule()).isFalse();
         assertThat(result.getCausedByInstallerRule()).isFalse();
+    }
+
+    public void testMobileBytesTransfer() throws Throwable {
+        final int appUid = getUid();
+        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
+
+        // Verify MobileBytesTransfer, passing a ThrowingPredicate that verifies contents of
+        // corresponding atom type to prevent code duplication. The passed predicate returns
+        // true if the atom of appUid is found, false otherwise, and throws an exception if
+        // contents are not expected.
+        doTestMobileBytesTransferThat(Atom.MOBILE_BYTES_TRANSFER_FIELD_NUMBER, (atom) -> {
+            final AtomsProto.MobileBytesTransfer data = ((Atom) atom).getMobileBytesTransfer();
+            if (data.getUid() == appUid) {
+                assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                        data.getRxPackets(), data.getTxPackets(), data.getRatType(),
+                        subtypeCombined);
+                return true; // found
+            }
+            return false;
+        });
+    }
+
+    public void testMobileBytesTransferByFgBg() throws Throwable {
+        final int appUid = getUid();
+        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
+
+        doTestMobileBytesTransferThat(Atom.MOBILE_BYTES_TRANSFER_BY_FG_BG_FIELD_NUMBER, (atom) -> {
+            final AtomsProto.MobileBytesTransferByFgBg data =
+                    ((Atom) atom).getMobileBytesTransferByFgBg();
+            if (data.getUid() == appUid) {
+                assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                        data.getRxPackets(), data.getTxPackets(), data.getRatType(),
+                        subtypeCombined);
+                // IsForeground cannot be judged since foreground activity that launched
+                // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
+                // in NetworkPolicyManagerService.
+                return true; // found
+            }
+            return false;
+        });
+    }
+
+    private void assertDataUsageAtomDataExpected(
+            long rxb, long txb, long rxp, long txp, int ratType, boolean subtypeCombined) {
+        assertThat(rxb).isGreaterThan(0L);
+        assertThat(txb).isGreaterThan(0L);
+        assertThat(rxp).isGreaterThan(0L);
+        assertThat(txp).isGreaterThan(0L);
+        // TODO: verify the RAT type field with the value get from device.
+        if (subtypeCombined) {
+            assertThat(ratType).isEqualTo(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+        } else {
+            assertThat(ratType).isGreaterThan(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+        }
+    }
+
+    private void doTestMobileBytesTransferThat(int atomTag, ThrowingPredicate p)
+            throws Throwable {
+        if (statsdDisabled()) return;
+        if (!hasFeature(FEATURE_TELEPHONY, true)) return;
+
+        // Get MobileBytesTransfer as a simple gauge metric.
+        final StatsdConfig.Builder config = getPulledConfig();
+        addGaugeAtomWithDimensions(config, atomTag, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Generate some traffic on mobile network.
+        runActivity("StatsdCtsForegroundActivity", "action", "action.generate_mobile_traffic");
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Force polling NetworkStatsService to get most updated network stats from lower layer.
+        forcePollNetworkStats();
+
+        // Pull a report
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        final List<Atom> atoms = getGaugeMetricDataList();
+        assertThat(atoms.size()).isAtLeast(1);
+
+        boolean foundAppStats = false;
+        for (final Atom atom : atoms) {
+            if (p.accept(atom)) {
+                foundAppStats = true;
+            }
+        }
+        assertWithMessage("uid " + getUid() + " is not found in " + atoms.size() + " atoms")
+                .that(foundAppStats).isTrue();
+    }
+
+    @FunctionalInterface
+    private interface ThrowingPredicate<S, T extends Throwable> {
+        boolean accept(S s) throws T;
     }
 }
