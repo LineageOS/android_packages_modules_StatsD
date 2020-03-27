@@ -434,79 +434,60 @@ public class AnomalyDetectionTests extends AtomTestCase {
     private final StatsdConfig.Builder getBaseConfig(int numBuckets,
                                                      int refractorySecs,
                                                      long triggerIfSumGt) throws Exception {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID)
-                // Items of relevance for detecting the anomaly:
-                .addAtomMatcher(StatsdConfigProto.AtomMatcher.newBuilder()
-                        .setId(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
-                        .setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                                // Event only when the uid is this app's uid.
-                                .addFieldValueMatcher(
-                                        createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
-                                                .setEqInt(getHostUid())
-                                )
-                                .addFieldValueMatcher(
-                                        createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                                .setEqInt(
-                                                        AppBreadcrumbReported.State.START.ordinal())
-                                )
-                        )
-                )
-                .addAtomMatcher(StatsdConfigProto.AtomMatcher.newBuilder()
-                        .setId(APP_BREADCRUMB_REPORTED_MATCH_STOP_ID)
-                        .setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
-                                // Event only when the uid is this app's uid.
-                                .addFieldValueMatcher(
-                                        createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
-                                                .setEqInt(getHostUid())
-                                )
-                                .addFieldValueMatcher(
-                                        createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                                .setEqInt(
-                                                        AppBreadcrumbReported.State.STOP.ordinal())
-                                )
-                        )
-                )
-                .addAlert(Alert.newBuilder()
+      return createConfigBuilder()
+          // Items of relevance for detecting the anomaly:
+          .addAtomMatcher(
+              StatsdConfigProto.AtomMatcher.newBuilder()
+                  .setId(APP_BREADCRUMB_REPORTED_MATCH_START_ID)
+                  .setSimpleAtomMatcher(
+                      StatsdConfigProto.SimpleAtomMatcher.newBuilder()
+                          .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                          // Event only when the uid is this app's uid.
+                          .addFieldValueMatcher(createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
+                                                    .setEqInt(getHostUid()))
+                          .addFieldValueMatcher(
+                              createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                  .setEqInt(AppBreadcrumbReported.State.START.ordinal()))))
+          .addAtomMatcher(
+              StatsdConfigProto.AtomMatcher.newBuilder()
+                  .setId(APP_BREADCRUMB_REPORTED_MATCH_STOP_ID)
+                  .setSimpleAtomMatcher(
+                      StatsdConfigProto.SimpleAtomMatcher.newBuilder()
+                          .setAtomId(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                          // Event only when the uid is this app's uid.
+                          .addFieldValueMatcher(createFvm(AppBreadcrumbReported.UID_FIELD_NUMBER)
+                                                    .setEqInt(getHostUid()))
+                          .addFieldValueMatcher(
+                              createFvm(AppBreadcrumbReported.STATE_FIELD_NUMBER)
+                                  .setEqInt(AppBreadcrumbReported.State.STOP.ordinal()))))
+          .addAlert(Alert.newBuilder()
                         .setId(ALERT_ID)
                         .setMetricId(METRIC_ID) // The metric itself must yet be added by the test.
                         .setNumBuckets(numBuckets)
                         .setRefractoryPeriodSecs(refractorySecs)
-                        .setTriggerIfSumGt(triggerIfSumGt)
-                )
-                .addSubscription(Subscription.newBuilder()
-                        .setId(SUBSCRIPTION_ID_INCIDENTD)
-                        .setRuleType(Subscription.RuleType.ALERT)
-                        .setRuleId(ALERT_ID)
-                        .setIncidentdDetails(IncidentdDetails.newBuilder()
-                                .addSection(INCIDENTD_SECTION))
-                )
-                // We want to trigger anomalies on METRIC_ID, but don't want the actual data.
-                .addNoReportMetric(METRIC_ID)
-                .addAllowedLogSource("AID_ROOT") // needed for AppBreadcrumb (if rooted)
-                .addAllowedLogSource("AID_SHELL") // needed for AppBreadcrumb (if unrooted)
-                .addAllowedLogSource("AID_STATSD") // needed for AnomalyDetected
-                // No need in this test for .addAllowedLogSource("AID_SYSTEM")
+                        .setTriggerIfSumGt(triggerIfSumGt))
+          .addSubscription(
+              Subscription.newBuilder()
+                  .setId(SUBSCRIPTION_ID_INCIDENTD)
+                  .setRuleType(Subscription.RuleType.ALERT)
+                  .setRuleId(ALERT_ID)
+                  .setIncidentdDetails(IncidentdDetails.newBuilder().addSection(INCIDENTD_SECTION)))
+          // We want to trigger anomalies on METRIC_ID, but don't want the actual data.
+          .addNoReportMetric(METRIC_ID)
 
-                // Items of relevance to reporting the anomaly (we do want this data):
-                .addAtomMatcher(StatsdConfigProto.AtomMatcher.newBuilder()
-                        .setId(ANOMALY_DETECT_MATCH_ID)
-                        .setSimpleAtomMatcher(StatsdConfigProto.SimpleAtomMatcher.newBuilder()
-                                .setAtomId(Atom.ANOMALY_DETECTED_FIELD_NUMBER)
-                                .addFieldValueMatcher(
-                                        createFvm(AnomalyDetected.CONFIG_UID_FIELD_NUMBER)
-                                                .setEqInt(getHostUid())
-                                )
-                                .addFieldValueMatcher(
-                                        createFvm(AnomalyDetected.CONFIG_ID_FIELD_NUMBER)
-                                                .setEqInt(CONFIG_ID)
-                                )
-                        )
-                )
-                .addEventMetric(StatsdConfigProto.EventMetric.newBuilder()
-                        .setId(ANOMALY_EVENT_ID)
-                        .setWhat(ANOMALY_DETECT_MATCH_ID)
-                );
+          // Items of relevance to reporting the anomaly (we do want this data):
+          .addAtomMatcher(
+              StatsdConfigProto.AtomMatcher.newBuilder()
+                  .setId(ANOMALY_DETECT_MATCH_ID)
+                  .setSimpleAtomMatcher(
+                      StatsdConfigProto.SimpleAtomMatcher.newBuilder()
+                          .setAtomId(Atom.ANOMALY_DETECTED_FIELD_NUMBER)
+                          .addFieldValueMatcher(createFvm(AnomalyDetected.CONFIG_UID_FIELD_NUMBER)
+                                                    .setEqInt(getHostUid()))
+                          .addFieldValueMatcher(createFvm(AnomalyDetected.CONFIG_ID_FIELD_NUMBER)
+                                                    .setEqInt(CONFIG_ID))))
+          .addEventMetric(StatsdConfigProto.EventMetric.newBuilder()
+                              .setId(ANOMALY_EVENT_ID)
+                              .setWhat(ANOMALY_DETECT_MATCH_ID));
     }
 }

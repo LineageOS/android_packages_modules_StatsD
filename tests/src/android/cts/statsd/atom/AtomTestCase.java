@@ -211,12 +211,17 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected static StatsdConfig.Builder createConfigBuilder() {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID)
-                .addAllowedLogSource("AID_SYSTEM")
-                .addAllowedLogSource("AID_BLUETOOTH")
-                // TODO(b/134091167): Fix bluetooth source name issue in Auto platform.
-                .addAllowedLogSource("com.android.bluetooth")
-                .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
+      return StatsdConfig.newBuilder()
+          .setId(CONFIG_ID)
+          .addAllowedLogSource("AID_SYSTEM")
+          .addAllowedLogSource("AID_BLUETOOTH")
+          // TODO(b/134091167): Fix bluetooth source name issue in Auto platform.
+          .addAllowedLogSource("com.android.bluetooth")
+          .addAllowedLogSource("AID_LMKD")
+          .addAllowedLogSource("AID_ROOT")
+          .addAllowedLogSource("AID_STATSD")
+          .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE)
+          .addDefaultPullPackages("AID_SYSTEM");
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {
@@ -929,16 +934,10 @@ public class AtomTestCase extends BaseTestCase {
                 "logcat -v threadtime -t '%s' -d %s", date, logcatParams));
     }
 
-    /**
-     * Pulled atoms should have a better way of constructing the config.
-     * Remove this config when that happens.
-     */
+    // TODO: Remove this and migrate all usages to createConfigBuilder()
     protected StatsdConfig.Builder getPulledConfig() {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID)
-                .addAllowedLogSource("AID_SYSTEM")
-                .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE);
+        return createConfigBuilder();
     }
-
     /**
      * Determines if the device has the given feature.
      * Prints a warning if its value differs from requiredAnswer.
