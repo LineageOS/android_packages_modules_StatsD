@@ -61,7 +61,6 @@ import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ProcessMemorySnapshot;
 import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
-import com.android.os.AtomsProto.SnapshotMergeReported;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.TestAtomReported;
 import com.android.os.AtomsProto.VibratorStateChanged;
@@ -131,32 +130,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atom.getUid()).isEqualTo(getUid());
         assertThat(atom.getProcessName()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
         assertThat(atom.getOomAdjScore()).isAtLeast(500);
-    }
-
-    public void testSnapshotMergeReported() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
-        // Test is only valid for Virtual A/B devices
-        if (!"true".equals(getProperty("ro.virtual_ab.enabled"))) {
-            return;
-        }
-
-        final int atomTag = Atom.SNAPSHOT_MERGE_REPORTED_FIELD_NUMBER;
-        createAndUploadConfig(atomTag, false);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        Process process = new ProcessBuilder("snapshotctl", "--dry-run", "--report").start();
-
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        List<EventMetricData> data = getEventMetricDataList();
-
-        SnapshotMergeReported atom = data.get(0).getAtom().getSnapshotMergeReported();
-        assertThat(atom.getFinalState()).isEqualTo(SnapshotMergeReported.UpdateState.MERGE_COMPLETED);
-        assertThat(atom.getDurationMillis()).isEqualTo(1234);
-        assertThat(atom.getIntermediateReboots()).isEqualTo(56);
     }
 
     public void testAppCrashOccurred() throws Exception {
@@ -717,6 +690,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // assertStatesOccurred had a tighter range on large timeouts.
         final int waitTime = 5000;
 
+        // From {@link VideoPlayerActivity#DELAY_MILLIS}
+        final int videoDuration = 2000;
+
         Set<Integer> onState = new HashSet<>(
                 Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
         Set<Integer> offState = new HashSet<>(
@@ -735,7 +711,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, waitTime,
+        assertStatesOccurred(stateSet, data, videoDuration,
                 atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
