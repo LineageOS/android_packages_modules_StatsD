@@ -341,7 +341,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.REMAINING_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -368,7 +368,7 @@ public class HostAtomTests extends AtomTestCase {
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.FULL_BATTERY_CAPACITY_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -392,7 +392,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -417,7 +417,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_LEVEL_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -442,7 +442,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_CYCLE_COUNT_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -465,7 +465,7 @@ public class HostAtomTests extends AtomTestCase {
         if (statsdDisabled() || !kernelWakelockStatsExist()) {
             return;
         }
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.KERNEL_WAKELOCK_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -501,7 +501,7 @@ public class HostAtomTests extends AtomTestCase {
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!checkDeviceFor("checkWifiEnhancedPowerReportingSupported")) return;
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.WIFI_ACTIVITY_INFO_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -527,7 +527,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BUILD_INFORMATION_FIELD_NUMBER, null);
         uploadConfig(config);
 
@@ -555,7 +555,7 @@ public class HostAtomTests extends AtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.ON_DEVICE_POWER_MEASUREMENT_FIELD_NUMBER, null);
 
         uploadConfig(config);
