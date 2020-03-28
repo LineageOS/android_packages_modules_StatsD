@@ -66,19 +66,15 @@ public class AlarmTests extends AtomTestCase {
 
 
     private final StatsdConfig.Builder getBaseConfig() throws Exception {
-        return StatsdConfig.newBuilder().setId(CONFIG_ID)
-                .addAlarm(Alarm.newBuilder()
-                        .setId(ALARM_ID)
-                        .setOffsetMillis(2)
-                        .setPeriodMillis(5_000) // every 5 seconds.
-                )
-                .addSubscription(Subscription.newBuilder()
-                        .setId(SUBSCRIPTION_ID_INCIDENTD)
-                        .setRuleType(Subscription.RuleType.ALARM)
-                        .setRuleId(ALARM_ID)
-                        .setIncidentdDetails(IncidentdDetails.newBuilder()
-                                .addSection(INCIDENTD_SECTION))
-                )
-                .addAllowedLogSource("AID_SYSTEM");
+      return createConfigBuilder()
+          .addAlarm(Alarm.newBuilder().setId(ALARM_ID).setOffsetMillis(2).setPeriodMillis(
+              5_000) // every 5 seconds.
+              )
+          .addSubscription(Subscription.newBuilder()
+                               .setId(SUBSCRIPTION_ID_INCIDENTD)
+                               .setRuleType(Subscription.RuleType.ALARM)
+                               .setRuleId(ALARM_ID)
+                               .setIncidentdDetails(
+                                   IncidentdDetails.newBuilder().addSection(INCIDENTD_SECTION)));
     }
 }
