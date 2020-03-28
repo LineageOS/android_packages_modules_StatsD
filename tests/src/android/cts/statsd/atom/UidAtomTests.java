@@ -111,11 +111,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder conf = createConfigBuilder()
-                .addAllowedLogSource("AID_LMKD");
         final int atomTag = Atom.LMK_KILL_OCCURRED_FIELD_NUMBER;
-        addAtomEvent(conf, atomTag, false);
-        uploadConfig(conf);
+        createAndUploadConfig(atomTag, false);
 
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -363,7 +360,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
 
         uploadConfig(config);
@@ -396,7 +393,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_USE_FIELD_NUMBER, null);
         uploadConfig(config);
         unplugDevice();
@@ -419,7 +416,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                 Atom.DEVICE_CALCULATED_POWER_BLAME_UID_FIELD_NUMBER, null);
         uploadConfig(config);
@@ -615,7 +612,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Get GnssMetrics as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.GNSS_STATS_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1086,7 +1083,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             enableBinderStats();
             binderStatsNoSampling();
             resetBinderStats();
-            StatsdConfig.Builder config = getPulledConfig();
+            StatsdConfig.Builder config = createConfigBuilder();
             addGaugeAtomWithDimensions(config, Atom.BINDER_CALLS_FIELD_NUMBER, null);
 
             uploadConfig(config);
@@ -1133,7 +1130,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         try {
             unplugDevice();
             setUpLooperStats();
-            StatsdConfig.Builder config = getPulledConfig();
+            StatsdConfig.Builder config = createConfigBuilder();
             addGaugeAtomWithDimensions(config, Atom.LOOPER_STATS_FIELD_NUMBER, null);
             uploadConfig(config);
             Thread.sleep(WAIT_TIME_SHORT);
@@ -1186,7 +1183,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Get ProcessMemoryState as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_STATE_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1228,7 +1225,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Get ProcessMemoryHighWaterMark as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_HIGH_WATER_MARK_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1275,7 +1272,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Get ProcessMemorySnapshot as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_SNAPSHOT_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1342,7 +1339,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     /** Returns IonHeapSize atoms pulled as a simple gauge metric while test app is running. */
     private List<Atom> pullIonHeapSizeAsGaugeMetric() throws Exception {
         // Get IonHeapSize as a simple gauge metric.
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.ION_HEAP_SIZE_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1387,7 +1384,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 "cmd role add-role-holder " + callScreenAppRole + " " + DEVICE_SIDE_TEST_PACKAGE);
 
         // Set up what to collect
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.ROLE_HOLDER_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1428,7 +1425,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         final int FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED =  1 << 9;
 
         // Set up what to collect
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1472,7 +1469,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // get full atom for reference
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1492,7 +1489,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // retries in case sampling returns full list or empty list - which should be extremely rare
         for (int attempt = 0; attempt < 10; attempt++) {
             // Set up what to collect
-            config = getPulledConfig();
+            config = createConfigBuilder();
             addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_SAMPLED_FIELD_NUMBER,
                     null);
             uploadConfig(config);
@@ -1547,7 +1544,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         // Set up what to collect
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.APP_OPS_FIELD_NUMBER, null);
         uploadConfig(config);
 
@@ -1698,7 +1695,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_PREFERENCES_FIELD_NUMBER,
                     null);
@@ -1738,7 +1735,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_CHANNEL_PREFERENCES_FIELD_NUMBER,
                     null);
@@ -1782,7 +1779,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_CHANNEL_GROUP_PREFERENCES_FIELD_NUMBER,
                     null);
