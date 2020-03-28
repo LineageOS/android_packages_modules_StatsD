@@ -90,7 +90,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
         final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.8; // ratio that statsd and bs can differ
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_USE_FIELD_NUMBER, null);
         uploadConfig(config);
         unplugDevice();
