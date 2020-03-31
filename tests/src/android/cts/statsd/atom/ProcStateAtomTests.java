@@ -172,8 +172,8 @@ public class ProcStateAtomTests extends ProcStateTestCase {
         Thread.sleep(WAIT_TIME_FOR_CONFIG_AND_SCREEN_MS);
 
         executeForegroundActivity(ACTION_SLEEP_WHILE_TOP);
-        final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS;
-        Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
+        final int waitTime = SLEEP_OF_ACTION_SLEEP_WHILE_TOP;
+        Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS + EXTRA_WAIT_TIME_MS);
 
         List<EventMetricData> data = getEventMetricDataList();
         popUntilFind(data, onStates, PROC_STATE_FUNCTION); // clear out initial proc states.
