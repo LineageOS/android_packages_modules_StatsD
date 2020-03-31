@@ -26,19 +26,10 @@ import com.android.os.AtomsProto.ProcessStatsPackageProto;
 import com.android.os.AtomsProto.ProcessStatsProto;
 import com.android.os.AtomsProto.ProcessStatsStateProto;
 import com.android.os.StatsLog.DimensionsValue;
-import com.android.os.StatsLog.DurationBucketInfo;
-import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.ValueBucketInfo;
 import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.log.LogUtil;
-import com.android.tradefed.log.LogUtil.CLog;
-import com.android.tradefed.util.FileUtil;
 
-import com.google.protobuf.TextFormat;
-import com.google.protobuf.TextFormat.ParseException;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 /**
@@ -242,18 +233,14 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         assertThat(statsdData).isNotEmpty();
         assertThat(
                 statsdData.get(0).getProcStatsPkgProc().getProcStatsSection()
-                        .getAvailablePagesList()
+                        .getProcessStatsList()
         ).isNotEmpty();
-
-        List<ProcessStatsPackageProto> processStatsPackageProtoList = getAllProcStatsProto();
 
         // We pull directly from ProcessStatsService, so not necessary to compare every field.
         // Make sure that 1. both capture statsd package 2. spot check some values are reasonable
         LogUtil.CLog.d("======================");
 
         String statsdPkgName = "com.android.server.cts.device.statsd";
-        long pssAvgStatsd = 0;
-        long ussAvgStatsd = 0;
         long rssAvgStatsd = 0;
         long durationStatsd = 0;
         for (Atom d : statsdData) {
@@ -266,8 +253,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
                             if (state.getProcessState()
                                     == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
                                 durationStatsd = state.getDurationMillis();
-                                pssAvgStatsd = state.getPss().getAverage();
-                                ussAvgStatsd = state.getUss().getAverage();
                                 rssAvgStatsd = state.getRss().getAverage();
                             }
                         }
@@ -278,7 +263,9 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
             }
         }
 
-        LogUtil.CLog.d("avg pss from statsd is " + pssAvgStatsd);
+        LogUtil.CLog.d("avg rss from statsd is " + rssAvgStatsd);
+
+        List<ProcessStatsPackageProto> processStatsPackageProtoList = getAllProcStatsProto();
 
         long pssAvgProcstats = 0;
         long ussAvgProcstats = 0;
@@ -309,10 +296,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         assertThat(associationStatsCount).isGreaterThan(0);
 
         LogUtil.CLog.d("avg pss from procstats is " + pssAvgProcstats);
-        assertThat(durationStatsd).isGreaterThan(0L);
-        assertThat(durationStatsd).isEqualTo(durationProcstats);
-        assertThat(pssAvgStatsd).isEqualTo(pssAvgProcstats);
-        assertThat(ussAvgStatsd).isEqualTo(ussAvgProcstats);
         assertThat(rssAvgStatsd).isEqualTo(rssAvgProcstats);
     }
 }
