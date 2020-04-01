@@ -26,6 +26,7 @@ import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 import android.telephony.NetworkTypeEnum;
 
+import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.ANROccurred;
@@ -1316,24 +1317,32 @@ public class UidAtomTests extends DeviceAtomTestCase {
             .that(foundSystemServer).isTrue();
     }
 
-    public void testIonHeapSize_disabled() throws Exception {
-        if (statsdDisabled() || fileExists("/sys/kernel/ion/total_heaps_kb")) {
+    public void testIonHeapSize_optional() throws Exception {
+        if (statsdDisabled() || isIonHeapSizeMandatory()) {
             return;
         }
 
         List<Atom> atoms = pullIonHeapSizeAsGaugeMetric();
-        assertThat(atoms).isEmpty();
+        if (atoms.isEmpty()) {
+            // No support.
+            return;
+        }
+        assertIonHeapSize(atoms);
     }
 
-    public void testIonHeapSize_enabled() throws Exception {
-        if (statsdDisabled() || !fileExists("/sys/kernel/ion/total_heaps_kb")) {
+    public void testIonHeapSize_mandatory() throws Exception {
+        if (statsdDisabled() || !isIonHeapSizeMandatory()) {
             return;
         }
 
         List<Atom> atoms = pullIonHeapSizeAsGaugeMetric();
-        assertThat(atoms).hasSize(1);
-        IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
-        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
+        assertIonHeapSize(atoms);
+    }
+
+    /** Returns whether IonHeapSize atom is supported. */
+    private boolean isIonHeapSizeMandatory() throws Exception {
+        // Support is guaranteed by libmeminfo VTS.
+        return PropertyUtil.getFirstApiLevel(getDevice()) >= 30;
     }
 
     /** Returns IonHeapSize atoms pulled as a simple gauge metric while test app is running. */
@@ -1354,10 +1363,10 @@ public class UidAtomTests extends DeviceAtomTestCase {
         return getGaugeMetricDataList();
     }
 
-    private boolean fileExists(String path) throws Exception {
-        String commandFormat = "test -f %s && echo \"yes\" || echo \"no\"";
-        String result = getDevice().executeShellCommand(String.format(commandFormat, path));
-        return result.trim().equals("yes");
+    private static void assertIonHeapSize(List<Atom> atoms) {
+        assertThat(atoms).hasSize(1);
+        IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
+        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
     }
 
     /**
