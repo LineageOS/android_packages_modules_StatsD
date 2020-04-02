@@ -74,6 +74,7 @@ import com.android.os.StatsLog.EventMetricData;
 import com.android.tradefed.log.LogUtil;
 
 import com.google.common.collect.Range;
+import com.google.protobuf.Descriptors;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1560,6 +1561,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
             expectedOps.add(i);
         }
 
+        for (Descriptors.EnumValueDescriptor valueDescriptor :
+                AttributedAppOps.getDefaultInstance().getOp().getDescriptorForType().getValues()) {
+            if (valueDescriptor.getOptions().hasDeprecated()) {
+                // Deprecated app op, remove from list of expected ones.
+                expectedOps.remove(expectedOps.indexOf(valueDescriptor.getNumber()));
+            }
+        }
         for (Atom atom : getGaugeMetricDataList()) {
 
             AppOps appOps = atom.getAppOps();
