@@ -660,8 +660,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 assertThat(state.getTopFourAverageCn0DbMhz()).isGreaterThan((long) 0);
                 assertThat(state.getL5TopFourAverageCn0Reports()).isAtLeast((long) 0);
                 assertThat(state.getL5TopFourAverageCn0DbMhz()).isAtLeast((long) 0);
-                assertThat(state.getSvStatusReports()).isGreaterThan((long) 0);
-                assertThat(state.getSvStatusReportsUsedInFix()).isGreaterThan((long) 0);
+                assertThat(state.getSvStatusReports()).isAtLeast((long) 0);
+                assertThat(state.getSvStatusReportsUsedInFix()).isAtLeast((long) 0);
                 assertThat(state.getL5SvStatusReports()).isAtLeast((long) 0);
                 assertThat(state.getL5SvStatusReportsUsedInFix()).isAtLeast((long) 0);
             }
