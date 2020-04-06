@@ -313,16 +313,6 @@ public class DeviceAtomTestCase extends AtomTestCase {
         return false;
     }
 
-    void forcePollNetworkStats() throws Exception {
-        try {
-            getDevice().enableAdbRoot();
-            final String output = getDevice().executeShellCommand("dumpsys netstats --poll").trim();
-            if (!output.equals("Forced poll")) throw new Exception(output);
-        } finally {
-            getDevice().disableAdbRoot();
-        }
-    }
-
     boolean getNetworkStatsCombinedSubTypeEnabled() throws Exception {
         final String output = getDevice().executeShellCommand(
                 "settings get global netstats_combine_subtype_enabled").trim();
