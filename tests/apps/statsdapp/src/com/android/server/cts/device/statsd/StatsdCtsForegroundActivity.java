@@ -21,6 +21,8 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationChannelGroup;
 import android.app.NotificationManager;
+import android.app.usage.NetworkStatsManager;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
@@ -30,6 +32,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
@@ -56,6 +59,7 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_CRASH = "action.crash";
     public static final String ACTION_CREATE_CHANNEL_GROUP = "action.create_channel_group";
     public static final String ACTION_GENERATE_MOBILE_TRAFFIC = "action.generate_mobile_traffic";
+    public static final String ACTION_POLL_NETWORK_STATS = "action.poll_network_stats";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
     public static final int SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY = 2_000;
@@ -104,6 +108,9 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_GENERATE_MOBILE_TRAFFIC:
                 doGenerateNetworkTraffic(NetworkCapabilities.TRANSPORT_CELLULAR);
+                break;
+            case ACTION_POLL_NETWORK_STATS:
+                doPollNetworkStats();
                 break;
             default:
                 Log.e(TAG, "Intent had invalid action " + action);
@@ -265,6 +272,26 @@ public class StatsdCtsForegroundActivity extends Activity {
             if (urlc != null) {
                 urlc.disconnect();
             }
+        }
+    }
+
+    // Trigger force poll on NetworkStatsService to make sure the service get most updated network
+    // stats from lower layer on subsequent verifications.
+    private void doPollNetworkStats() {
+        final NetworkStatsManager nsm =
+                (NetworkStatsManager) getSystemService(Context.NETWORK_STATS_SERVICE);
+
+        // While the flag of force polling is the only important thing needed when making binder
+        // call to service, the type, parameters and returned result of the query here do not
+        // matter.
+        try {
+            nsm.setPollForce(true);
+            nsm.querySummaryForUser(ConnectivityManager.TYPE_WIFI, null, Long.MIN_VALUE,
+                    Long.MAX_VALUE);
+        } catch (RemoteException e) {
+            Log.e(TAG, "doPollNetworkStats failed with " + e);
+        } finally {
+            finish();
         }
     }
 
