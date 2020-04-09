@@ -26,6 +26,7 @@ import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 import android.telephony.NetworkTypeEnum;
 
+import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
@@ -78,6 +79,7 @@ import com.android.tradefed.log.LogUtil;
 import com.google.common.collect.Range;
 import com.google.protobuf.Descriptors;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -98,6 +100,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     private static final int NUM_APP_OPS = AttributedAppOps.getDefaultInstance().getOp().
             getDescriptorForType().getValues().size() - 1;
+
+    private static final String TEST_INSTALL_APK = "CtsStatsdEmptyApp.apk";
+    private static final String TEST_INSTALL_PACKAGE =
+            "com.android.cts.device.statsd.emptyapp";
+    private static final String TEST_REMOTE_DIR = "/data/local/tmp/statsd";
 
     @Override
     protected void setUp() throws Exception {
@@ -1982,5 +1989,42 @@ public class UidAtomTests extends DeviceAtomTestCase {
     @FunctionalInterface
     private interface ThrowingPredicate<S, T extends Throwable> {
         boolean accept(S s) throws T;
+    }
+
+    public void testPackageInstallerV2MetricsReported() throws Throwable {
+        if (statsdDisabled()) {
+            return;
+        }
+        createAndUploadConfig(Atom.PACKAGE_INSTALLER_V2_REPORTED_FIELD_NUMBER);
+        Thread.sleep(WAIT_TIME_SHORT);
+        installPackageUsingIncremental(TEST_INSTALL_APK, TEST_REMOTE_DIR);
+        assertTrue(getDevice().isPackageInstalled(TEST_INSTALL_PACKAGE));
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        List<AtomsProto.PackageInstallerV2Reported> reports = new ArrayList<>();
+        for(EventMetricData data : getEventMetricDataList()) {
+            if (data.getAtom().hasPackageInstallerV2Reported()) {
+                reports.add(data.getAtom().getPackageInstallerV2Reported());
+            }
+        }
+        assertEquals(1, reports.size());
+        final AtomsProto.PackageInstallerV2Reported report = reports.get(0);
+        assertTrue(report.getIsIncremental());
+        assertEquals(TEST_INSTALL_PACKAGE, report.getPackageName());
+        assertEquals(1, report.getReturnCode());
+        assertTrue(report.getDurationMillis() > 0);
+
+        getDevice().uninstallPackage(TEST_INSTALL_PACKAGE);
+    }
+
+    private void installPackageUsingIncremental(String apkName, String remoteDirPath)
+            throws Exception {
+        getDevice().executeShellCommand("mkdir " + remoteDirPath);
+        CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(getBuild());
+        final File apk = buildHelper.getTestFile(apkName);
+        assertNotNull(apk);
+        final String remoteApkPath = remoteDirPath + "/" + apk.getName();
+        assertTrue(getDevice().pushFile(apk, remoteApkPath));
+        getDevice().executeShellCommand("pm install-incremental -t -g " + remoteApkPath);
     }
 }
