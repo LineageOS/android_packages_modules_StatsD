@@ -31,6 +31,7 @@ import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.ANROccurred;
+import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppOps;
 import com.android.os.AtomsProto.AppStartOccurred;
@@ -213,9 +214,16 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        // AudioStateChanged timestamp is fuzzed to 5min buckets
+        // Because the timestamp is truncated, we skip checking time differences between state
+        // changes.
         assertStatesOccurred(stateSet, data, 0,
                 atom -> atom.getAudioStateChanged().getState().getNumber());
+
+        // Check that timestamp is truncated
+        for (EventMetricData metric : data) {
+            long elapsedTimestampNs = metric.getElapsedTimestampNanos();
+            assertTimestampIsTruncated(elapsedTimestampNs);
+        }
     }
 
     public void testBleScan() throws Exception {
@@ -1993,6 +2001,21 @@ public class UidAtomTests extends DeviceAtomTestCase {
         });
     }
 
+    public void testIsolatedToHostUidMapping() throws Exception {
+        createAndUploadConfig(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, /*useAttribution=*/false);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Create an isolated service from which An AppBreadcrumbReported atom is written.
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testIsolatedProcessService");
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertThat(data).hasSize(1);
+        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
+        assertThat(atom.getUid()).isEqualTo(getUid());
+        assertThat(atom.getLabel()).isEqualTo(0);
+        assertThat(atom.getState()).isEqualTo(AppBreadcrumbReported.State.START);
+    }
+
     private void assertDataUsageAtomDataExpected(
             long rxb, long txb, long rxp, long txp, int ratType, boolean subtypeCombined) {
         assertThat(rxb).isGreaterThan(0L);
@@ -2030,8 +2053,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         setAppBreadcrumbPredicate();
         Thread.sleep(WAIT_TIME_SHORT);
 
-        final List<Atom> atoms = getGaugeMetricDataList();
-
+        final List<Atom> atoms = getGaugeMetricDataList(/*checkTimestampTruncated=*/true);
         assertThat(atoms.size()).isAtLeast(1);
 
         boolean foundAppStats = false;
