@@ -44,6 +44,7 @@ android_test_helper_app {
         "compatibility-device-util-axt",
         "androidx.legacy_legacy-support-v4",
         "androidx.test.rules",
+        "cts-net-utils",
     ],
     jni_libs: ["liblmkhelper"],
     compile_multilib: "both",

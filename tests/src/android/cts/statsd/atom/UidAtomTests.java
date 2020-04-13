@@ -1961,7 +1961,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         // Generate some traffic on mobile network.
-        runActivity("StatsdCtsForegroundActivity", "action", "action.generate_mobile_traffic");
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testGenerateMobileTraffic");
         Thread.sleep(WAIT_TIME_SHORT);
 
         // Force polling NetworkStatsService to get most updated network stats from lower layer.
@@ -1973,6 +1973,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         Thread.sleep(WAIT_TIME_SHORT);
 
         final List<Atom> atoms = getGaugeMetricDataList();
+
         assertThat(atoms.size()).isAtLeast(1);
 
         boolean foundAppStats = false;
