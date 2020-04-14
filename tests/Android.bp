@@ -39,5 +39,6 @@ java_test_host {
     data: [
         "**/*.pbtxt",
         ":CtsStatsdApp",
+        ":CtsStatsdEmptyApp",
     ],
 }
