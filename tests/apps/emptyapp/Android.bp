@@ -16,10 +16,5 @@ android_test_helper_app {
     name: "CtsStatsdEmptyApp",
     defaults: ["cts_defaults"],
     sdk_version: "current",
-    // tag this module as a cts test artifact
-    test_suites: [
-        "cts",
-        "general-tests",
-    ],
     v4_signature: true,
 }
