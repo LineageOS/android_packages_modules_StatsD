@@ -84,7 +84,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -1995,6 +1994,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (statsdDisabled()) {
             return;
         }
+        if (!hasFeature(FEATURE_INCREMENTAL_DELIVERY, true)) return;
         createAndUploadConfig(Atom.PACKAGE_INSTALLER_V2_REPORTED_FIELD_NUMBER);
         Thread.sleep(WAIT_TIME_SHORT);
         installPackageUsingIncremental(TEST_INSTALL_APK, TEST_REMOTE_DIR);
