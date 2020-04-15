@@ -547,6 +547,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
+        // 5 seconds. Starting video tends to be much slower than most other
+        // tests on slow devices. This is unfortunate, because it leaves a
+        // really big slop in assertStatesOccurred.  It would be better if
+        // assertStatesOccurred had a tighter range on large timeouts.
+        final int waitTime = 5000;
+
+        // From {@link VideoPlayerActivity#DELAY_MILLIS}
+        final int videoDuration = 2000;
+
         Set<Integer> onState = new HashSet<>(
                 Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
         Set<Integer> offState = new HashSet<>(
@@ -564,7 +573,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+        assertStatesOccurred(stateSet, data, videoDuration,
                 atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
