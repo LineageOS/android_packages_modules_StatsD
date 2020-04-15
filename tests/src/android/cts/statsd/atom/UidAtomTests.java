@@ -1313,7 +1313,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
           }
 
           assertThat(snapshot.getPid()).isGreaterThan(0);
-          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isGreaterThan(0);
+          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isAtLeast(0);
           assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isEqualTo(
                   snapshot.getAnonRssInKilobytes() + snapshot.getSwapInKilobytes());
           assertThat(snapshot.getRssInKilobytes()).isAtLeast(0);
