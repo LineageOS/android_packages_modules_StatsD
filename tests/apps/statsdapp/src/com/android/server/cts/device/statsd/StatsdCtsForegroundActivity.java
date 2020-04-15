@@ -27,24 +27,14 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Point;
 import android.net.ConnectivityManager;
-import android.net.Network;
-import android.net.NetworkCapabilities;
-import android.net.NetworkRequest;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.RemoteException;
-import android.os.SystemClock;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-
-import androidx.annotation.NonNull;
-
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.concurrent.TimeUnit;
 
 /** An activity (to be run as a foreground process) which performs one of a number of actions. */
 public class StatsdCtsForegroundActivity extends Activity {
@@ -58,18 +48,11 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_SHOW_NOTIFICATION = "action.show_notification";
     public static final String ACTION_CRASH = "action.crash";
     public static final String ACTION_CREATE_CHANNEL_GROUP = "action.create_channel_group";
-    public static final String ACTION_GENERATE_MOBILE_TRAFFIC = "action.generate_mobile_traffic";
     public static final String ACTION_POLL_NETWORK_STATS = "action.poll_network_stats";
 
     public static final int SLEEP_OF_ACTION_SLEEP_WHILE_TOP = 2_000;
     public static final int SLEEP_OF_ACTION_SHOW_APPLICATION_OVERLAY = 2_000;
     public static final int LONG_SLEEP_WHILE_TOP = 60_000;
-    private static final int NETWORK_TIMEOUT_MILLIS = 15000;
-    private static final String HTTPS_HOST_URL =
-            "https://connectivitycheck.gstatic.com/generate_204";
-    // Minimum and Maximum of iterations of exercise host, @see #doGenerateNetworkTraffic.
-    private static final int MIN_EXERCISE_HOST_ITERATIONS = 1;
-    private static final int MAX_EXERCISE_HOST_ITERATIONS = 19;
 
     @Override
     public void onCreate(Bundle bundle) {
@@ -105,9 +88,6 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_CREATE_CHANNEL_GROUP:
                 doCreateChannelGroup();
-                break;
-            case ACTION_GENERATE_MOBILE_TRAFFIC:
-                doGenerateNetworkTraffic(NetworkCapabilities.TRANSPORT_CELLULAR);
                 break;
             case ACTION_POLL_NETWORK_STATS:
                 doPollNetworkStats();
@@ -192,87 +172,6 @@ public class StatsdCtsForegroundActivity extends Activity {
         channelGroup.setDescription("StatsdCtsGroup Description");
         nm.createNotificationChannelGroup(channelGroup);
         finish();
-    }
-
-    private void doGenerateNetworkTraffic(@NetworkCapabilities.Transport int transport) {
-        final ConnectivityManager cm = getSystemService(ConnectivityManager.class);
-        final NetworkRequest request = new NetworkRequest.Builder().addCapability(
-                NetworkCapabilities.NET_CAPABILITY_INTERNET).addTransportType(transport).build();
-        final ConnectivityManager.NetworkCallback cb = new ConnectivityManager.NetworkCallback() {
-            @Override
-            public void onAvailable(@NonNull Network network) {
-                final long startTime = SystemClock.elapsedRealtime();
-                try {
-                    // Since history of network stats only have 2 hours of resolution, when it is
-                    // being queried, service will assume that history network stats has uniform
-                    // distribution and return a fraction of network stats that is originally
-                    // subject to 2 hours. To be specific:
-                    //    <returned network stats> = <total network stats> * <duration> / 2 hour,
-                    // assuming the duration can fit in a 2 hours bucket.
-                    // In the other hand, in statsd, the network stats is queried since boot,
-                    // that means in order to assert non-zero packet counts, either the test should
-                    // be run after enough time since boot, or the packet counts generated here
-                    // should be enough. That is to say:
-                    //   <total packet counts> * <up time> / 2 hour >= 1,
-                    // or
-                    //   iterations >= 2 hour / (<up time> * <packets per iteration>)
-                    // Thus, iterations can be chosen based on the factors above to make this
-                    // function generate enough packets in each direction to accommodate enough
-                    // packet counts for a fraction of history bucket.
-                    final double iterations = (TimeUnit.HOURS.toMillis(2) / startTime / 7);
-                    // While just enough iterations are going to make the test flaky, add a 20%
-                    // buffer to stabilize it and make sure it's in a reasonable range, so it won't
-                    // consumes more than 100kb of traffic, or generates 0 byte of traffic.
-                    final int augmentedIterations =
-                            (int) Math.max(iterations * 1.2, MIN_EXERCISE_HOST_ITERATIONS);
-                    if (augmentedIterations > MAX_EXERCISE_HOST_ITERATIONS) {
-                        throw new IllegalStateException("Exceeded max allowed iterations"
-                                + ", iterations=" + augmentedIterations
-                                + ", uptime=" + TimeUnit.MILLISECONDS.toSeconds(startTime) + "s");
-                    }
-
-                    for (int i = 0; i < augmentedIterations; i++) {
-                        // By observing results of "dumpsys netstats --uid", typically the single
-                        // run of the https request below generates 4200/1080 rx/tx bytes with
-                        // around 7/9 rx/tx packets.
-                        // This blocks the thread of NetworkCallback, thus no other event
-                        // can be processed before return.
-                        exerciseRemoteHost(cm, network, new URL(HTTPS_HOST_URL));
-                    }
-                    Log.i(TAG, "exerciseRemoteHost successful in " + (SystemClock.elapsedRealtime()
-                            - startTime) + " ms with iterations=" + augmentedIterations
-                            + ", uptime=" + TimeUnit.MILLISECONDS.toSeconds(startTime) + "s");
-                } catch (Exception e) {
-                    Log.e(TAG, "exerciseRemoteHost failed in " + (SystemClock.elapsedRealtime()
-                            - startTime) + " ms: " + e);
-                } finally {
-                    cm.unregisterNetworkCallback(this);
-                    finish();
-                }
-            }
-        };
-
-        // Request network, and make http query when the network is available.
-        cm.requestNetwork(request, cb);
-    }
-
-    /**
-     * Generate traffic on specified network.
-     */
-    private void exerciseRemoteHost(@NonNull ConnectivityManager cm, @NonNull Network network,
-            @NonNull URL url) throws Exception {
-        cm.bindProcessToNetwork(network);
-        HttpURLConnection urlc = null;
-        try {
-            urlc = (HttpURLConnection) network.openConnection(url);
-            urlc.setConnectTimeout(NETWORK_TIMEOUT_MILLIS);
-            urlc.setUseCaches(false);
-            urlc.connect();
-        } finally {
-            if (urlc != null) {
-                urlc.disconnect();
-            }
-        }
     }
 
     // Trigger force poll on NetworkStatsService to make sure the service get most updated network

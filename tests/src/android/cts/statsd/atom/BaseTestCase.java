@@ -133,9 +133,11 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
      * @param pkgName Test package name, such as "com.android.server.cts.netstats".
      * @param testClassName Test class name; either a fully qualified name, or "." + a class name.
      * @param testMethodName Test method name.
+     * @return {@link TestRunResult} of this invocation.
      * @throws DeviceNotAvailableException
      */
-    protected void runDeviceTests(@Nonnull String pkgName,
+    @Nonnull
+    protected TestRunResult runDeviceTests(@Nonnull String pkgName,
             @Nullable String testClassName, @Nullable String testMethodName)
             throws DeviceNotAvailableException {
         if (testClassName != null && testClassName.startsWith(".")) {
@@ -175,6 +177,8 @@ public class BaseTestCase extends DeviceTestCase implements IBuildReceiver {
             }
             throw new AssertionError(errorBuilder.toString());
         }
+
+        return result;
     }
 
     protected boolean statsdDisabled() throws DeviceNotAvailableException {
