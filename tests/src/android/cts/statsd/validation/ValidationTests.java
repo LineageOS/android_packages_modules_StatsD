@@ -134,7 +134,6 @@ public class ValidationTests extends DeviceAtomTestCase {
 
         assertNotNull(wl);
         assertTrue(wl.getDurationMs() > 0);
-        assertTrue(wl.getCount() == 1);
         assertTrue(wl.getMaxDurationMs() >= 400);
         assertTrue(wl.getMaxDurationMs() < 700);
         assertTrue(wl.getTotalDurationMs() >= 400);
