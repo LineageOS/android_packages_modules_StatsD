@@ -547,6 +547,13 @@ public class UidAtomTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
+        // 5 seconds. Starting video tends to be much slower than most other
+        // tests on slow devices.
+        final int videoActivityWaitTime = 5000;
+
+        // From {@link VideoPlayerActivity#DELAY_MILLIS}
+        final int videoDuration = 2000;
+
         Set<Integer> onState = new HashSet<>(
                 Arrays.asList(MediaCodecStateChanged.State.ON_VALUE));
         Set<Integer> offState = new HashSet<>(
@@ -558,13 +565,14 @@ public class UidAtomTests extends DeviceAtomTestCase {
         createAndUploadConfig(atomTag, true);  // True: uses attribution.
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("VideoPlayerActivity", "action", "action.play_video");
+        runActivity("VideoPlayerActivity", "action", "action.play_video",
+            videoActivityWaitTime);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+        assertStatesOccurred(stateSet, data, videoDuration,
                 atom -> atom.getMediaCodecStateChanged().getState().getNumber());
     }
 
