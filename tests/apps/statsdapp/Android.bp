@@ -19,6 +19,7 @@ cc_library_shared {
         "-Wall",
         "-Werror",
     ],
+    header_libs: ["jni_headers"],
     shared_libs: ["liblog"],
     stl: "c++_static",
     sdk_version: "current",
