@@ -64,6 +64,7 @@ import com.android.os.AtomsProto.ProcessMemoryHighWaterMark;
 import com.android.os.AtomsProto.ProcessMemorySnapshot;
 import com.android.os.AtomsProto.ProcessMemoryState;
 import com.android.os.AtomsProto.ScheduledJobStateChanged;
+import com.android.os.AtomsProto.SettingSnapshot;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.TestAtomReported;
 import com.android.os.AtomsProto.VibratorStateChanged;
@@ -1312,7 +1313,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
           }
 
           assertThat(snapshot.getPid()).isGreaterThan(0);
-          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isGreaterThan(0);
+          assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isAtLeast(0);
           assertThat(snapshot.getAnonRssAndSwapInKilobytes()).isEqualTo(
                   snapshot.getAnonRssInKilobytes() + snapshot.getSwapInKilobytes());
           assertThat(snapshot.getRssInKilobytes()).isAtLeast(0);
@@ -1868,6 +1869,63 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(n.getCategory()).isEmpty();
         assertThat(n.getStyle()).isEqualTo(0);
         assertThat(n.getNumPeople()).isEqualTo(0);
+    }
+
+    public void testSettingsStatsReported() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        // Base64 encoded proto com.android.service.nano.StringListParamProto,
+        // which contains two strings "font_scale" and "screen_auto_brightness_adj".
+        final String ENCODED = "ChpzY3JlZW5fYXV0b19icmlnaHRuZXNzX2FkagoKZm9udF9zY2FsZQ";
+        final String FONT_SCALE = "font_scale";
+        SettingSnapshot snapshot = null;
+
+        // Set whitelist through device config.
+        Thread.sleep(WAIT_TIME_SHORT);
+        getDevice().executeShellCommand(
+                "device_config put settings_stats SystemFeature__float_whitelist " + ENCODED);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Get SettingSnapshot as a simple gauge metric.
+        StatsdConfig.Builder config = createConfigBuilder();
+        addGaugeAtomWithDimensions(config, Atom.SETTING_SNAPSHOT_FIELD_NUMBER, null);
+        uploadConfig(config);
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Start test app and trigger a pull while it is running.
+        try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
+                "action.show_notification")) {
+            Thread.sleep(WAIT_TIME_SHORT);
+            // Trigger a pull and wait for new pull before killing the process.
+            setAppBreadcrumbPredicate();
+            Thread.sleep(WAIT_TIME_LONG);
+        }
+
+        // Test the size of atoms. It should contain at least "font_scale" and
+        // "screen_auto_brightness_adj" two setting values.
+        List<Atom> atoms = getGaugeMetricDataList();
+        assertThat(atoms.size()).isAtLeast(2);
+        for (Atom atom : atoms) {
+            SettingSnapshot settingSnapshot = atom.getSettingSnapshot();
+            if (FONT_SCALE.equals(settingSnapshot.getName())) {
+                snapshot = settingSnapshot;
+                break;
+            }
+        }
+        // Get font_scale value.
+        final float fontScale = Float.parseFloat(
+                getDevice().executeShellCommand("settings get system font_scale"));
+        Thread.sleep(WAIT_TIME_SHORT);
+        // Test the data of atom.
+        assertNotNull(snapshot);
+        assertThat(snapshot.getType()).isEqualTo(
+                SettingSnapshot.SettingsValueType.ASSIGNED_FLOAT_TYPE);
+        assertThat(snapshot.getBoolValue()).isEqualTo(false);
+        assertThat(snapshot.getIntValue()).isEqualTo(0);
+        assertThat(snapshot.getFloatValue()).isEqualTo(fontScale);
+        assertThat(snapshot.getStrValue()).isEqualTo("");
+        assertThat(snapshot.getUserId()).isEqualTo(0);
     }
 
     public void testIntegrityCheckAtomReportedDuringInstall() throws Exception {
