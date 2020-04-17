@@ -233,7 +233,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         assertThat(statsdData).isNotEmpty();
         assertThat(
                 statsdData.get(0).getProcStatsPkgProc().getProcStatsSection()
-                        .getProcessStatsList()
+                        .getPackageStatsList()
         ).isNotEmpty();
 
         // We pull directly from ProcessStatsService, so not necessary to compare every field.
