@@ -68,6 +68,8 @@ import android.os.Vibrator;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.util.StatsEvent;
+import android.util.StatsLog;
 
 import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
@@ -853,6 +855,19 @@ public class AtomTests {
                 urlc.disconnect();
             }
         }
+    }
+
+    @Test
+    public void testIsolatedProcessService() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        int uid = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0).uid;
+
+        // Start the isolated service, which logs an AppBreadcrumbReported atom, and then exit
+        // shortly afterwards.
+        Intent intent = new Intent(context, IsolatedProcessService.class);
+        context.startService(intent);
+        sleep(500);
+        context.stopService(intent);
     }
 
     // ------- Helper methods
