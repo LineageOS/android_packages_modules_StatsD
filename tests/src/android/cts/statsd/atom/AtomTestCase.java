@@ -48,6 +48,7 @@ import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.DurationMetricData;
 import com.android.os.StatsLog.EventMetricData;
+import com.android.os.StatsLog.GaugeBucketInfo;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.CountMetricData;
 import com.android.os.StatsLog.StatsLogReport;
@@ -116,6 +117,8 @@ public class AtomTestCase extends BaseTestCase {
 
     protected static final long SCREEN_STATE_CHANGE_TIMEOUT = 4000;
     protected static final long SCREEN_STATE_POLLING_INTERVAL = 500;
+
+    protected static final long NS_PER_SEC = (long) 1E+9;
 
     @Override
     protected void setUp() throws Exception {
@@ -293,6 +296,10 @@ public class AtomTestCase extends BaseTestCase {
     }
 
     protected List<Atom> getGaugeMetricDataList() throws Exception {
+        return getGaugeMetricDataList(/*checkTimestampTruncated=*/false);
+    }
+
+    protected List<Atom> getGaugeMetricDataList(boolean checkTimestampTruncated) throws Exception {
         ConfigMetricsReportList reportList = getReportList();
         assertThat(reportList.getReportsCount()).isEqualTo(1);
 
@@ -304,8 +311,14 @@ public class AtomTestCase extends BaseTestCase {
         for (GaugeMetricData gaugeMetricData :
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
             assertThat(gaugeMetricData.getBucketInfoCount()).isEqualTo(1);
-            for (Atom atom : gaugeMetricData.getBucketInfo(0).getAtomList()) {
+            GaugeBucketInfo bucketInfo = gaugeMetricData.getBucketInfo(0);
+            for (Atom atom : bucketInfo.getAtomList()) {
                 data.add(atom);
+            }
+            if (checkTimestampTruncated) {
+                for (long timestampNs: bucketInfo.getElapsedTimestampNanosList()) {
+                    assertTimestampIsTruncated(timestampNs);
+                }
             }
         }
 
@@ -967,5 +980,12 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void turnOffAirplaneMode() throws Exception {
         getDevice().executeShellCommand("cmd connectivity airplane-mode disable");
+    }
+
+    // Checks that a timestamp has been truncated to be a multiple of 5 min
+    protected void assertTimestampIsTruncated(long timestampNs) {
+        long fiveMinutesInNs = NS_PER_SEC * 5 * 60;
+        assertWithMessage("Timestamp is not truncated")
+                .that(timestampNs % fiveMinutesInNs).isEqualTo(0);
     }
 }
