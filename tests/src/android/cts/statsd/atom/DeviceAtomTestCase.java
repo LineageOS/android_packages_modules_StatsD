@@ -135,7 +135,8 @@ public class DeviceAtomTestCase extends AtomTestCase {
      * Adds an event to the config for an atom that matches the app's uid.
      * @param conf configuration
      * @param atomTag atom tag (from atoms.proto)
-     * @param useAttribution if the atom has a uid or AttributionNode
+     * @param useAttribution If true, the atom has a uid within an attribution node. Else, the atom
+     * has a uid but not in an attribution node.
      */
     protected void addAtomEvent(StatsdConfig.Builder conf, int atomTag,
             boolean useAttribution) throws Exception {
@@ -144,7 +145,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
         if (useAttribution) {
             fvmUid = createAttributionFvm(UID_KEY);
         } else {
-            fvmUid = createFvm(UID_KEY).setEqInt(getUid());
+            fvmUid = createFvm(UID_KEY).setEqString(DEVICE_SIDE_TEST_PACKAGE);
         }
         addAtomEvent(conf, atomTag, Arrays.asList(fvmUid));
     }
