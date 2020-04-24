@@ -19,9 +19,11 @@ import static com.google.common.truth.Truth.assertThat;
 
 import android.cts.statsd.atom.ProcStateTestCase;
 import android.service.procstats.ProcessState;
+import android.service.procstats.AggregatedProcessState;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.Atom;
+import com.android.os.AtomsProto.ProcessStateAggregated;
 import com.android.os.AtomsProto.ProcessStatsPackageProto;
 import com.android.os.AtomsProto.ProcessStatsProto;
 import com.android.os.AtomsProto.ProcessStatsStateProto;
@@ -141,11 +143,12 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
         setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_SHORT + 5_000);
 
         List<Atom> statsdData = getGaugeMetricDataList();
 
-        List<ProcessStatsPackageProto> processStatsPackageProtoList = getAllProcStatsProto();
+        List<android.service.procstats.ProcessStatsProto> processStatsProtoList
+                = getAllProcStatsProtoForStatsd();
 
         // We pull directly from ProcessStatsService, so not necessary to compare every field.
         // Make sure that 1. both capture statsd package 2. spot check some values are reasonable
@@ -154,16 +157,14 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         String statsdPkgName = "com.android.server.cts.device.statsd";
         long rssAvgStatsd = 0;
         for (Atom d : statsdData) {
-            for (ProcessStatsPackageProto pkg : d.getProcStats().getProcStatsSection().getPackageStatsList()) {
-                if (pkg.getPackage().equals(statsdPkgName)) {
+            for (ProcessStatsProto proc : d.getProcStats().getProcStatsSection().getProcessStatsList()) {
+                if (proc.getProcess().equals(statsdPkgName)) {
                     LogUtil.CLog.d("Got proto from statsd:");
-                    LogUtil.CLog.d(pkg.toString());
-                    for (ProcessStatsProto process : pkg.getProcessStatsList()) {
-                        for (ProcessStatsStateProto state : process.getStatesList()) {
-                            if (state.getProcessState()
-                                    == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                                rssAvgStatsd = state.getRss().getAverage();
-                            }
+                    LogUtil.CLog.d(proc.toString());
+                    for (ProcessStatsStateProto state : proc.getStatesList()) {
+                        if (state.getProcessStateAggregated()
+                                == ProcessStateAggregated.PROCESS_STATE_IMPORTANT_FOREGROUND) {
+                            rssAvgStatsd = state.getRss().getMeanKb();
                         }
                     }
                 }
@@ -171,16 +172,16 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         }
 
         long rssAvgProcstats = 0;
-        for (ProcessStatsPackageProto pkg : processStatsPackageProtoList) {
-            if (pkg.getPackage().equals(statsdPkgName)) {
+        for (android.service.procstats.ProcessStatsProto process: processStatsProtoList) {
+            if (process.getProcess().equals(statsdPkgName)) {
                 LogUtil.CLog.d("Got proto from procstats dumpsys:");
-                LogUtil.CLog.d(pkg.toString());
-                for (ProcessStatsProto process : pkg.getProcessStatsList()) {
-                    for (ProcessStatsStateProto state : process.getStatesList()) {
-                        if (state.getProcessState()
-                                == ProcessState.PROCESS_STATE_IMPORTANT_FOREGROUND) {
-                            rssAvgProcstats = state.getRss().getAverage();
-                        }
+                LogUtil.CLog.d(process.toString());
+                for (android.service.procstats.ProcessStatsStateProto state
+                        : process.getStatesList()) {
+                    if (AggregatedProcessState.AGGREGATED_PROCESS_STATE_IMPORTANT_FOREGROUND
+                            == state.getProcessStateAggregated()) {
+                        rssAvgProcstats = state.getRss().getMeanKb();
+                        break;
                     }
                 }
             }
@@ -190,6 +191,10 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
     }
 
     public void testProcStatsPkgProcStats() throws Exception {
+        /**
+         * Temporarily disable this test as the proc stats data being pulled into the statsd
+         * doesn't include the pkg part now.
+         *
         if (statsdDisabled()) {
             return;
         }
@@ -297,5 +302,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
 
         LogUtil.CLog.d("avg pss from procstats is " + pssAvgProcstats);
         assertThat(rssAvgStatsd).isEqualTo(rssAvgProcstats);
+        */
     }
 }
