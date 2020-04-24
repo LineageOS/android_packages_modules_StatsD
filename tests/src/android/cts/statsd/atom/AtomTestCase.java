@@ -506,6 +506,30 @@ public class AtomTestCase extends BaseTestCase {
         }
     }
 
+    /*
+     * Get all processes' procstats statsd data in proto
+     */
+    protected List<android.service.procstats.ProcessStatsProto> getAllProcStatsProtoForStatsd()
+            throws Exception {
+        try {
+            android.service.procstats.ProcessStatsSectionProto sectionProto = getDump(
+                    android.service.procstats.ProcessStatsSectionProto.parser(),
+                    String.join(" ", DUMP_PROCSTATS_CMD,
+                            "--statsd"));
+            List<android.service.procstats.ProcessStatsProto> processStatsProtoList
+                    = sectionProto.getProcessStatsList();
+            LogUtil.CLog.d("Got procstats:\n ");
+            for (android.service.procstats.ProcessStatsProto processStatsProto
+                    : processStatsProtoList) {
+                LogUtil.CLog.d(processStatsProto.toString());
+            }
+            return processStatsProtoList;
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            LogUtil.CLog.e("Failed to dump procstats proto");
+            throw (e);
+        }
+    }
+
     protected boolean hasBattery() throws Exception {
         try {
             BatteryServiceDumpProto batteryProto = getDump(BatteryServiceDumpProto.parser(),
