@@ -391,7 +391,7 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
 
         List<Atom> statsdData = getGaugeMetricDataList();
         assertTrue(statsdData.size() > 0);
-        assertTrue(statsdData.get(0).getProcStatsPkgProc().getProcStatsSection().getAvailablePagesList().size() > 0);
+        assertTrue(statsdData.get(0).getProcStatsPkgProc().getProcStatsSection().getPackageStatsList().size() > 0);
 
         List<ProcessStatsPackageProto> processStatsPackageProtoList = getAllProcStatsProto();
 
