@@ -1978,8 +1978,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             final AtomsProto.MobileBytesTransfer data = ((Atom) atom).getMobileBytesTransfer();
             if (data.getUid() == appUid) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
-                        data.getRxPackets(), data.getTxPackets(), data.getRatType(),
-                        subtypeCombined);
+                        data.getRxPackets(), data.getTxPackets());
                 return true; // found
             }
             return false;
@@ -1995,8 +1994,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                     ((Atom) atom).getMobileBytesTransferByFgBg();
             if (data.getUid() == appUid) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
-                        data.getRxPackets(), data.getTxPackets(), data.getRatType(),
-                        subtypeCombined);
+                        data.getRxPackets(), data.getTxPackets());
                 // IsForeground cannot be judged since foreground activity that launched
                 // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
                 // in NetworkPolicyManagerService.
@@ -2021,18 +2019,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atom.getState()).isEqualTo(AppBreadcrumbReported.State.START);
     }
 
-    private void assertDataUsageAtomDataExpected(
-            long rxb, long txb, long rxp, long txp, int ratType, boolean subtypeCombined) {
+    private void assertDataUsageAtomDataExpected(long rxb, long txb, long rxp, long txp) {
         assertThat(rxb).isGreaterThan(0L);
         assertThat(txb).isGreaterThan(0L);
         assertThat(rxp).isGreaterThan(0L);
         assertThat(txp).isGreaterThan(0L);
-        // TODO: verify the RAT type field with the value get from device.
-        if (subtypeCombined) {
-            assertThat(ratType).isEqualTo(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-        } else {
-            assertThat(ratType).isGreaterThan(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-        }
     }
 
     private void doTestMobileBytesTransferThat(int atomTag, ThrowingPredicate p)
