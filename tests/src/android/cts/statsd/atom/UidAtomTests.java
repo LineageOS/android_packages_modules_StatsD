@@ -2069,7 +2069,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertEquals(1, reports.size());
         final AtomsProto.PackageInstallerV2Reported report = reports.get(0);
         assertTrue(report.getIsIncremental());
-        assertEquals(TEST_INSTALL_PACKAGE, report.getPackageName());
+        // tests are ran using SHELL_UID and installation will be treated as adb install
+        assertEquals("", report.getPackageName());
         assertEquals(1, report.getReturnCode());
         assertTrue(report.getDurationMillis() > 0);
 
