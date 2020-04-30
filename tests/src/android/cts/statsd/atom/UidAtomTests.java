@@ -1885,15 +1885,17 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
         // Base64 encoded proto com.android.service.nano.StringListParamProto,
         // which contains two strings "font_scale" and "screen_auto_brightness_adj".
-        final String ENCODED = "ChpzY3JlZW5fYXV0b19icmlnaHRuZXNzX2FkagoKZm9udF9zY2FsZQ";
-        final String FONT_SCALE = "font_scale";
+        final String encoded = "ChpzY3JlZW5fYXV0b19icmlnaHRuZXNzX2FkagoKZm9udF9zY2FsZQ";
+        final String font_scale = "font_scale";
         SettingSnapshot snapshot = null;
 
         // Set whitelist through device config.
         Thread.sleep(WAIT_TIME_SHORT);
         getDevice().executeShellCommand(
-                "device_config put settings_stats SystemFeature__float_whitelist " + ENCODED);
+                "device_config put settings_stats SystemFeature__float_whitelist " + encoded);
         Thread.sleep(WAIT_TIME_SHORT);
+        // Set font_scale value
+        getDevice().executeShellCommand("settings put system font_scale 1.5");
 
         // Get SettingSnapshot as a simple gauge metric.
         StatsdConfig.Builder config = createConfigBuilder();
@@ -1916,17 +1918,18 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atoms.size()).isAtLeast(2);
         for (Atom atom : atoms) {
             SettingSnapshot settingSnapshot = atom.getSettingSnapshot();
-            if (FONT_SCALE.equals(settingSnapshot.getName())) {
+            if (font_scale.equals(settingSnapshot.getName())) {
                 snapshot = settingSnapshot;
                 break;
             }
         }
-        // Get font_scale value.
-        final float fontScale = Float.parseFloat(
-                getDevice().executeShellCommand("settings get system font_scale"));
+
         Thread.sleep(WAIT_TIME_SHORT);
         // Test the data of atom.
         assertNotNull(snapshot);
+        // Get font_scale value and test value type.
+        final float fontScale = Float.parseFloat(
+                getDevice().executeShellCommand("settings get system font_scale"));
         assertThat(snapshot.getType()).isEqualTo(
                 SettingSnapshot.SettingsValueType.ASSIGNED_FLOAT_TYPE);
         assertThat(snapshot.getBoolValue()).isEqualTo(false);
