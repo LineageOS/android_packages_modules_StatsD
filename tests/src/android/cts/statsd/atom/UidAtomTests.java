@@ -103,6 +103,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
             getDescriptorForType().getValues().size() - 1;
 
     private static final String TEST_INSTALL_APK = "CtsStatsdEmptyApp.apk";
+    private static final String TEST_INSTALL_APK_BASE = "CtsStatsdEmptySplitApp.apk";
+    private static final String TEST_INSTALL_APK_SPLIT = "CtsStatsdEmptySplitApp_pl.apk";
     private static final String TEST_INSTALL_PACKAGE =
             "com.android.cts.device.statsd.emptyapp";
     private static final String TEST_REMOTE_DIR = "/data/local/tmp/statsd";
@@ -2079,9 +2081,43 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
         if (!hasFeature(FEATURE_INCREMENTAL_DELIVERY, true)) return;
+        final AtomsProto.PackageInstallerV2Reported report = installPackageUsingV2AndGetReport(
+                new String[]{TEST_INSTALL_APK});
+        assertTrue(report.getIsIncremental());
+        // tests are ran using SHELL_UID and installation will be treated as adb install
+        assertEquals("", report.getPackageName());
+        assertEquals(1, report.getReturnCode());
+        assertTrue(report.getDurationMillis() > 0);
+        assertEquals(getTestFileSize(TEST_INSTALL_APK), report.getApksSizeBytes());
+
+        getDevice().uninstallPackage(TEST_INSTALL_PACKAGE);
+    }
+
+    public void testPackageInstallerV2MetricsReportedForSplits() throws Throwable {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_INCREMENTAL_DELIVERY, true)) return;
+
+        final AtomsProto.PackageInstallerV2Reported report = installPackageUsingV2AndGetReport(
+                new String[]{TEST_INSTALL_APK_BASE, TEST_INSTALL_APK_SPLIT});
+        assertTrue(report.getIsIncremental());
+        // tests are ran using SHELL_UID and installation will be treated as adb install
+        assertEquals("", report.getPackageName());
+        assertEquals(1, report.getReturnCode());
+        assertTrue(report.getDurationMillis() > 0);
+        assertEquals(
+                getTestFileSize(TEST_INSTALL_APK_BASE) + getTestFileSize(TEST_INSTALL_APK_SPLIT),
+                report.getApksSizeBytes());
+
+        getDevice().uninstallPackage(TEST_INSTALL_PACKAGE);
+    }
+
+    private AtomsProto.PackageInstallerV2Reported installPackageUsingV2AndGetReport(
+            String[] apkNames) throws Exception {
         createAndUploadConfig(Atom.PACKAGE_INSTALLER_V2_REPORTED_FIELD_NUMBER);
         Thread.sleep(WAIT_TIME_SHORT);
-        installPackageUsingIncremental(TEST_INSTALL_APK, TEST_REMOTE_DIR);
+        installPackageUsingIncremental(apkNames, TEST_REMOTE_DIR);
         assertTrue(getDevice().isPackageInstalled(TEST_INSTALL_PACKAGE));
         Thread.sleep(WAIT_TIME_SHORT);
 
@@ -2092,23 +2128,33 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
         }
         assertEquals(1, reports.size());
-        final AtomsProto.PackageInstallerV2Reported report = reports.get(0);
-        assertTrue(report.getIsIncremental());
-        assertEquals(TEST_INSTALL_PACKAGE, report.getPackageName());
-        assertEquals(1, report.getReturnCode());
-        assertTrue(report.getDurationMillis() > 0);
-
-        getDevice().uninstallPackage(TEST_INSTALL_PACKAGE);
+        return reports.get(0);
     }
 
-    private void installPackageUsingIncremental(String apkName, String remoteDirPath)
+    private void installPackageUsingIncremental(String[] apkNames, String remoteDirPath)
             throws Exception {
         getDevice().executeShellCommand("mkdir " + remoteDirPath);
+        String[] remoteApkPaths = new String[apkNames.length];
+        for (int i = 0; i < remoteApkPaths.length; i++) {
+            remoteApkPaths[i] = pushApkToRemote(apkNames[i], remoteDirPath);
+        }
+        getDevice().executeShellCommand(
+                "pm install-incremental -t -g " + String.join(" ", remoteApkPaths));
+    }
+
+    private String pushApkToRemote(String apkName, String remoteDirPath)
+            throws Exception {
         CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(getBuild());
         final File apk = buildHelper.getTestFile(apkName);
-        assertNotNull(apk);
         final String remoteApkPath = remoteDirPath + "/" + apk.getName();
         assertTrue(getDevice().pushFile(apk, remoteApkPath));
-        getDevice().executeShellCommand("pm install-incremental -t -g " + remoteApkPath);
+        assertNotNull(apk);
+        return remoteApkPath;
+    }
+
+    private long getTestFileSize(String fileName) throws Exception {
+        CompatibilityBuildHelper buildHelper = new CompatibilityBuildHelper(getBuild());
+        final File file = buildHelper.getTestFile(fileName);
+        return file.length();
     }
 }
