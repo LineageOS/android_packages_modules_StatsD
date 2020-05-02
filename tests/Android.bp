@@ -40,5 +40,6 @@ java_test_host {
         "**/*.pbtxt",
         ":CtsStatsdApp",
         ":CtsStatsdEmptyApp",
+        ":CtsStatsdEmptySplitApp",
     ],
 }

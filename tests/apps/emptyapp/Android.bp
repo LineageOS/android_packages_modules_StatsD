@@ -18,3 +18,11 @@ android_test_helper_app {
     sdk_version: "current",
     v4_signature: true,
 }
+
+android_test_helper_app {
+    name: "CtsStatsdEmptySplitApp",
+    defaults: ["cts_defaults"],
+    sdk_version: "current",
+    v4_signature: true,
+    package_splits: ["pl"],
+}
