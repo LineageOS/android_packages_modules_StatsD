@@ -159,6 +159,12 @@ public class ShellSubscriberTest extends DeviceTestCase {
         while (output.length > startIndex) {
             assertThat(output.length).isAtLeast(startIndex + sizetBytes);
             int dataLength = readSizetFromByteArray(output, startIndex);
+            if (dataLength == 0) {
+                // We have received a heartbeat from statsd. This heartbeat isn't accompanied by any
+                // atoms so return to top of while loop.
+                startIndex += sizetBytes;
+                continue;
+            }
             assertThat(output.length).isAtLeast(startIndex + sizetBytes + dataLength);
 
             ShellDataProto.ShellData data = null;
