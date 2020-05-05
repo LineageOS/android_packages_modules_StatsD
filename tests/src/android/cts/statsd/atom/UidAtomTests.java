@@ -571,7 +571,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             int expectedCount = 0;
             switch (opName) {
                 case AppOpEnum.APP_OP_CAMERA_VALUE:
-                    expectedCount = 2;
+                    expectedCount = 3;
                     break;
                 case AppOpEnum.APP_OP_FINE_LOCATION_VALUE:
                     expectedCount = 1;

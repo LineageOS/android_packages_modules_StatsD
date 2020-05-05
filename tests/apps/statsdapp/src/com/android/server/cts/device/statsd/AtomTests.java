@@ -372,6 +372,7 @@ public class AtomTests {
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, false);
         noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, false);
         sleep(500);
         context.stopService(fgsIntent);
 
