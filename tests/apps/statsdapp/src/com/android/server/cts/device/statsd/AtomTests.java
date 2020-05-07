@@ -709,6 +709,49 @@ public class AtomTests {
     }
 
     @Test
+    public void testSliceByWakelockState() {
+        int uid = Process.myUid();
+        int whatAtomId = 9_998;
+        int wakelockType = PowerManager.PARTIAL_WAKE_LOCK;
+        String tag = "StatsdPartialWakelock";
+
+        Context context = InstrumentationRegistry.getContext();
+        PowerManager pm = context.getSystemService(PowerManager.class);
+        PowerManager.WakeLock wl = pm.newWakeLock(wakelockType, tag);
+
+        wl.acquire();
+        sleep(500);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        wl.acquire();
+        sleep(500);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        wl.release();
+        sleep(500);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        wl.release();
+        sleep(500);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+        writeSliceByWakelockStateChangedAtom(whatAtomId, uid, wakelockType, tag);
+    }
+
+    private static void writeSliceByWakelockStateChangedAtom(int atomId, int firstUid,
+                                                            int field2, String field3) {
+        final StatsEvent.Builder builder = StatsEvent.newBuilder()
+                .setAtomId(atomId)
+                .writeAttributionChain(new int[] {firstUid}, new String[] {"tag1"})
+                .writeInt(field2)
+                .writeString(field3)
+                .usePooledBuffer();
+
+        StatsLog.write(builder.build());
+    }
+
+
+    @Test
     public void testWakelockLoad() {
         final int NUM_THREADS = 16;
         CountDownLatch latch = new CountDownLatch(NUM_THREADS);
