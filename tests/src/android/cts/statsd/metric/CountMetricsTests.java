@@ -21,8 +21,12 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import android.cts.statsd.atom.DeviceAtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
+import com.android.internal.os.StatsdConfigProto.FieldMatcher;
+import com.android.internal.os.StatsdConfigProto.Position;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
+import com.android.os.AtomsProto.AttributionNode;
+import com.android.os.AtomsProto.BleScanStateChanged;
 import com.android.os.StatsLog;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -296,7 +300,7 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         assertThat(bucketInfo.getCount()).isEqualTo(1);
         assertWithMessage("First report's bucket should be less than 1 day")
                 .that(bucketInfo.getEndBucketElapsedNanos())
-                .isLessThan(bucketInfo.getStartBucketElapsedNanos() + 
+                .isLessThan(bucketInfo.getStartBucketElapsedNanos() +
                         1_000_000_000L * 60L * 60L * 24L);
 
         //Second report should have a count of 2.
@@ -305,6 +309,120 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         for (CountBucketInfo bucket : data2.getBucketInfoList()) {
             totalCount += bucket.getCount();
         }
+        assertThat(totalCount).isEqualTo(2);
+    }
+
+    public void testSlicedStateCountMetric() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
+
+        int whatMatcherId = 3;
+        int stateId = 4;
+
+        // Atom 9999 {
+        //     repeated AttributionNode attribution_node = 1;
+        //     optional bool is_filtered = 2;
+        //     optional bool is_first_match = 3;
+        //     optional bool is_opportunistic = 4;
+        // }
+        int whatAtomId = 9_999;
+
+        StatsdConfigProto.AtomMatcher whatMatcher =
+                MetricsUtils.getAtomMatcher(whatAtomId)
+                        .setId(whatMatcherId)
+                        .build();
+
+        StatsdConfigProto.State state = StatsdConfigProto.State.newBuilder()
+            .setId(stateId)
+            .setAtomId(Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER)
+            .build();
+
+        StatsdConfigProto.MetricStateLink stateLink = StatsdConfigProto.MetricStateLink.newBuilder()
+            .setStateAtomId(Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER)
+            .setFieldsInWhat(FieldMatcher.newBuilder()
+                    .setField(whatAtomId)
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(1)
+                            .setPosition(Position.FIRST)
+                            .addChild(FieldMatcher.newBuilder()
+                                    .setField(AttributionNode.UID_FIELD_NUMBER)
+                            )
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(2)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(3)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(4)
+                    )
+            )
+            .setFieldsInState(FieldMatcher.newBuilder()
+                    .setField(Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER)
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(BleScanStateChanged.ATTRIBUTION_NODE_FIELD_NUMBER)
+                            .setPosition(Position.FIRST)
+                            .addChild(FieldMatcher.newBuilder()
+                                    .setField(AttributionNode.UID_FIELD_NUMBER)
+                            )
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(BleScanStateChanged.IS_FILTERED_FIELD_NUMBER)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(BleScanStateChanged.IS_FIRST_MATCH_FIELD_NUMBER)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(BleScanStateChanged.IS_OPPORTUNISTIC_FIELD_NUMBER)
+                    )
+            )
+            .build();
+
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder()
+                .addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
+                    .setId(MetricsUtils.COUNT_METRIC_ID)
+                    .setBucket(StatsdConfigProto.TimeUnit.CTS)
+                    .setWhat(whatMatcherId)
+                    .addSliceByState(stateId)
+                    .addStateLink(stateLink)
+                )
+                .addAtomMatcher(whatMatcher)
+                .addState(state);
+        uploadConfig(builder);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testBleScanInterrupted");
+
+        StatsLogReport metricReport = getStatsLogReport();
+        LogUtil.CLog.d("Got the following stats log report: \n" + metricReport.toString());
+        assertThat(metricReport.getMetricId()).isEqualTo(MetricsUtils.COUNT_METRIC_ID);
+        assertThat(metricReport.hasCountMetrics()).isTrue();
+
+        StatsLogReport.CountMetricDataWrapper dataWrapper = metricReport.getCountMetrics();
+        assertThat(dataWrapper.getDataCount()).isEqualTo(2);
+
+        CountMetricData data = dataWrapper.getData(0);
+        assertThat(data.getSliceByStateCount()).isEqualTo(1);
+        assertThat(data.getSliceByState(0).getAtomId())
+                .isEqualTo(Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER);
+        assertThat(data.getSliceByState(0).getValue())
+                .isEqualTo(BleScanStateChanged.State.OFF.ordinal());
+        long totalCount = data.getBucketInfoList().stream()
+                .mapToLong(CountBucketInfo::getCount)
+                .sum();
+        assertThat(totalCount).isEqualTo(3);
+
+        data = dataWrapper.getData(1);
+        assertThat(data.getSliceByStateCount()).isEqualTo(1);
+        assertThat(data.getSliceByState(0).getAtomId())
+                .isEqualTo(Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER);
+        assertThat(data.getSliceByState(0).getValue())
+                .isEqualTo(BleScanStateChanged.State.ON.ordinal());
+        totalCount = data.getBucketInfoList().stream()
+                .mapToLong(CountBucketInfo::getCount)
+                .sum();
         assertThat(totalCount).isEqualTo(2);
     }
 }
