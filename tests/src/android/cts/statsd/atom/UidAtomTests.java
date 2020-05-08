@@ -2037,6 +2037,23 @@ public class UidAtomTests extends DeviceAtomTestCase {
         });
     }
 
+    // TODO(b/157651730): Determine how to test tag and metered state within atom.
+    public void testBytesTransferByTagAndMetered() throws Throwable {
+        final int appUid = getUid();
+        final int atomId = Atom.BYTES_TRANSFER_BY_TAG_AND_METERED_FIELD_NUMBER;
+
+        doTestMobileBytesTransferThat(atomId, (atom) -> {
+            final AtomsProto.BytesTransferByTagAndMetered data =
+                    ((Atom) atom).getBytesTransferByTagAndMetered();
+            if (data.getUid() == appUid) {
+                assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                        data.getRxPackets(), data.getTxPackets());
+                return true; // found
+            }
+            return false;
+        });
+    }
+
     public void testIsolatedToHostUidMapping() throws Exception {
         createAndUploadConfig(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, /*useAttribution=*/false);
         Thread.sleep(WAIT_TIME_SHORT);
