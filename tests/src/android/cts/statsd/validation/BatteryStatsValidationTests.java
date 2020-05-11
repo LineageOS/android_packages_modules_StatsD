@@ -51,6 +51,7 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
     @Override
     protected void tearDown() throws Exception {
         plugInUsb();
+        super.tearDown();
     }
 
     /*
