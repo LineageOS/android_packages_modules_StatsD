@@ -839,9 +839,6 @@ public class AtomTests {
     private static final int NETWORK_TIMEOUT_MILLIS = 15000;
     private static final String HTTPS_HOST_URL =
             "https://connectivitycheck.gstatic.com/generate_204";
-    // Minimum and Maximum of iterations of exercise host, @see #doGenerateNetworkTraffic.
-    private static final int MIN_EXERCISE_HOST_ITERATIONS = 1;
-    private static final int MAX_EXERCISE_HOST_ITERATIONS = 19;
 
     private void doGenerateNetworkTraffic(@NonNull Context context,
             @NetworkCapabilities.Transport int transport) throws InterruptedException {
@@ -862,45 +859,9 @@ public class AtomTests {
 
         final long startTime = SystemClock.elapsedRealtime();
         try {
-            // Since history of network stats only have 2 hours of resolution, when it is
-            // being queried, service will assume that history network stats has uniform
-            // distribution and return a fraction of network stats that is originally
-            // subject to 2 hours. To be specific:
-            //    <returned network stats> = <total network stats> * <duration> / 2 hour,
-            // assuming the duration can fit in a 2 hours bucket.
-            // In the other hand, in statsd, the network stats is queried since boot,
-            // that means in order to assert non-zero packet counts, either the test should
-            // be run after enough time since boot, or the packet counts generated here
-            // should be enough. That is to say:
-            //   <total packet counts> * <up time> / 2 hour >= 1,
-            // or
-            //   iterations >= 2 hour / (<up time> * <packets per iteration>)
-            // Thus, iterations can be chosen based on the factors above to make this
-            // function generate enough packets in each direction to accommodate enough
-            // packet counts for a fraction of history bucket.
-            final double iterations = (TimeUnit.HOURS.toMillis(2) / startTime / 7);
-            // While just enough iterations are going to make the test flaky, add a 20%
-            // buffer to stabilize it and make sure it's in a reasonable range, so it won't
-            // consumes more than 100kb of traffic, or generates 0 byte of traffic.
-            final int augmentedIterations =
-                    (int) Math.max(iterations * 1.2, MIN_EXERCISE_HOST_ITERATIONS);
-            if (augmentedIterations > MAX_EXERCISE_HOST_ITERATIONS) {
-                throw new IllegalStateException("Exceeded max allowed iterations"
-                        + ", iterations=" + augmentedIterations
-                        + ", uptime=" + TimeUnit.MILLISECONDS.toSeconds(startTime) + "s");
-            }
-
-            for (int i = 0; i < augmentedIterations; i++) {
-                // By observing results of "dumpsys netstats --uid", typically the single
-                // run of the https request below generates 4200/1080 rx/tx bytes with
-                // around 7/9 rx/tx packets.
-                // This blocks the thread of NetworkCallback, thus no other event
-                // can be processed before return.
-                exerciseRemoteHost(cm, network, new URL(HTTPS_HOST_URL));
-            }
+            exerciseRemoteHost(cm, network, new URL(HTTPS_HOST_URL));
             Log.i(TAG, "exerciseRemoteHost successful in " + (SystemClock.elapsedRealtime()
-                    - startTime) + " ms with iterations=" + augmentedIterations
-                    + ", uptime=" + TimeUnit.MILLISECONDS.toSeconds(startTime) + "s");
+                    - startTime) + " ms");
         } catch (Exception e) {
             Log.e(TAG, "exerciseRemoteHost failed in " + (SystemClock.elapsedRealtime()
                     - startTime) + " ms: " + e);
