@@ -35,6 +35,7 @@ import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.AppCrashOccurred;
 import com.android.os.AtomsProto.AppOps;
 import com.android.os.AtomsProto.AppStartOccurred;
+import com.android.os.AtomsProto.AppUsageEventOccurred;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AttributedAppOps;
 import com.android.os.AtomsProto.AttributionNode;
@@ -87,6 +88,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 /**
  * Statsd atom tests that are done via app, for atoms that report a uid.
@@ -108,6 +110,11 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static final String TEST_INSTALL_PACKAGE =
             "com.android.cts.device.statsd.emptyapp";
     private static final String TEST_REMOTE_DIR = "/data/local/tmp/statsd";
+    private static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
+
+    private static final int WAIT_TIME_FOR_CONFIG_UPDATE_MS = 200;
+    private static final int EXTRA_WAIT_TIME_MS = 5_000; // as buffer when app starting/stopping.
+    private static final int STATSD_REPORT_WAIT_TIME_MS = 500; // make sure statsd finishes log.
 
     @Override
     protected void setUp() throws Exception {
@@ -2102,6 +2109,32 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 report.getApksSizeBytes());
 
         getDevice().uninstallPackage(TEST_INSTALL_PACKAGE);
+    }
+
+    public void testAppForegroundBackground() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        Set<Integer> onStates = new HashSet<>(Arrays.asList(
+                AppUsageEventOccurred.EventType.MOVE_TO_FOREGROUND_VALUE));
+        Set<Integer> offStates = new HashSet<>(Arrays.asList(
+                AppUsageEventOccurred.EventType.MOVE_TO_BACKGROUND_VALUE));
+
+        List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
+        createAndUploadConfig(Atom.APP_USAGE_EVENT_OCCURRED_FIELD_NUMBER, false);  // False: does not use attribution.
+        Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
+
+        getDevice().executeShellCommand(String.format(
+            "am start -n '%s' -e %s %s",
+            "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity",
+            "action", ACTION_SHOW_APPLICATION_OVERLAY));
+        final int waitTime = EXTRA_WAIT_TIME_MS + 5_000; // Overlay may need to sit there a while.
+        Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        Function<Atom, Integer> appUsageStateFunction = atom -> atom.getAppUsageEventOccurred().getEventType().getNumber();
+        popUntilFind(data, onStates, appUsageStateFunction); // clear out initial appusage states.
+        assertStatesOccurred(stateSet, data, 0, appUsageStateFunction);
     }
 
     private AtomsProto.PackageInstallerV2Reported installPackageUsingV2AndGetReport(
