@@ -27,6 +27,7 @@ import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.AttributionNode;
 import com.android.os.AtomsProto.BleScanStateChanged;
+import com.android.os.AtomsProto.WakelockStateChanged;
 import com.android.os.StatsLog;
 import com.android.os.StatsLog.ConfigMetricsReport;
 import com.android.os.StatsLog.ConfigMetricsReportList;
@@ -38,6 +39,8 @@ import com.android.tradefed.log.LogUtil;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class CountMetricsTests extends DeviceAtomTestCase {
 
@@ -424,5 +427,137 @@ public class CountMetricsTests extends DeviceAtomTestCase {
                 .mapToLong(CountBucketInfo::getCount)
                 .sum();
         assertThat(totalCount).isEqualTo(2);
+    }
+
+    public void testSlicedStateCountMetricNoReset() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+
+        int whatMatcherId = 3;
+        int stateId = 4;
+        int onStateGroupId = 5;
+        int offStateGroupId = 6;
+
+        // Atom 9998 {
+        //     repeated AttributionNode attribution_node = 1;
+        //     optional WakeLockLevelEnum type = 2;
+        //     optional string tag = 3;
+        // }
+        int whatAtomId = 9_998;
+
+        StatsdConfigProto.AtomMatcher whatMatcher =
+                MetricsUtils.getAtomMatcher(whatAtomId)
+                        .setId(whatMatcherId)
+                        .build();
+
+        StatsdConfigProto.State state = StatsdConfigProto.State.newBuilder()
+            .setId(stateId)
+            .setAtomId(Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER)
+            .setMap(StatsdConfigProto.StateMap.newBuilder()
+                    .addGroup(StatsdConfigProto.StateMap.StateGroup.newBuilder()
+                            .setGroupId(onStateGroupId)
+                            .addValue(WakelockStateChanged.State.ACQUIRE_VALUE)
+                            .addValue(WakelockStateChanged.State.CHANGE_ACQUIRE_VALUE)
+                    )
+                    .addGroup(StatsdConfigProto.StateMap.StateGroup.newBuilder()
+                            .setGroupId(offStateGroupId)
+                            .addValue(WakelockStateChanged.State.RELEASE_VALUE)
+                            .addValue(WakelockStateChanged.State.CHANGE_RELEASE_VALUE)
+                    )
+            )
+            .build();
+
+        StatsdConfigProto.MetricStateLink stateLink = StatsdConfigProto.MetricStateLink.newBuilder()
+            .setStateAtomId(Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER)
+            .setFieldsInWhat(FieldMatcher.newBuilder()
+                    .setField(whatAtomId)
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(1)
+                            .setPosition(Position.FIRST)
+                            .addChild(FieldMatcher.newBuilder()
+                                    .setField(AttributionNode.UID_FIELD_NUMBER)
+                            )
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(2)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(3)
+                    )
+            )
+            .setFieldsInState(FieldMatcher.newBuilder()
+                    .setField(Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER)
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(WakelockStateChanged.ATTRIBUTION_NODE_FIELD_NUMBER)
+                            .setPosition(Position.FIRST)
+                            .addChild(FieldMatcher.newBuilder()
+                                    .setField(AttributionNode.UID_FIELD_NUMBER)
+                            )
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(WakelockStateChanged.TYPE_FIELD_NUMBER)
+                    )
+                    .addChild(FieldMatcher.newBuilder()
+                            .setField(WakelockStateChanged.TAG_FIELD_NUMBER)
+                    )
+            )
+            .build();
+
+        StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder()
+                .addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
+                    .setId(MetricsUtils.COUNT_METRIC_ID)
+                    .setBucket(StatsdConfigProto.TimeUnit.CTS)
+                    .setWhat(whatMatcherId)
+                    .addSliceByState(stateId)
+                    .addStateLink(stateLink)
+                )
+                .addAtomMatcher(whatMatcher)
+                .addState(state);
+        uploadConfig(builder);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSliceByWakelockState");
+
+        StatsLogReport metricReport = getStatsLogReport();
+        LogUtil.CLog.d("Got the following stats log report: \n" + metricReport.toString());
+        assertThat(metricReport.getMetricId()).isEqualTo(MetricsUtils.COUNT_METRIC_ID);
+        assertThat(metricReport.hasCountMetrics()).isTrue();
+
+        StatsLogReport.CountMetricDataWrapper dataWrapper = metricReport.getCountMetrics();
+        assertThat(dataWrapper.getDataCount()).isEqualTo(2);
+
+
+        List<CountMetricData> sortedDataList = IntStream.range(0, dataWrapper.getDataCount())
+                .mapToObj(i -> {
+                        CountMetricData data = dataWrapper.getData(i);
+                        assertWithMessage("Unexpected SliceByState count for data[%s]", "" + i)
+                                .that(data.getSliceByStateCount()).isEqualTo(1);
+                        return data;
+                })
+                .sorted((data1, data2) ->
+                        Long.compare(data1.getSliceByState(0).getGroupId(),
+                                data2.getSliceByState(0).getGroupId())
+                )
+                .collect(Collectors.toList());
+
+        CountMetricData data = sortedDataList.get(0);
+        assertThat(data.getSliceByState(0).getAtomId())
+                .isEqualTo(Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER);
+        assertThat(data.getSliceByState(0).getGroupId())
+                .isEqualTo(onStateGroupId);
+        long totalCount = data.getBucketInfoList().stream()
+                .mapToLong(CountBucketInfo::getCount)
+                .sum();
+        assertThat(totalCount).isEqualTo(6);
+
+        data = sortedDataList.get(1);
+        assertThat(data.getSliceByState(0).getAtomId())
+                .isEqualTo(Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER);
+        assertThat(data.getSliceByState(0).getGroupId())
+                .isEqualTo(offStateGroupId);
+        totalCount = data.getBucketInfoList().stream()
+                .mapToLong(CountBucketInfo::getCount)
+                .sum();
+        assertThat(totalCount).isEqualTo(3);
     }
 }
