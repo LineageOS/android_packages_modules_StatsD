@@ -23,6 +23,7 @@ import android.os.BatteryStatusEnum;
 import android.platform.test.annotations.RestrictedBuildTest;
 import android.server.DeviceIdleModeEnum;
 import android.view.DisplayStateEnum;
+import android.telephony.NetworkTypeEnum;
 
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto.AppBreadcrumbReported;
@@ -30,6 +31,8 @@ import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.BatterySaverModeStateChanged;
 import com.android.os.AtomsProto.BuildInformation;
 import com.android.os.AtomsProto.ConnectivityStateChanged;
+import com.android.os.AtomsProto.SimSlotState;
+import com.android.os.AtomsProto.SupportedRadioAccessFamily;
 import com.android.os.StatsLog.ConfigMetricsReportList;
 import com.android.os.StatsLog.EventMetricData;
 
@@ -50,6 +53,28 @@ public class HostAtomTests extends AtomTestCase {
     // Either file must exist to read kernel wake lock stats.
     private static final String WAKE_LOCK_FILE = "/proc/wakelocks";
     private static final String WAKE_SOURCES_FILE = "/d/wakeup_sources";
+
+    // Bitmask of radio access technologies that all GSM phones should at least partially support
+    protected static final long NETWORK_TYPE_BITMASK_GSM_ALL =
+            (1 << (NetworkTypeEnum.NETWORK_TYPE_GSM_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_GPRS_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_EDGE_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_UMTS_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_HSDPA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_HSUPA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_HSPA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_HSPAP_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_TD_SCDMA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_LTE_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_LTE_CA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_NR_VALUE - 1));
+    // Bitmask of radio access technologies that all CDMA phones should at least partially support
+    protected static final long NETWORK_TYPE_BITMASK_CDMA_ALL =
+            (1 << (NetworkTypeEnum.NETWORK_TYPE_CDMA_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_1XRTT_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_EVDO_0_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_EVDO_A_VALUE - 1))
+            | (1 << (NetworkTypeEnum.NETWORK_TYPE_EHRPD_VALUE - 1));
 
     @Override
     protected void setUp() throws Exception {
@@ -664,5 +689,67 @@ public class HostAtomTests extends AtomTestCase {
         }
         assertThat(foundConnectEvent).isTrue();
         assertThat(foundDisconnectEvent).isTrue();
+    }
+
+    public void testSimSlotState() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_TELEPHONY, true)) {
+            return;
+        }
+
+        StatsdConfig.Builder config = createConfigBuilder();
+        addGaugeAtomWithDimensions(config, Atom.SIM_SLOT_STATE_FIELD_NUMBER, null);
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+        assertThat(data).isNotEmpty();
+        SimSlotState atom = data.get(0).getSimSlotState();
+        // NOTE: it is possible for devices with telephony support to have no SIM at all
+        assertThat(atom.getActiveSlotCount()).isEqualTo(getActiveSimSlotCount());
+        assertThat(atom.getSimCount()).isAtMost(getActiveSimCountUpperBound());
+        assertThat(atom.getEsimCount()).isAtMost(getActiveEsimCountUpperBound());
+        // Above assertions do no necessarily enforce the following, since some are upper bounds
+        assertThat(atom.getActiveSlotCount()).isAtLeast(atom.getSimCount());
+        assertThat(atom.getSimCount()).isAtLeast(atom.getEsimCount());
+        assertThat(atom.getEsimCount()).isAtLeast(0);
+        // For GSM phones, at least one slot should be active even if there is no card
+        if (hasGsmPhone()) {
+            assertThat(atom.getActiveSlotCount()).isAtLeast(1);
+        }
+    }
+
+    public void testSupportedRadioAccessFamily() throws Exception {
+        if (statsdDisabled()) {
+            return;
+        }
+        if (!hasFeature(FEATURE_TELEPHONY, true)) {
+            return;
+        }
+
+        StatsdConfig.Builder config = createConfigBuilder();
+        addGaugeAtomWithDimensions(config, Atom.SUPPORTED_RADIO_ACCESS_FAMILY_FIELD_NUMBER, null);
+        uploadConfig(config);
+
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_LONG);
+
+        List<Atom> data = getGaugeMetricDataList();
+        assertThat(data).isNotEmpty();
+        SupportedRadioAccessFamily atom = data.get(0).getSupportedRadioAccessFamily();
+        if (hasGsmPhone()) {
+            assertThat(atom.getNetworkTypeBitmask() & NETWORK_TYPE_BITMASK_GSM_ALL)
+                    .isNotEqualTo(0L);
+        }
+        if (hasCdmaPhone()) {
+            assertThat(atom.getNetworkTypeBitmask() & NETWORK_TYPE_BITMASK_CDMA_ALL)
+                    .isNotEqualTo(0L);
+        }
     }
 }
