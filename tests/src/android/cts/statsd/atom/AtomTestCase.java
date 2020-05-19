@@ -68,9 +68,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -111,6 +117,11 @@ public class AtomTestCase extends BaseTestCase {
     public static final String FEATURE_WIFI = "android.hardware.wifi";
     public static final String FEATURE_INCREMENTAL_DELIVERY =
             "android.software.incremental_delivery";
+
+    // Telephony phone types
+    public static final int PHONE_TYPE_GSM = 1;
+    public static final int PHONE_TYPE_CDMA = 2;
+    public static final int PHONE_TYPE_CDMA_LTE = 6;
 
     protected static final int WAIT_TIME_SHORT = 500;
     protected static final int WAIT_TIME_LONG = 2_000;
@@ -223,9 +234,11 @@ public class AtomTestCase extends BaseTestCase {
           // TODO(b/134091167): Fix bluetooth source name issue in Auto platform.
           .addAllowedLogSource("com.android.bluetooth")
           .addAllowedLogSource("AID_LMKD")
+          .addAllowedLogSource("AID_RADIO")
           .addAllowedLogSource("AID_ROOT")
           .addAllowedLogSource("AID_STATSD")
           .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE)
+          .addDefaultPullPackages("AID_RADIO")
           .addDefaultPullPackages("AID_SYSTEM");
     }
 
@@ -1004,6 +1017,105 @@ public class AtomTestCase extends BaseTestCase {
 
     protected void turnOffAirplaneMode() throws Exception {
         getDevice().executeShellCommand("cmd connectivity airplane-mode disable");
+    }
+
+    /**
+     * Returns a list of fields and values for {@code className} from {@link TelephonyDebugService}
+     * output.
+     *
+     * <p>Telephony dumpsys output does not support proto at the moment. This method provides
+     * limited support for parsing its output. Specifically, it does not support arrays or
+     * multi-line values.
+     */
+    private List<Map<String, String>> getTelephonyDumpEntries(String className) throws Exception {
+        // Matches any line with indentation, except for lines with only spaces
+        Pattern indentPattern = Pattern.compile("^(\\s*)[^ ].*$");
+        // Matches pattern for class, e.g. "    Phone:"
+        Pattern classNamePattern = Pattern.compile("^(\\s*)" + Pattern.quote(className) + ":.*$");
+        // Matches pattern for key-value pairs, e.g. "     mPhoneId=1"
+        Pattern keyValuePattern = Pattern.compile("^(\\s*)([a-zA-Z]+[a-zA-Z0-9_]*)\\=(.+)$");
+        String response =
+                getDevice().executeShellCommand("dumpsys activity service TelephonyDebugService");
+        Queue<String> responseLines = new LinkedList<>(Arrays.asList(response.split("[\\r\\n]+")));
+
+        List<Map<String, String>> results = new ArrayList<>();
+        while (responseLines.peek() != null) {
+            Matcher matcher = classNamePattern.matcher(responseLines.poll());
+            if (matcher.matches()) {
+                final int classIndentLevel = matcher.group(1).length();
+                final Map<String, String> instanceEntries = new HashMap<>();
+                while (responseLines.peek() != null) {
+                    // Skip blank lines
+                    matcher = indentPattern.matcher(responseLines.peek());
+                    if (responseLines.peek().length() == 0 || !matcher.matches()) {
+                        responseLines.poll();
+                        continue;
+                    }
+                    // Finish (without consuming the line) if already parsed past this instance
+                    final int indentLevel = matcher.group(1).length();
+                    if (indentLevel <= classIndentLevel) {
+                        break;
+                    }
+                    // Parse key-value pair if it belongs to the instance directly
+                    matcher = keyValuePattern.matcher(responseLines.poll());
+                    if (indentLevel == classIndentLevel + 1 && matcher.matches()) {
+                        instanceEntries.put(matcher.group(2), matcher.group(3));
+                    }
+                }
+                results.add(instanceEntries);
+            }
+        }
+        return results;
+    }
+
+    protected int getActiveSimSlotCount() throws Exception {
+        List<Map<String, String>> slots = getTelephonyDumpEntries("UiccSlot");
+        long count = slots.stream().filter(slot -> "true".equals(slot.get("mActive"))).count();
+        return Math.toIntExact(count);
+    }
+
+    /**
+     * Returns the upper bound of active SIM profile count.
+     *
+     * <p>The value is an upper bound as eSIMs without profiles are also counted in.
+     */
+    protected int getActiveSimCountUpperBound() throws Exception {
+        List<Map<String, String>> slots = getTelephonyDumpEntries("UiccSlot");
+        long count = slots.stream().filter(slot ->
+                "true".equals(slot.get("mActive"))
+                && "CARDSTATE_PRESENT".equals(slot.get("mCardState"))).count();
+        return Math.toIntExact(count);
+    }
+
+    /**
+     * Returns the upper bound of active eSIM profile count.
+     *
+     * <p>The value is an upper bound as eSIMs without profiles are also counted in.
+     */
+    protected int getActiveEsimCountUpperBound() throws Exception {
+        List<Map<String, String>> slots = getTelephonyDumpEntries("UiccSlot");
+        long count = slots.stream().filter(slot ->
+                "true".equals(slot.get("mActive"))
+                && "CARDSTATE_PRESENT".equals(slot.get("mCardState"))
+                && "true".equals(slot.get("mIsEuicc"))).count();
+        return Math.toIntExact(count);
+    }
+
+    protected boolean hasGsmPhone() throws Exception {
+        // Not using log entries or ServiceState in the dump since they may or may not be present,
+        // which can make the test flaky
+        return getTelephonyDumpEntries("Phone").stream()
+                .anyMatch(phone ->
+                        String.format("%d", PHONE_TYPE_GSM).equals(phone.get("getPhoneType()")));
+    }
+
+    protected boolean hasCdmaPhone() throws Exception {
+        // Not using log entries or ServiceState in the dump due to the same reason as hasGsmPhone()
+        return getTelephonyDumpEntries("Phone").stream()
+                .anyMatch(phone ->
+                        String.format("%d", PHONE_TYPE_CDMA).equals(phone.get("getPhoneType()"))
+                        || String.format("%d", PHONE_TYPE_CDMA_LTE)
+                                .equals(phone.get("getPhoneType()")));
     }
 
     // Checks that a timestamp has been truncated to be a multiple of 5 min
