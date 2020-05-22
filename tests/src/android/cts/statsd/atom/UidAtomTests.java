@@ -1975,7 +1975,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testMobileBytesTransfer() throws Throwable {
         final int appUid = getUid();
-        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
 
         // Verify MobileBytesTransfer, passing a ThrowingPredicate that verifies contents of
         // corresponding atom type to prevent code duplication. The passed predicate returns
@@ -1994,7 +1993,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testMobileBytesTransferByFgBg() throws Throwable {
         final int appUid = getUid();
-        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
 
         doTestMobileBytesTransferThat(Atom.MOBILE_BYTES_TRANSFER_BY_FG_BG_FIELD_NUMBER, (atom) -> {
             final AtomsProto.MobileBytesTransferByFgBg data =
@@ -2008,6 +2006,28 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 return true; // found
             }
             return false;
+        });
+    }
+
+    public void testDataUsageBytesTransfer() throws Throwable {
+        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
+
+        doTestMobileBytesTransferThat(Atom.DATA_USAGE_BYTES_TRANSFER_FIELD_NUMBER, (atom) -> {
+            final AtomsProto.DataUsageBytesTransfer data =
+                    ((Atom) atom).getDataUsageBytesTransfer();
+            assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                    data.getRxPackets(), data.getTxPackets());
+            // TODO: verify the RAT type field with the value gotten from device.
+            if (subtypeCombined) {
+                assertThat(data.getRatType()).isEqualTo(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+            } else {
+                assertThat(data.getRatType()).isGreaterThan(
+                        NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+            }
+            // Foreground state cannot be judged since foreground activity that launched
+            // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
+            // in NetworkPolicyManagerService.
+            return true;
         });
     }
 
