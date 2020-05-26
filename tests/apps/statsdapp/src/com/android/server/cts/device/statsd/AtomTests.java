@@ -469,7 +469,8 @@ public class AtomTests {
             int noteCount = APP_OPS_ENUM_MAP.getOrDefault(op, opsList.length) + 1;
             for (int j = 0; j < noteCount; j++) {
                 try {
-                    noteAppOp(appOpsManager, opsList[i], true);
+                    appOpsManager.noteOp(opsList[i], android.os.Process.myUid(), MY_PACKAGE_NAME,
+                            null, "statsdTest");
                 } catch (SecurityException e) {}
             }
         }
