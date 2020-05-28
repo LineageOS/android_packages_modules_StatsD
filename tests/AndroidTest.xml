@@ -26,4 +26,8 @@
     <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
         <option name="run-command" value="setprop persist.traced.enable 1" />
     </target_preparer>
+
+    <object type="module_controller" class="com.android.tradefed.testtype.suite.module.MainlineTestModuleController">
+        <option name="mainline-module-package-name" value="com.google.android.os.statsd" />
+    </object>
 </configuration>
