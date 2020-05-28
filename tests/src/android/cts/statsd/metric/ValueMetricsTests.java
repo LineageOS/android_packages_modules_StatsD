@@ -37,6 +37,7 @@ import com.android.os.AtomsProto.AppBreadcrumbReported;
 import com.android.os.AtomsProto.Atom;
 import com.android.os.AtomsProto.SystemElapsedRealtime;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.os.StatsLog.StatsLogReport.BucketDropReason;
 import com.android.os.StatsLog.ValueBucketInfo;
 import com.android.os.StatsLog.ValueMetricData;
 
@@ -330,7 +331,12 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
     StatsLogReport metricReport = getStatsLogReport();
     LogUtil.CLog.d("Got the following value metric data: " + metricReport.toString());
     assertThat(metricReport.getMetricId()).isEqualTo(MetricsUtils.VALUE_METRIC_ID);
-    assertThat(metricReport.hasValueMetrics()).isFalse();
+    assertThat(metricReport.getValueMetrics().getDataList()).isEmpty();
+    // Bucket is skipped because metric is not activated.
+    assertThat(metricReport.getValueMetrics().getSkippedList()).isNotEmpty();
+    assertThat(metricReport.getValueMetrics().getSkipped(0).getDropEventList()).isNotEmpty();
+    assertThat(metricReport.getValueMetrics().getSkipped(0).getDropEvent(0).getDropReason())
+            .isEqualTo(BucketDropReason.NO_DATA);
   }
 
     public void testValueMetricWithConditionAndActivation() throws Exception {
