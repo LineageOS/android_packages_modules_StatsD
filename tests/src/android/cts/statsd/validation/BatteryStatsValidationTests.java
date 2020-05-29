@@ -82,9 +82,6 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
     */
 
     public void testPowerUse() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
         resetBatteryStats();
         unplugDevice();

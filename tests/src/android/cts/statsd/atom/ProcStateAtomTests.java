@@ -96,9 +96,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testForegroundService() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_FOREGROUND_SERVICE_VALUE));
         Set<Integer> offStates = complement(onStates);
@@ -117,9 +114,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testForeground() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_IMPORTANT_FOREGROUND_VALUE));
         // There are no offStates, since the app remains in foreground until killed.
@@ -139,9 +133,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testBackground() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = BG_STATES;
         Set<Integer> offStates = complement(onStates);
 
@@ -159,9 +150,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testTop() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_TOP_VALUE));
         Set<Integer> offStates = complement(onStates);
@@ -181,9 +169,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testTopSleeping() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 ProcessStateEnum.PROCESS_STATE_TOP_SLEEPING_VALUE));
@@ -212,9 +197,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testCached() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = CACHED_STATES;
         Set<Integer> offStates = complement(onStates);
 
@@ -247,9 +229,6 @@ public class ProcStateAtomTests extends ProcStateTestCase {
     }
 
     public void testValidityOfStates() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         assertWithMessage("UNKNOWN_TO_PROTO should not be a valid state")
             .that(ALL_STATES).doesNotContain(ProcessStateEnum.PROCESS_STATE_UNKNOWN_TO_PROTO_VALUE);
     }

@@ -44,9 +44,6 @@ public class MetadataTests extends MetadataTestCase {
 
     // Tests that the statsd config is reset after the specified ttl.
     public void testConfigTtl() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int TTL_TIME_SEC = 8;
         StatsdConfig.Builder config = getBaseConfig();
         config.setTtlInSeconds(TTL_TIME_SEC); // should reset in this many seconds.
