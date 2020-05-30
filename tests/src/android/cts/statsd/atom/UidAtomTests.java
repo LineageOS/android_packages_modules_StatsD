@@ -16,7 +16,6 @@
 package android.cts.statsd.atom;
 
 import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
-
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -25,7 +24,6 @@ import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 import android.telephony.NetworkTypeEnum;
-
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
@@ -57,6 +55,7 @@ import com.android.os.AtomsProto.IonHeapSize;
 import com.android.os.AtomsProto.LmkKillOccurred;
 import com.android.os.AtomsProto.LooperStats;
 import com.android.os.AtomsProto.MediaCodecStateChanged;
+import com.android.os.AtomsProto.NotificationReported;
 import com.android.os.AtomsProto.OverlayStateChanged;
 import com.android.os.AtomsProto.PackageNotificationChannelGroupPreferences;
 import com.android.os.AtomsProto.PackageNotificationChannelPreferences;
@@ -78,10 +77,8 @@ import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.server.notification.SmallHash;
 import com.android.tradefed.log.LogUtil;
-
 import com.google.common.collect.Range;
 import com.google.protobuf.Descriptors;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1866,7 +1863,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         }
 
         StatsdConfig.Builder config = getPulledConfig();
-        addAtomEvent(config, Atom.NOTIFICATION_REPORTED_FIELD_NUMBER);
+        addAtomEvent(config, Atom.NOTIFICATION_REPORTED_FIELD_NUMBER,
+            Arrays.asList(createFvm(NotificationReported.PACKAGE_NAME_FIELD_NUMBER)
+                              .setEqString(DEVICE_SIDE_TEST_PACKAGE)));
         uploadConfig(config);
         Thread.sleep(WAIT_TIME_SHORT);
         runActivity("StatsdCtsForegroundActivity", "action", "action.show_notification");
