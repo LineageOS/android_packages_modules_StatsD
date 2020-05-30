@@ -713,7 +713,7 @@ public class AtomTestCase extends BaseTestCase {
                 LogUtil.CLog.i("Assert that the following atom at dataIndex=" + dataIndex + " is"
                         + " in stateSetIndex " + stateSetIndex + ":\n"
                         + data.get(dataIndex).getAtom().toString());
-                assertWithMessage("Missed first state").that(dataIndex).isNotEqualTo(0); 
+                assertWithMessage("Missed first state").that(dataIndex).isNotEqualTo(0);
                 assertWithMessage("Too many states").that(stateSetIndex)
                     .isLessThan(stateSets.size());
                 assertWithMessage(String.format("Is in wrong state (%d)", state))
