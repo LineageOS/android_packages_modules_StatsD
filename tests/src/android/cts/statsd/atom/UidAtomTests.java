@@ -326,13 +326,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
         getDevice().executeShellCommand(
                 "device_config put app_compat hidden_api_access_statslog_sampling_rate 65536");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
         try {
             final int atomTag = Atom.HIDDEN_API_USED_FIELD_NUMBER;
 
             createAndUploadConfig(atomTag, false);
 
-            runActivity("HiddenApiUsedActivity", null, null);
-
+            runActivity("HiddenApiUsedActivity", null, null, 2_500);
 
             List<EventMetricData> data = getEventMetricDataList();
             assertThat(data).hasSize(1);
