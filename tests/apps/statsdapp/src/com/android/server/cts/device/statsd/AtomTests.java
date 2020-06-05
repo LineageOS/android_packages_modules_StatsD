@@ -75,8 +75,6 @@ import android.util.StatsLog;
 import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
 
-import com.android.compatibility.common.util.ShellIdentityUtils;
-
 import org.junit.Test;
 
 import java.net.HttpURLConnection;
@@ -429,7 +427,7 @@ public class AtomTests {
         AppOpsManager appOpsManager = context.getSystemService(AppOpsManager.class);
 
         // No foreground service session
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION);
         sleep(500);
 
         // Foreground service session 1
@@ -437,17 +435,17 @@ public class AtomTests {
         while (!checkIfServiceRunning(context, StatsdCtsForegroundService.class.getName())) {
             sleep(50);
         }
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_FINE_LOCATION, true);
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, true);
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, false);
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO, true);
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA, false);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_FINE_LOCATION);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA);
+        startAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_RECORD_AUDIO);
+        startAppOp(appOpsManager, AppOpsManager.OPSTR_CAMERA);
         sleep(500);
         context.stopService(fgsIntent);
 
         // No foreground service session
-        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION, true);
+        noteAppOp(appOpsManager, AppOpsManager.OPSTR_COARSE_LOCATION);
         sleep(500);
 
         // TODO(b/149098800): Start fgs a second time and log OPSTR_CAMERA again
@@ -469,24 +467,18 @@ public class AtomTests {
             int noteCount = APP_OPS_ENUM_MAP.getOrDefault(op, opsList.length) + 1;
             for (int j = 0; j < noteCount; j++) {
                 try {
-                    appOpsManager.noteOp(opsList[i], android.os.Process.myUid(), MY_PACKAGE_NAME,
-                            null, "statsdTest");
+                    noteAppOp(appOpsManager, opsList[i]);
                 } catch (SecurityException e) {}
             }
         }
     }
 
-    /** @param doNote true if should use noteOp; false if should use startOp. */
-    private void noteAppOp(AppOpsManager appOpsManager, String opStr, boolean doNote) {
-        if (doNote) {
-            ShellIdentityUtils.invokeMethodWithShellPermissions(appOpsManager,
-                    (aom) -> aom.noteOp(opStr, android.os.Process.myUid(), MY_PACKAGE_NAME, null,
-                            "statsdTest"));
-        } else {
-            ShellIdentityUtils.invokeMethodWithShellPermissions(appOpsManager,
-                    (aom) -> aom.startOp(opStr, android.os.Process.myUid(),
-                            MY_PACKAGE_NAME, null, "statsdTest"));
-        }
+    private void noteAppOp(AppOpsManager aom, String opStr) {
+        aom.noteOp(opStr, android.os.Process.myUid(), MY_PACKAGE_NAME, null, "statsdTest");
+    }
+
+    private void startAppOp(AppOpsManager aom, String opStr) {
+        aom.startOp(opStr, android.os.Process.myUid(), MY_PACKAGE_NAME, null, "statsdTest");
     }
 
     /** Check if service is running. */
