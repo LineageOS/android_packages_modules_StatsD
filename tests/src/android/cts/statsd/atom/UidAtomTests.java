@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -24,6 +25,7 @@ import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 import android.telephony.NetworkTypeEnum;
+
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
@@ -77,8 +79,10 @@ import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.server.notification.SmallHash;
 import com.android.tradefed.log.LogUtil;
+
 import com.google.common.collect.Range;
 import com.google.protobuf.Descriptors;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1999,12 +2003,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(Atom.MOBILE_BYTES_TRANSFER_BY_FG_BG_FIELD_NUMBER, (atom) -> {
             final AtomsProto.MobileBytesTransferByFgBg data =
                     ((Atom) atom).getMobileBytesTransferByFgBg();
-            if (data.getUid() == appUid) {
+            if (data.getUid() == appUid && data.getIsForeground()) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
                         data.getRxPackets(), data.getTxPackets());
-                // IsForeground cannot be judged since foreground activity that launched
-                // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
-                // in NetworkPolicyManagerService.
                 return true; // found
             }
             return false;
@@ -2017,25 +2018,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(Atom.DATA_USAGE_BYTES_TRANSFER_FIELD_NUMBER, (atom) -> {
             final AtomsProto.DataUsageBytesTransfer data =
                     ((Atom) atom).getDataUsageBytesTransfer();
-            assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
-                    data.getRxPackets(), data.getTxPackets());
-            // TODO: verify the RAT type field with the value gotten from device.
-            if (subtypeCombined) {
-                assertThat(data.getRatType()).isEqualTo(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-            } else {
-                assertThat(data.getRatType()).isGreaterThan(
-                        NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+            if (data.getState() == 1 /*NetworkStats.SET_FOREGROUND*/) {
+                assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                        data.getRxPackets(), data.getTxPackets());
+                // TODO: verify the RAT type field with the value gotten from device.
+                if (subtypeCombined) {
+                    assertThat(data.getRatType()).isEqualTo(
+                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+                } else {
+                    assertThat(data.getRatType()).isGreaterThan(
+                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+                }
+
+                // Assert that subscription info is valid.
+                assertThat(data.getSimMcc()).matches("^\\d{3}$");
+                assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
+                assertThat(data.getCarrierId()).isNotEqualTo(
+                        -1); // TelephonyManager#UNKNOWN_CARRIER_ID
+
+                return true; // found
             }
-            // Foreground state cannot be judged since foreground activity that launched
-            // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
-            // in NetworkPolicyManagerService.
-
-            // Assert that subscription info is valid.
-            assertThat(data.getSimMcc()).matches("^\\d{3}$");
-            assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
-            assertThat(data.getCarrierId()).isNotEqualTo(-1); // TelephonyManager#UNKNOWN_CARRIER_ID
-
-            return true;
+            return false;
         });
     }
 
