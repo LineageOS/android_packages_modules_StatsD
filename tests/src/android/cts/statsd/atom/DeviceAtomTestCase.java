@@ -55,6 +55,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
         super.setUp();
         getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
         installTestApp();
+        Thread.sleep(1000);
     }
 
     @Override
