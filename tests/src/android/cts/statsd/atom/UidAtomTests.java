@@ -891,8 +891,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getSyncStateChanged().getState().getNumber());
+        assertStatesOccurred(stateSet, data,
+            /* wait = */ 0 /* don't verify time differences between state changes */,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
     }
 
     public void testVibratorState() throws Exception {
