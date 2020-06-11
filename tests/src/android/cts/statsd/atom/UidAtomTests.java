@@ -891,8 +891,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getSyncStateChanged().getState().getNumber());
+        assertStatesOccurred(stateSet, data,
+            /* wait = */ 0 /* don't verify time differences between state changes */,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
     }
 
     public void testVibratorState() throws Exception {
@@ -1218,9 +1219,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
-            // Trigger a pull and wait for new pull before killing the process.
             Thread.sleep(WAIT_TIME_LONG);
-            // Trigger new pull.
+            // Trigger a pull and wait for new pull before killing the process.
             setAppBreadcrumbPredicate();
             Thread.sleep(WAIT_TIME_LONG);
         }
