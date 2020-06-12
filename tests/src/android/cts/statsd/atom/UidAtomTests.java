@@ -180,11 +180,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("StatsdCtsForegroundActivity", "action", "action.sleep_top");
+        runActivity("StatsdCtsForegroundActivity", "action", "action.sleep_top", 3_500);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
+        assertThat(data).hasSize(1);
         AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
         assertThat(atom.getPkgName()).isEqualTo(TEST_PACKAGE_NAME);
         assertThat(atom.getActivityName())
@@ -891,8 +892,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getSyncStateChanged().getState().getNumber());
+        assertStatesOccurred(stateSet, data,
+            /* wait = */ 0 /* don't verify time differences between state changes */,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
     }
 
     public void testVibratorState() throws Exception {
