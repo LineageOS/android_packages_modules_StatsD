@@ -677,7 +677,7 @@ public class AtomTests {
         long startTime = System.currentTimeMillis();
         CountDownLatch latch = StatsdJobService.resetCountDownLatch();
         js.schedule(job);
-        waitForReceiver(context, 2_500, latch, null);
+        waitForReceiver(context, 5_000, latch, null);
     }
 
     @Test
