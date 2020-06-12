@@ -205,22 +205,24 @@ public class AtomTestCase extends BaseTestCase {
 
     private String probe(String path) throws Exception {
         return getDevice().executeShellCommand("if [ -e " + path + " ] ; then"
-                + " cat " + path + " ; else echo 0 ; fi");
+                + " cat " + path + " ; else echo -1 ; fi");
     }
 
     /**
      * Determines whether perfetto enabled the kernel ftrace tracer.
      */
     protected boolean isSystemTracingEnabled() throws Exception {
-        final String debugFsPath = "/sys/kernel/debug/tracing/tracing_on";
         final String traceFsPath = "/sys/kernel/tracing/tracing_on";
-        String tracing_on = probe(debugFsPath);
+        String tracing_on = probe(traceFsPath);
         if (tracing_on.startsWith("0")) return false;
         if (tracing_on.startsWith("1")) return true;
-        // fallback to traceFs
-        LogUtil.CLog.d("Unexpected state for %s = %s. Falling back to traceFs", debugFsPath,
+
+        // fallback to debugfs
+        LogUtil.CLog.d("Unexpected state for %s = %s. Falling back to debugfs", traceFsPath,
                 tracing_on);
-        tracing_on = probe(traceFsPath);
+
+        final String debugFsPath = "/sys/kernel/debug/tracing/tracing_on";
+        tracing_on = probe(debugFsPath);
         if (tracing_on.startsWith("0")) return false;
         if (tracing_on.startsWith("1")) return true;
         throw new Exception(String.format("Unexpected state for %s = %s", traceFsPath, tracing_on));
