@@ -1313,8 +1313,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app and trigger a pull while it is running.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
-            setAppBreadcrumbPredicate();
             Thread.sleep(WAIT_TIME_LONG);
+            setAppBreadcrumbPredicate();
         }
 
         // Assert about ProcessMemorySnapshot for the test app, statsd and system server.
