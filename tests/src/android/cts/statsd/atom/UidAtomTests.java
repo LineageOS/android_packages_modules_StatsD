@@ -676,7 +676,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 assertThat(state.getLocationReports()).isGreaterThan((long) 0);
                 assertThat(state.getLocationFailureReports()).isAtLeast((long) 0);
                 assertThat(state.getTimeToFirstFixReports()).isGreaterThan((long) 0);
-                assertThat(state.getTimeToFirstFixMilliS()).isGreaterThan((long) 0);
+                assertThat(state.getTimeToFirstFixMillis()).isGreaterThan((long) 0);
                 assertThat(state.getPositionAccuracyReports()).isGreaterThan((long) 0);
                 assertThat(state.getPositionAccuracyMeters()).isGreaterThan((long) 0);
                 assertThat(state.getTopFourAverageCn0Reports()).isGreaterThan((long) 0);
