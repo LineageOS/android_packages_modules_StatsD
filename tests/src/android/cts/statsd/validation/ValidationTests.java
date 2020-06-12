@@ -79,9 +79,6 @@ public class ValidationTests extends DeviceAtomTestCase {
     }
 
     public void testPartialWakelock() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         resetBatteryStats();
         unplugDevice();
@@ -140,9 +137,6 @@ public class ValidationTests extends DeviceAtomTestCase {
 
     @RestrictedBuildTest
     public void testPartialWakelockDuration() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
 
         // getUid() needs shell command via ADB. turnScreenOff() sometimes let system go to suspend.
@@ -210,9 +204,6 @@ public class ValidationTests extends DeviceAtomTestCase {
     }
 
     public void testPartialWakelockLoad() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!ENABLE_LOAD_TEST) return;
         turnScreenOn(); // To ensure that the ScreenOff later gets logged.
         uploadWakelockDurationBatteryStatsConfig(TimeUnit.CTS);

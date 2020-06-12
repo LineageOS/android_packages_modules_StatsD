@@ -36,9 +36,6 @@ public class GarageModeAtomTests extends AtomTestCase {
     }
 
     public void testGarageModeOnOff() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, true)) {
             return;
         }

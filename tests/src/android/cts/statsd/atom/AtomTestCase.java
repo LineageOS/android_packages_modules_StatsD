@@ -135,10 +135,6 @@ public class AtomTestCase extends BaseTestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
         getReportList(); // Clears data.
