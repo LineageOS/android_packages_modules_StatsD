@@ -27,6 +27,7 @@ import android.app.ActivityManager.RunningServiceInfo;
 import android.app.AlarmManager;
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
+import android.app.blob.BlobStoreManager;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.bluetooth.BluetoothAdapter;
@@ -61,6 +62,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
@@ -75,6 +77,11 @@ import android.util.StatsLog;
 import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
 
+import com.android.compatibility.common.util.ShellIdentityUtils;
+import com.android.utils.blob.DummyBlobData;
+
+import com.google.common.io.BaseEncoding;
+
 import org.junit.Test;
 
 import java.net.HttpURLConnection;
@@ -82,6 +89,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -938,6 +946,42 @@ public class AtomTests {
         context.stopService(intent);
     }
 
+
+    // Constants for testBlobStore
+    private static final long BLOB_COMMIT_CALLBACK_TIMEOUT_SEC = 5;
+    private static final long BLOB_EXPIRY_DURATION_MS = 24 * 60 * 60 * 1000;
+    private static final long BLOB_FILE_SIZE_BYTES = 23 * 1024L;
+    private static final long BLOB_LEASE_EXPIRY_DURATION_MS = 60 * 60 * 1000;
+    private static final byte[] FAKE_PKG_CERT_SHA256 = BaseEncoding.base16().decode(
+            "187E3D3172F2177D6FEC2EA53785BF1E25DFF7B2E5F6E59807E365A7A837E6C3");
+
+    @Test
+    public void testBlobStore() throws Exception {
+        Context context = InstrumentationRegistry.getContext();
+        int uid = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0).uid;
+
+        BlobStoreManager bsm = context.getSystemService(BlobStoreManager.class);
+        final long leaseExpiryMs = System.currentTimeMillis() + BLOB_LEASE_EXPIRY_DURATION_MS;
+
+        final DummyBlobData blobData = new DummyBlobData.Builder(context).setExpiryDurationMs(
+                BLOB_EXPIRY_DURATION_MS).setFileSize(BLOB_FILE_SIZE_BYTES).build();
+
+        blobData.prepare();
+        try {
+            // Commit the Blob, should result in BLOB_COMMITTED atom event
+            commitBlob(context, bsm, blobData);
+
+            // Lease the Blob, should result in BLOB_LEASED atom event
+            bsm.acquireLease(blobData.getBlobHandle(), "", leaseExpiryMs);
+
+            // Open the Blob, should result in BLOB_OPENED atom event
+            bsm.openBlob(blobData.getBlobHandle());
+
+        } finally {
+            blobData.delete();
+        }
+    }
+
     // ------- Helper methods
 
     /** Puts the current thread to sleep. */
@@ -993,5 +1037,20 @@ public class AtomTests {
 
     private static void setScreenBrightness(int brightness) {
         runShellCommand("settings put system screen_brightness " + brightness);
+    }
+
+
+    private void commitBlob(Context context, BlobStoreManager bsm, DummyBlobData blobData)
+            throws Exception {;
+        final long sessionId = bsm.createSession(blobData.getBlobHandle());
+        try (BlobStoreManager.Session session = bsm.openSession(sessionId)) {
+            blobData.writeToSession(session);
+            session.allowPackageAccess("fake.package.name", FAKE_PKG_CERT_SHA256);
+
+            final CompletableFuture<Integer> callback = new CompletableFuture<>();
+            session.commit(context.getMainExecutor(), callback::complete);
+            assertWithMessage("Session failed to commit within timeout").that(
+                    callback.get(BLOB_COMMIT_CALLBACK_TIMEOUT_SEC, TimeUnit.SECONDS)).isEqualTo(0);
+        }
     }
 }

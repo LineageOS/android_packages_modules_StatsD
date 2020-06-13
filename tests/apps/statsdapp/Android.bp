@@ -45,6 +45,7 @@ android_test_helper_app {
         "androidx.legacy_legacy-support-v4",
         "androidx.test.rules",
         "cts-net-utils",
+        "BlobStoreTestUtils"
     ],
     jni_libs: ["liblmkhelper"],
     compile_multilib: "both",
