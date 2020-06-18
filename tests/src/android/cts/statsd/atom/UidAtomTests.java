@@ -1861,34 +1861,51 @@ public class UidAtomTests extends DeviceAtomTestCase {
         });
     }
 
-    public void testDataUsageBytesTransfer() throws Throwable {
-        final boolean subtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
+    private void assertSubscriptionInfo(AtomsProto.DataUsageBytesTransfer data) {
+        assertThat(data.getSimMcc()).matches("^\\d{3}$");
+        assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
+        assertThat(data.getCarrierId()).isNotEqualTo(-1); // TelephonyManager#UNKNOWN_CARRIER_ID
+    }
+
+    private void doTestDataUsageBytesTransferEnabled(boolean enable) throws Throwable {
+        // Set value to enable/disable combine subtype.
+        setNetworkStatsCombinedSubTypeEnabled(enable);
 
         doTestMobileBytesTransferThat(Atom.DATA_USAGE_BYTES_TRANSFER_FIELD_NUMBER, (atom) -> {
             final AtomsProto.DataUsageBytesTransfer data =
                     ((Atom) atom).getDataUsageBytesTransfer();
-            if (data.getState() == 1 /*NetworkStats.SET_FOREGROUND*/) {
+            final boolean ratTypeEqualsToUnknown =
+                    (data.getRatType() == NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+            final boolean ratTypeGreaterThanUnknown =
+                    (data.getRatType() > NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+
+            if ((data.getState() == 1 /*NetworkStats.SET_FOREGROUND*/)
+                    && ((enable && ratTypeEqualsToUnknown)
+                    || (!enable && ratTypeGreaterThanUnknown))) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
                         data.getRxPackets(), data.getTxPackets());
-                // TODO: verify the RAT type field with the value gotten from device.
-                if (subtypeCombined) {
-                    assertThat(data.getRatType()).isEqualTo(
-                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-                } else {
-                    assertThat(data.getRatType()).isGreaterThan(
-                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-                }
-
                 // Assert that subscription info is valid.
-                assertThat(data.getSimMcc()).matches("^\\d{3}$");
-                assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
-                assertThat(data.getCarrierId()).isNotEqualTo(
-                        -1); // TelephonyManager#UNKNOWN_CARRIER_ID
+                assertSubscriptionInfo(data);
 
                 return true; // found
             }
             return false;
         });
+    }
+
+    public void testDataUsageBytesTransfer() throws Throwable {
+        final boolean oldSubtypeCombined = getNetworkStatsCombinedSubTypeEnabled();
+
+        doTestDataUsageBytesTransferEnabled(true);
+
+        // Remove config from memory and disk to clear the history.
+        removeConfig(CONFIG_ID);
+        getReportList(); // Clears data.
+
+        doTestDataUsageBytesTransferEnabled(false);
+
+        // Restore to original default value.
+        setNetworkStatsCombinedSubTypeEnabled(oldSubtypeCombined);
     }
 
     // TODO(b/157651730): Determine how to test tag and metered state within atom.
