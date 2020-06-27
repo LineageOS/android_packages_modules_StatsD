@@ -241,7 +241,8 @@ public class AtomTestCase extends BaseTestCase {
           .addAllowedLogSource("AID_STATSD")
           .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE)
           .addDefaultPullPackages("AID_RADIO")
-          .addDefaultPullPackages("AID_SYSTEM");
+          .addDefaultPullPackages("AID_SYSTEM")
+          .addWhitelistedAtomIds(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER);
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {
