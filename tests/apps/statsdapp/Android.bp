@@ -35,7 +35,7 @@ android_test_helper_app {
         ":statslog-statsd-cts-java-gen",
     ],
     libs: [
-        "android.test.runner.stubs",
+        "android.test.runner",
         "junit",
         "org.apache.http.legacy",
     ],
