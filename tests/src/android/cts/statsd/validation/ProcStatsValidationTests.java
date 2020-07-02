@@ -49,25 +49,25 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
         uploadConfig(config);
         clearProcStats();
-        Thread.sleep(WAIT_TIME_SHORT);
+        toggleScreenAndSleep(WAIT_TIME_SHORT);
 
         // foreground service
         executeForegroundService();
-        Thread.sleep(SLEEP_OF_FOREGROUND_SERVICE + EXTRA_WAIT_TIME_MS);
+        toggleScreenAndSleep(SLEEP_OF_FOREGROUND_SERVICE + EXTRA_WAIT_TIME_MS);
         // background
         executeBackgroundService(ACTION_BACKGROUND_SLEEP);
-        Thread.sleep(SLEEP_OF_ACTION_BACKGROUND_SLEEP + EXTRA_WAIT_TIME_MS);
+        toggleScreenAndSleep(SLEEP_OF_ACTION_BACKGROUND_SLEEP + EXTRA_WAIT_TIME_MS);
         // top
         executeForegroundActivity(ACTION_LONG_SLEEP_WHILE_TOP);
-        Thread.sleep(SLEEP_OF_ACTION_LONG_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS);
+        toggleScreenAndSleep(SLEEP_OF_ACTION_LONG_SLEEP_WHILE_TOP + EXTRA_WAIT_TIME_MS);
         // Start extremely short-lived activity, so app goes into cache state (#1 - #3 above).
         executeBackgroundService(ACTION_END_IMMEDIATELY);
         final int cacheTime = 2_000; // process should be in cached state for up to this long
-        Thread.sleep(cacheTime);
+        toggleScreenAndSleep(cacheTime);
         // foreground
         // overlay should take 2 sec to appear. So this makes it 4 sec in TOP
         executeForegroundActivity(ACTION_SHOW_APPLICATION_OVERLAY);
-        Thread.sleep(EXTRA_WAIT_TIME_MS + 5_000);
+        toggleScreenAndSleep(EXTRA_WAIT_TIME_MS + 5_000);
 
         // Sorted list of events in order in which they occurred.
         List<ValueMetricData> statsdData = getValueMetricDataList();
@@ -100,6 +100,14 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
         }
         assertThat(valueInProcStats).isGreaterThan(0d);
         assertThat(valueInStatsd).isWithin(1e-10).of(valueInProcStats);
+    }
+
+    private void toggleScreenAndSleep(final long duration) throws Exception {
+        final long half = duration >> 1;
+        Thread.sleep(half);
+        turnScreenOff();
+        Thread.sleep(half);
+        turnScreenOn();
     }
 
     public void testProcessStateByPulling() throws Exception {
