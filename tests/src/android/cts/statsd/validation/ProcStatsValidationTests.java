@@ -44,9 +44,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
     private static final int EXTRA_WAIT_TIME_MS = 1_000; // as buffer when proc state changing.
 
     public void testProcessStatePssValue() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final String fileName = "PROCSTATSQ_PROCS_STATE_PSS_VALUE.pbtxt";
         StatsdConfig config = createValidationUtil().getConfig(fileName);
         LogUtil.CLog.d("Updating the following config:\n" + config.toString());
@@ -106,9 +103,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
     }
 
     public void testProcessStateByPulling() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         startProcStatsTesting();
         clearProcStats();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -195,9 +189,6 @@ public class ProcStatsValidationTests extends ProcStateTestCase {
          * Temporarily disable this test as the proc stats data being pulled into the statsd
          * doesn't include the pkg part now.
          *
-        if (statsdDisabled()) {
-            return;
-        }
         startProcStatsTesting();
         clearProcStats();
         Thread.sleep(WAIT_TIME_SHORT);
