@@ -45,9 +45,6 @@ import java.util.stream.IntStream;
 public class CountMetricsTests extends DeviceAtomTestCase {
 
     public void testSimpleEventCountMetric() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         int matcherId = 1;
         StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
@@ -72,9 +69,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         assertThat(countData.getData(0).getBucketInfo(0).getCount()).isEqualTo(2);
     }
     public void testEventCountWithCondition() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         int startMatcherId = 1;
         int endMatcherId = 2;
         int whatMatcherId = 3;
@@ -132,9 +126,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
     }
 
     public void testEventCountWithConditionAndActivation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         int startMatcherId = 1;
         int startMatcherLabel = 1;
         int endMatcherId = 2;
@@ -259,9 +250,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
     }
 
     public void testPartialBucketCountMetric() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         int matcherId = 1;
         StatsdConfigProto.StatsdConfig.Builder builder = createConfigBuilder();
         builder.addCountMetric(StatsdConfigProto.CountMetric.newBuilder()
@@ -316,9 +304,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
     }
 
     public void testSlicedStateCountMetric() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         int whatMatcherId = 3;
@@ -430,10 +415,6 @@ public class CountMetricsTests extends DeviceAtomTestCase {
     }
 
     public void testSlicedStateCountMetricNoReset() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         int whatMatcherId = 3;
         int stateId = 4;
         int onStateGroupId = 5;
