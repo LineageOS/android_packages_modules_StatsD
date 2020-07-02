@@ -49,9 +49,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
   private static final int APP_BREADCRUMB_REPORTED_B_MATCH_START_ID = 2;
 
   public void testValueMetric() throws Exception {
-    if (statsdDisabled()) {
-      return;
-    }
     // Add AtomMatcher's.
     AtomMatcher startAtomMatcher =
         MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
@@ -115,9 +112,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
 
   // Test value metric with pulled atoms and across multiple buckets
   public void testPullerAcrossBuckets() throws Exception {
-    if (statsdDisabled()) {
-      return;
-    }
     // Add AtomMatcher's.
     final String predicateTrueName = "APP_BREADCRUMB_REPORTED_START";
     final String predicateFalseName = "APP_BREADCRUMB_REPORTED_STOP";
@@ -195,9 +189,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
 
   // Test value metric with pulled atoms and across multiple buckets
   public void testMultipleEventsPerBucket() throws Exception {
-    if (statsdDisabled()) {
-      return;
-    }
     // Add AtomMatcher's.
     final String predicateTrueName = "APP_BREADCRUMB_REPORTED_START";
     final String predicateFalseName = "APP_BREADCRUMB_REPORTED_STOP";
@@ -279,10 +270,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
 
   // Test value metric with pulled atoms and across multiple buckets
   public void testPullerAcrossBucketsWithActivation() throws Exception {
-    if (statsdDisabled()) {
-      return;
-    }
-
     StatsdConfig.Builder builder = createConfigBuilder();
 
     // Add AtomMatcher's.
@@ -340,10 +327,6 @@ public class ValueMetricsTests extends DeviceAtomTestCase {
   }
 
     public void testValueMetricWithConditionAndActivation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int conditionLabel = 2;
         final int activationMatcherId = 5;
         final int activationMatcherLabel = 5;

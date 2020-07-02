@@ -82,9 +82,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testScreenStateChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         // Setup, make sure the screen is off and turn off AoD if it is on.
         // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
         // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
@@ -131,9 +128,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testChargingStateChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set charging state to full.
         setChargingState(5);
@@ -184,9 +178,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testPluggedStateChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, unplug device.
         unplugDevice();
@@ -237,9 +228,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBatteryLevelChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, set battery level to full.
         setBatteryLevel(100);
@@ -285,9 +273,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testDeviceIdleModeStateChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         // Setup, leave doze mode.
         leaveDozeMode();
         Thread.sleep(WAIT_TIME_SHORT);
@@ -324,9 +309,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBatterySaverModeStateChangedAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         // Setup, turn off battery saver.
         turnBatterySaverOff();
@@ -361,9 +343,6 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testRemainingBatteryCapacity() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
@@ -388,9 +367,6 @@ public class HostAtomTests extends AtomTestCase {
 
     @RestrictedBuildTest
     public void testFullBatteryCapacity() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
@@ -413,9 +389,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBatteryVoltage() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_VOLTAGE_FIELD_NUMBER, null);
@@ -438,9 +411,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // This test is for the pulled battery level atom.
     public void testBatteryLevel() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_LEVEL_FIELD_NUMBER, null);
@@ -463,9 +433,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // This test is for the pulled battery charge count atom.
     public void testBatteryCycleCount() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BATTERY_CYCLE_COUNT_FIELD_NUMBER, null);
@@ -487,7 +454,7 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testKernelWakelock() throws Exception {
-        if (statsdDisabled() || !kernelWakelockStatsExist()) {
+        if (!kernelWakelockStatsExist()) {
             return;
         }
         StatsdConfig.Builder config = createConfigBuilder();
@@ -519,9 +486,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testWifiActivityInfo() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!checkDeviceFor("checkWifiEnhancedPowerReportingSupported")) return;
@@ -548,10 +512,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testBuildInformation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.BUILD_INFORMATION_FIELD_NUMBER, null);
         uploadConfig(config);
@@ -576,9 +536,6 @@ public class HostAtomTests extends AtomTestCase {
 
     public void testOnDevicePowerMeasurement() throws Exception {
         if (!OPTIONAL_TESTS_ENABLED) return;
-        if (statsdDisabled()) {
-            return;
-        }
 
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.ON_DEVICE_POWER_MEASUREMENT_FIELD_NUMBER, null);
@@ -600,9 +557,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // Explicitly tests if the adb command to log a breadcrumb is working.
     public void testBreadcrumbAdb() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
         createAndUploadConfig(atomTag);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -618,9 +572,6 @@ public class HostAtomTests extends AtomTestCase {
 
     // Test dumpsys stats --proto.
     public void testDumpsysStats() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER;
         createAndUploadConfig(atomTag);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -653,9 +604,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testConnectivityStateChange() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_WATCH, false)) return;
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
@@ -692,9 +640,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testSimSlotState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_TELEPHONY, true)) {
             return;
         }
@@ -725,9 +670,6 @@ public class HostAtomTests extends AtomTestCase {
     }
 
     public void testSupportedRadioAccessFamily() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_TELEPHONY, true)) {
             return;
         }

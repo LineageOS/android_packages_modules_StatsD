@@ -154,10 +154,6 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testCancellation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int act1TtlSecs = 5;
         final int act2TtlSecs = 8;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
@@ -255,10 +251,6 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testRestart() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int act1TtlSecs = 100;
         final int act2TtlSecs = 200;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
@@ -411,10 +403,6 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testMultipleActivations() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int act1TtlSecs = 100;
         final int act2TtlSecs = 200;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
