@@ -47,9 +47,6 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
   private static final int APP_BREADCRUMB_REPORTED_B_MATCH_START_ID = 2;
 
   public void testGaugeMetric() throws Exception {
-      if (statsdDisabled()) {
-        return;
-      }
       // Add AtomMatcher's.
       AtomMatcher startAtomMatcher =
           MetricsUtils.startAtomMatcher(APP_BREADCRUMB_REPORTED_A_MATCH_START_ID);
@@ -149,9 +146,6 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
   }
 
   public void testPulledGaugeMetricWithActivation() throws Exception {
-      if (statsdDisabled()) {
-        return;
-      }
       // Add AtomMatcher's.
       int activationAtomMatcherId = 1;
       int activationAtomMatcherLabel = 1;
@@ -202,10 +196,6 @@ public class GaugeMetricsTests extends DeviceAtomTestCase {
   }
 
     public void testPulledGaugeMetricWithConditionAndActivation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int conditionLabel = 2;
         final int activationMatcherId = 5;
         final int activationMatcherLabel = 5;
