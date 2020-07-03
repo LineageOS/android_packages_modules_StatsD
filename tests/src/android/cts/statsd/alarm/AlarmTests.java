@@ -51,9 +51,6 @@ public class AlarmTests extends AtomTestCase {
     }
 
     public void testAlarm() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         StatsdConfig.Builder config = getBaseConfig();
         turnScreenOn();
         uploadConfig(config);
