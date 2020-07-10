@@ -468,12 +468,14 @@ public class HostAtomTests extends AtomTestCase {
 
         List<Atom> data = getGaugeMetricDataList();
 
-        Atom atom = data.get(0);
-        assertThat(atom.getKernelWakelock().getName()).isNotEmpty();
-        assertThat(atom.getKernelWakelock().hasCount()).isTrue();
-        assertThat(atom.getKernelWakelock().hasVersion()).isTrue();
-        assertThat(atom.getKernelWakelock().getVersion()).isGreaterThan(0);
-        assertThat(atom.getKernelWakelock().hasTimeMicros()).isTrue();
+        assertThat(data).isNotEmpty();
+        for (Atom atom : data) {
+            assertThat(atom.getKernelWakelock().hasName()).isTrue();
+            assertThat(atom.getKernelWakelock().hasCount()).isTrue();
+            assertThat(atom.getKernelWakelock().hasVersion()).isTrue();
+            assertThat(atom.getKernelWakelock().getVersion()).isGreaterThan(0);
+            assertThat(atom.getKernelWakelock().hasTimeMicros()).isTrue();
+        }
     }
 
     // Returns true iff either |WAKE_LOCK_FILE| or |WAKE_SOURCES_FILE| exists.
