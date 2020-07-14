@@ -29,13 +29,13 @@ java_test_host {
         "compatibility-host-util",
         "cts-tradefed",
         "host-libprotobuf-java-full",
-        "perfetto_config-full",
         "platformprotos",
         "tradefed",
         "truth-prebuilt",
     ],
     static_libs: [
         "core_cts_test_resources",
+        "perfetto_config-full",
     ],
     data: [
         "**/*.pbtxt",
