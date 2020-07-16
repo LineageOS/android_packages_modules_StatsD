@@ -44,9 +44,6 @@ public class MetadataTests extends MetadataTestCase {
 
     // Tests that the statsd config is reset after the specified ttl.
     public void testConfigTtl() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int TTL_TIME_SEC = 8;
         StatsdConfig.Builder config = getBaseConfig();
         config.setTtlInSeconds(TTL_TIME_SEC); // should reset in this many seconds.
@@ -76,6 +73,7 @@ public class MetadataTests extends MetadataTestCase {
             Thread.sleep(10);
         }
         doAppBreadcrumbReportedStart(/* irrelevant val */ 6); // Event, after TTL_TIME_SEC secs.
+        Thread.sleep(WAIT_TIME_SHORT);
         report = getStatsdStatsReport();
         LogUtil.CLog.d("got following statsdstats report: " + report.toString());
         foundActiveConfig = false;

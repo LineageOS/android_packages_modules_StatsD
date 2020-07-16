@@ -62,6 +62,10 @@ import com.google.common.collect.Range;
 import com.google.common.io.Files;
 import com.google.protobuf.ByteString;
 
+import perfetto.protos.PerfettoConfig.DataSourceConfig;
+import perfetto.protos.PerfettoConfig.FtraceConfig;
+import perfetto.protos.PerfettoConfig.TraceConfig;
+
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -73,6 +77,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -135,10 +140,6 @@ public class AtomTestCase extends BaseTestCase {
     protected void setUp() throws Exception {
         super.setUp();
 
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Uninstall to clear the history in case it's still on the device.
         removeConfig(CONFIG_ID);
         getReportList(); // Clears data.
@@ -181,15 +182,41 @@ public class AtomTestCase extends BaseTestCase {
     /**
      * Returns a protobuf-encoded perfetto config that enables the kernel
      * ftrace tracer with sched_switch for 10 seconds.
-     * See https://android.googlesource.com/platform/external/perfetto/+/master/docs/trace-config.md
-     * for details on how to generate this.
      */
     protected ByteString getPerfettoConfig() {
-        return ByteString.copyFrom(new byte[] { 0xa, 0x3, 0x8, (byte) 0x80, 0x1, 0x12, 0x23, 0xa,
-                        0x21, 0xa, 0xc, 0x6c, 0x69, 0x6e, 0x75, 0x78, 0x2e, 0x66, 0x74, 0x72, 0x61,
-                        0x63, 0x65, 0x10, 0x0, (byte) 0xa2, 0x6, 0xe, 0xa, 0xc, 0x73, 0x63, 0x68,
-                        0x65, 0x64, 0x5f, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x18, (byte) 0x90,
-                        0x4e, (byte) 0x98, 0x01, 0x01 });
+        TraceConfig.Builder builder = TraceConfig.newBuilder();
+
+        TraceConfig.BufferConfig buffer = TraceConfig.BufferConfig
+            .newBuilder()
+            .setSizeKb(128)
+            .build();
+        builder.addBuffers(buffer);
+
+        FtraceConfig ftraceConfig = FtraceConfig.newBuilder()
+            .addFtraceEvents("sched/sched_switch")
+            .build();
+        DataSourceConfig dataSourceConfig = DataSourceConfig.newBuilder()
+            .setName("linux.ftrace")
+            .setTargetBuffer(0)
+            .setFtraceConfig(ftraceConfig)
+            .build();
+        TraceConfig.DataSource dataSource = TraceConfig.DataSource
+            .newBuilder()
+            .setConfig(dataSourceConfig)
+            .build();
+        builder.addDataSources(dataSource);
+
+        builder.setDurationMs(10000);
+        builder.setAllowUserBuildTracing(true);
+
+        // To avoid being hit with guardrails firing in multiple test runs back
+        // to back, we set a unique session key for each config.
+        Random random = new Random();
+        StringBuilder sessionNameBuilder = new StringBuilder("statsd-cts-");
+        sessionNameBuilder.append(random.nextInt() & Integer.MAX_VALUE);
+        builder.setUniqueSessionName(sessionNameBuilder.toString());
+
+        return builder.build().toByteString();
     }
 
     /**
@@ -205,22 +232,24 @@ public class AtomTestCase extends BaseTestCase {
 
     private String probe(String path) throws Exception {
         return getDevice().executeShellCommand("if [ -e " + path + " ] ; then"
-                + " cat " + path + " ; else echo 0 ; fi");
+                + " cat " + path + " ; else echo -1 ; fi");
     }
 
     /**
      * Determines whether perfetto enabled the kernel ftrace tracer.
      */
     protected boolean isSystemTracingEnabled() throws Exception {
-        final String debugFsPath = "/sys/kernel/debug/tracing/tracing_on";
         final String traceFsPath = "/sys/kernel/tracing/tracing_on";
-        String tracing_on = probe(debugFsPath);
+        String tracing_on = probe(traceFsPath);
         if (tracing_on.startsWith("0")) return false;
         if (tracing_on.startsWith("1")) return true;
-        // fallback to traceFs
-        LogUtil.CLog.d("Unexpected state for %s = %s. Falling back to traceFs", debugFsPath,
+
+        // fallback to debugfs
+        LogUtil.CLog.d("Unexpected state for %s = %s. Falling back to debugfs", traceFsPath,
                 tracing_on);
-        tracing_on = probe(traceFsPath);
+
+        final String debugFsPath = "/sys/kernel/debug/tracing/tracing_on";
+        tracing_on = probe(debugFsPath);
         if (tracing_on.startsWith("0")) return false;
         if (tracing_on.startsWith("1")) return true;
         throw new Exception(String.format("Unexpected state for %s = %s", traceFsPath, tracing_on));
@@ -239,7 +268,8 @@ public class AtomTestCase extends BaseTestCase {
           .addAllowedLogSource("AID_STATSD")
           .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE)
           .addDefaultPullPackages("AID_RADIO")
-          .addDefaultPullPackages("AID_SYSTEM");
+          .addDefaultPullPackages("AID_SYSTEM")
+          .addWhitelistedAtomIds(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER);
     }
 
     protected void createAndUploadConfig(int atomTag) throws Exception {

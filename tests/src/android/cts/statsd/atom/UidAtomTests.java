@@ -16,6 +16,7 @@
 package android.cts.statsd.atom;
 
 import static com.android.os.AtomsProto.IntegrityCheckResultReported.Response.ALLOWED;
+
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
@@ -24,6 +25,7 @@ import android.net.wifi.WifiModeEnum;
 import android.os.WakeLockLevelEnum;
 import android.server.ErrorSource;
 import android.telephony.NetworkTypeEnum;
+
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.compatibility.common.util.PropertyUtil;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
@@ -41,6 +43,9 @@ import com.android.os.AtomsProto.AudioStateChanged;
 import com.android.os.AtomsProto.BinderCalls;
 import com.android.os.AtomsProto.BleScanResultReceived;
 import com.android.os.AtomsProto.BleScanStateChanged;
+import com.android.os.AtomsProto.BlobCommitted;
+import com.android.os.AtomsProto.BlobLeased;
+import com.android.os.AtomsProto.BlobOpened;
 import com.android.os.AtomsProto.CameraStateChanged;
 import com.android.os.AtomsProto.DangerousPermissionState;
 import com.android.os.AtomsProto.DangerousPermissionStateSampled;
@@ -77,8 +82,10 @@ import com.android.os.AtomsProto.WifiScanStateChanged;
 import com.android.os.StatsLog.EventMetricData;
 import com.android.server.notification.SmallHash;
 import com.android.tradefed.log.LogUtil;
+
 import com.google.common.collect.Range;
 import com.google.protobuf.Descriptors;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -125,7 +132,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testLmkKillOccurred() throws Exception {
-        if (statsdDisabled() || !"true".equals(getProperty("ro.lmk.log_stats"))) {
+        if (!"true".equals(getProperty("ro.lmk.log_stats"))) {
             return;
         }
 
@@ -149,9 +156,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppCrashOccurred() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.APP_CRASH_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -172,19 +176,17 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppStartOccurred() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.APP_START_OCCURRED_FIELD_NUMBER;
 
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
 
-        runActivity("StatsdCtsForegroundActivity", "action", "action.sleep_top");
+        runActivity("StatsdCtsForegroundActivity", "action", "action.sleep_top", 3_500);
 
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
+        assertThat(data).hasSize(1);
         AppStartOccurred atom = data.get(0).getAtom().getAppStartOccurred();
         assertThat(atom.getPkgName()).isEqualTo(TEST_PACKAGE_NAME);
         assertThat(atom.getActivityName())
@@ -195,9 +197,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAudioState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_AUDIO_OUTPUT, true)) return;
 
         final int atomTag = Atom.AUDIO_STATE_CHANGED_FIELD_NUMBER;
@@ -233,9 +232,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleScan() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -255,9 +251,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleUnoptimizedScan() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -299,9 +292,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBleScanResult() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_BLUETOOTH_LE, true)) return;
 
         final int atom = Atom.BLE_SCAN_RESULT_RECEIVED_FIELD_NUMBER;
@@ -317,22 +307,20 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testHiddenApiUsed() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         String oldRate = getDevice().executeShellCommand(
                 "device_config get app_compat hidden_api_access_statslog_sampling_rate").trim();
 
         getDevice().executeShellCommand(
                 "device_config put app_compat hidden_api_access_statslog_sampling_rate 65536");
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
         try {
             final int atomTag = Atom.HIDDEN_API_USED_FIELD_NUMBER;
 
             createAndUploadConfig(atomTag, false);
 
-            runActivity("HiddenApiUsedActivity", null, null);
-
+            runActivity("HiddenApiUsedActivity", null, null, 2_500);
 
             List<EventMetricData> data = getEventMetricDataList();
             assertThat(data).hasSize(1);
@@ -357,9 +345,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCameraState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_CAMERA, true) && !hasFeature(FEATURE_CAMERA_FRONT, true)) return;
 
         final int atomTag = Atom.CAMERA_STATE_CHANGED_FIELD_NUMBER;
@@ -381,9 +366,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testCpuTimePerUid() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
@@ -413,9 +395,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDeviceCalculatedPowerUse() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
         StatsdConfig.Builder config = createConfigBuilder();
@@ -436,9 +415,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
 
     public void testDeviceCalculatedPowerBlameUid() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
         StatsdConfig.Builder config = createConfigBuilder();
@@ -472,9 +448,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDavey() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!DAVEY_ENABLED ) return;
         long MAX_DURATION = 2000;
         long MIN_DURATION = 750;
@@ -491,9 +464,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testFlashlightState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_CAMERA_FLASH, true)) return;
 
         final int atomTag = Atom.FLASHLIGHT_STATE_CHANGED_FIELD_NUMBER;
@@ -521,9 +491,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testForegroundServiceState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.FOREGROUND_SERVICE_STATE_CHANGED_FIELD_NUMBER;
         final String name = "testForegroundService";
 
@@ -550,9 +517,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
 
     public void testForegroundServiceAccessAppOp() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.FOREGROUND_SERVICE_APP_OP_SESSION_ENDED_FIELD_NUMBER;
         final String name = "testForegroundServiceAccessAppOp";
 
@@ -593,9 +557,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testGpsScan() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_LOCATION_GPS, true)) return;
         // Whitelist this app against background location request throttling
         String origWhitelist = getDevice().executeShellCommand(
@@ -632,10 +593,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testGnssStats() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Get GnssMetrics as a simple gauge metric.
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.GNSS_STATS_FIELD_NUMBER, null);
@@ -674,7 +631,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 assertThat(state.getLocationReports()).isGreaterThan((long) 0);
                 assertThat(state.getLocationFailureReports()).isAtLeast((long) 0);
                 assertThat(state.getTimeToFirstFixReports()).isGreaterThan((long) 0);
-                assertThat(state.getTimeToFirstFixMilliS()).isGreaterThan((long) 0);
+                assertThat(state.getTimeToFirstFixMillis()).isGreaterThan((long) 0);
                 assertThat(state.getPositionAccuracyReports()).isGreaterThan((long) 0);
                 assertThat(state.getPositionAccuracyMeters()).isGreaterThan((long) 0);
                 assertThat(state.getTopFourAverageCn0Reports()).isGreaterThan((long) 0);
@@ -701,9 +658,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testMediaCodecActivity() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.MEDIA_CODEC_STATE_CHANGED_FIELD_NUMBER;
 
@@ -739,9 +693,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testOverlayState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WATCH, false)) return;
         final int atomTag = Atom.OVERLAY_STATE_CHANGED_FIELD_NUMBER;
 
@@ -768,9 +719,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPictureInPictureState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         String supported = getDevice().executeShellCommand("am supports-multiwindow");
         if (!hasFeature(FEATURE_WATCH, false) ||
                 !hasFeature(FEATURE_PICTURE_IN_PICTURE, true) ||
@@ -801,9 +749,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testScheduledJobState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         String expectedName = "com.android.server.cts.device.statsd/.StatsdJobService";
         final int atomTag = Atom.SCHEDULED_JOB_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> jobSchedule = new HashSet<>(
@@ -834,9 +779,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     //Note: this test does not have uid, but must run on the device
     public void testScreenBrightness() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         int initialBrightness = getScreenBrightness();
         boolean isInitialManual = isScreenBrightnessModeManual();
         setScreenBrightnessMode(true);
@@ -871,9 +813,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
             atom -> atom.getScreenBrightnessChanged().getLevel());
     }
     public void testSyncState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.SYNC_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> syncOn = new HashSet<>(Arrays.asList(SyncStateChanged.State.ON_VALUE));
         Set<Integer> syncOff = new HashSet<>(Arrays.asList(SyncStateChanged.State.OFF_VALUE));
@@ -889,14 +828,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
         List<EventMetricData> data = getEventMetricDataList();
 
         // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_SHORT,
-                atom -> atom.getSyncStateChanged().getState().getNumber());
+        assertStatesOccurred(stateSet, data,
+            /* wait = */ 0 /* don't verify time differences between state changes */,
+            atom -> atom.getSyncStateChanged().getState().getNumber());
     }
 
     public void testVibratorState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!checkDeviceFor("checkVibratorSupported")) return;
 
         final int atomTag = Atom.VIBRATOR_STATE_CHANGED_FIELD_NUMBER;
@@ -924,9 +861,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakelockState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.WAKELOCK_STATE_CHANGED_FIELD_NUMBER;
         Set<Integer> wakelockOn = new HashSet<>(Arrays.asList(
                 WakelockStateChanged.State.ACQUIRE_VALUE,
@@ -960,9 +894,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWakeupAlarm() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         // For automotive, all wakeup alarm becomes normal alarm. So this
         // test does not work.
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
@@ -981,9 +912,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiLockHighPerf() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_PC, false)) return;
 
@@ -1011,9 +939,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiLockLowLatency() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_PC, false)) return;
 
@@ -1041,9 +966,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiMulticastLock() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
         if (!hasFeature(FEATURE_PC, false)) return;
 
@@ -1075,9 +997,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWifiScan() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_WIFI, true)) return;
 
         final int atom = Atom.WIFI_SCAN_STATE_CHANGED_FIELD_NUMBER;
@@ -1099,9 +1018,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testBinderStats() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         try {
             unplugDevice();
             Thread.sleep(WAIT_TIME_SHORT);
@@ -1149,9 +1065,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testLooperStats() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         try {
             unplugDevice();
             setUpLooperStats();
@@ -1203,10 +1116,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testProcessMemoryState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Get ProcessMemoryState as a simple gauge metric.
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_STATE_FIELD_NUMBER, null);
@@ -1216,8 +1125,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
-            Thread.sleep(WAIT_TIME_LONG);
             // Trigger a pull and wait for new pull before killing the process.
+            Thread.sleep(WAIT_TIME_LONG);
+            // Trigger new pull.
             setAppBreadcrumbPredicate();
             Thread.sleep(WAIT_TIME_LONG);
         }
@@ -1245,10 +1155,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testProcessMemoryHighWaterMark() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Get ProcessMemoryHighWaterMark as a simple gauge metric.
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_HIGH_WATER_MARK_FIELD_NUMBER, null);
@@ -1292,10 +1198,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testProcessMemorySnapshot() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Get ProcessMemorySnapshot as a simple gauge metric.
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.PROCESS_MEMORY_SNAPSHOT_FIELD_NUMBER, null);
@@ -1305,8 +1207,8 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Start test app and trigger a pull while it is running.
         try (AutoCloseable a = withActivity("StatsdCtsForegroundActivity", "action",
                 "action.show_notification")) {
-            setAppBreadcrumbPredicate();
             Thread.sleep(WAIT_TIME_LONG);
+            setAppBreadcrumbPredicate();
         }
 
         // Assert about ProcessMemorySnapshot for the test app, statsd and system server.
@@ -1342,7 +1244,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testIonHeapSize_optional() throws Exception {
-        if (statsdDisabled() || isIonHeapSizeMandatory()) {
+        if (isIonHeapSizeMandatory()) {
             return;
         }
 
@@ -1355,7 +1257,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testIonHeapSize_mandatory() throws Exception {
-        if (statsdDisabled() || !isIonHeapSizeMandatory()) {
+        if (!isIonHeapSizeMandatory()) {
             return;
         }
 
@@ -1407,10 +1309,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testRoleHolder() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Make device side test package a role holder
         String callScreenAppRole = "android.app.role.CALL_SCREENING";
         getDevice().executeShellCommand(
@@ -1450,10 +1348,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDangerousPermissionState() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int FLAG_PERMISSION_USER_SENSITIVE_WHEN_GRANTED =  1 << 8;
         final int FLAG_PERMISSION_USER_SENSITIVE_WHEN_DENIED =  1 << 9;
 
@@ -1497,10 +1391,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testDangerousPermissionStateSampled() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // get full atom for reference
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DANGEROUS_PERMISSION_STATE_FIELD_NUMBER, null);
@@ -1572,10 +1462,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppOps() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         // Set up what to collect
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.APP_OPS_FIELD_NUMBER, null);
@@ -1622,9 +1508,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testANROccurred() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.ANR_OCCURRED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, false);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1651,9 +1534,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testWriteRawTestAtom() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         final int atomTag = Atom.TEST_ATOM_REPORTED_FIELD_NUMBER;
         createAndUploadConfig(atomTag, true);
         Thread.sleep(WAIT_TIME_SHORT);
@@ -1731,10 +1611,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testNotificationPackagePreferenceExtraction() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_PREFERENCES_FIELD_NUMBER,
@@ -1771,10 +1647,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testNotificationChannelPreferencesExtraction() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_CHANNEL_PREFERENCES_FIELD_NUMBER,
@@ -1815,10 +1687,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testNotificationChannelGroupPreferencesExtraction() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                     Atom.PACKAGE_NOTIFICATION_CHANNEL_GROUP_PREFERENCES_FIELD_NUMBER,
@@ -1858,10 +1726,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testNotificationReported() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         StatsdConfig.Builder config = getPulledConfig();
         addAtomEvent(config, Atom.NOTIFICATION_REPORTED_FIELD_NUMBER,
             Arrays.asList(createFvm(NotificationReported.PACKAGE_NAME_FIELD_NUMBER)
@@ -1888,9 +1752,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testSettingsStatsReported() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         // Base64 encoded proto com.android.service.nano.StringListParamProto,
         // which contains two strings "font_scale" and "screen_auto_brightness_adj".
         final String encoded = "ChpzY3JlZW5fYXV0b19icmlnaHRuZXNzX2FkagoKZm9udF9zY2FsZQ";
@@ -1948,10 +1809,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testIntegrityCheckAtomReportedDuringInstall() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         createAndUploadConfig(AtomsProto.Atom.INTEGRITY_CHECK_RESULT_REPORTED_FIELD_NUMBER);
 
         getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
@@ -1996,12 +1853,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(Atom.MOBILE_BYTES_TRANSFER_BY_FG_BG_FIELD_NUMBER, (atom) -> {
             final AtomsProto.MobileBytesTransferByFgBg data =
                     ((Atom) atom).getMobileBytesTransferByFgBg();
-            if (data.getUid() == appUid) {
+            if (data.getUid() == appUid && data.getIsForeground()) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
                         data.getRxPackets(), data.getTxPackets());
-                // IsForeground cannot be judged since foreground activity that launched
-                // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
-                // in NetworkPolicyManagerService.
                 return true; // found
             }
             return false;
@@ -2014,25 +1868,27 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(Atom.DATA_USAGE_BYTES_TRANSFER_FIELD_NUMBER, (atom) -> {
             final AtomsProto.DataUsageBytesTransfer data =
                     ((Atom) atom).getDataUsageBytesTransfer();
-            assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
-                    data.getRxPackets(), data.getTxPackets());
-            // TODO: verify the RAT type field with the value gotten from device.
-            if (subtypeCombined) {
-                assertThat(data.getRatType()).isEqualTo(NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
-            } else {
-                assertThat(data.getRatType()).isGreaterThan(
-                        NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+            if (data.getState() == 1 /*NetworkStats.SET_FOREGROUND*/) {
+                assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
+                        data.getRxPackets(), data.getTxPackets());
+                // TODO: verify the RAT type field with the value gotten from device.
+                if (subtypeCombined) {
+                    assertThat(data.getRatType()).isEqualTo(
+                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+                } else {
+                    assertThat(data.getRatType()).isGreaterThan(
+                            NetworkTypeEnum.NETWORK_TYPE_UNKNOWN_VALUE);
+                }
+
+                // Assert that subscription info is valid.
+                assertThat(data.getSimMcc()).matches("^\\d{3}$");
+                assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
+                assertThat(data.getCarrierId()).isNotEqualTo(
+                        -1); // TelephonyManager#UNKNOWN_CARRIER_ID
+
+                return true; // found
             }
-            // Foreground state cannot be judged since foreground activity that launched
-            // while screen off (PROCESS_STATE_TOP_SLEEPING) will be treated as background
-            // in NetworkPolicyManagerService.
-
-            // Assert that subscription info is valid.
-            assertThat(data.getSimMcc()).matches("^\\d{3}$");
-            assertThat(data.getSimMnc()).matches("^\\d{2,3}$");
-            assertThat(data.getCarrierId()).isNotEqualTo(-1); // TelephonyManager#UNKNOWN_CARRIER_ID
-
-            return true;
+            return false;
         });
     }
 
@@ -2068,6 +1924,107 @@ public class UidAtomTests extends DeviceAtomTestCase {
         assertThat(atom.getState()).isEqualTo(AppBreadcrumbReported.State.START);
     }
 
+    public void testPushedBlobStoreStats() throws Exception {
+        StatsdConfig.Builder conf = createConfigBuilder();
+        addAtomEvent(conf, Atom.BLOB_COMMITTED_FIELD_NUMBER, false);
+        addAtomEvent(conf, Atom.BLOB_LEASED_FIELD_NUMBER, false);
+        addAtomEvent(conf, Atom.BLOB_OPENED_FIELD_NUMBER, false);
+        uploadConfig(conf);
+
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testBlobStore");
+
+        List<EventMetricData> data = getEventMetricDataList();
+        assertThat(data).hasSize(3);
+
+        BlobCommitted blobCommitted = data.get(0).getAtom().getBlobCommitted();
+        final long blobId = blobCommitted.getBlobId();
+        final long blobSize = blobCommitted.getSize();
+        assertThat(blobCommitted.getUid()).isEqualTo(getUid());
+        assertThat(blobId).isNotEqualTo(0);
+        assertThat(blobSize).isNotEqualTo(0);
+        assertThat(blobCommitted.getResult()).isEqualTo(BlobCommitted.Result.SUCCESS);
+
+        BlobLeased blobLeased = data.get(1).getAtom().getBlobLeased();
+        assertThat(blobLeased.getUid()).isEqualTo(getUid());
+        assertThat(blobLeased.getBlobId()).isEqualTo(blobId);
+        assertThat(blobLeased.getSize()).isEqualTo(blobSize);
+        assertThat(blobLeased.getResult()).isEqualTo(BlobLeased.Result.SUCCESS);
+
+        BlobOpened blobOpened = data.get(2).getAtom().getBlobOpened();
+        assertThat(blobOpened.getUid()).isEqualTo(getUid());
+        assertThat(blobOpened.getBlobId()).isEqualTo(blobId);
+        assertThat(blobOpened.getSize()).isEqualTo(blobSize);
+        assertThat(blobOpened.getResult()).isEqualTo(BlobOpened.Result.SUCCESS);
+    }
+
+    // Constants that match the constants for AtomTests#testBlobStore
+    private static final long BLOB_COMMIT_CALLBACK_TIMEOUT_SEC = 5;
+    private static final long BLOB_EXPIRY_DURATION_MS = 24 * 60 * 60 * 1000;
+    private static final long BLOB_FILE_SIZE_BYTES = 23 * 1024L;
+    private static final long BLOB_LEASE_EXPIRY_DURATION_MS = 60 * 60 * 1000;
+
+    public void testPulledBlobStoreStats() throws Exception {
+        StatsdConfig.Builder config = createConfigBuilder();
+        addGaugeAtomWithDimensions(config,
+                Atom.BLOB_INFO_FIELD_NUMBER,
+                null);
+        uploadConfig(config);
+
+        final long testStartTimeMs = System.currentTimeMillis();
+        Thread.sleep(WAIT_TIME_SHORT);
+        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testBlobStore");
+        Thread.sleep(WAIT_TIME_LONG);
+        setAppBreadcrumbPredicate();
+        Thread.sleep(WAIT_TIME_SHORT);
+
+        // Add commit callback time to test end time to account for async execution
+        final long testEndTimeMs =
+                System.currentTimeMillis() + BLOB_COMMIT_CALLBACK_TIMEOUT_SEC * 1000;
+
+        // Find the BlobInfo for the blob created in the test run
+        AtomsProto.BlobInfo blobInfo = null;
+        for (Atom atom : getGaugeMetricDataList()) {
+            if (atom.hasBlobInfo()) {
+                final AtomsProto.BlobInfo temp = atom.getBlobInfo();
+                if (temp.getCommitters().getCommitter(0).getUid() == getUid()) {
+                    blobInfo = temp;
+                    break;
+                }
+            }
+        }
+        assertThat(blobInfo).isNotNull();
+
+        assertThat(blobInfo.getSize()).isEqualTo(BLOB_FILE_SIZE_BYTES);
+
+        // Check that expiry time is reasonable
+        assertThat(blobInfo.getExpiryTimestampMillis()).isGreaterThan(
+                testStartTimeMs + BLOB_EXPIRY_DURATION_MS);
+        assertThat(blobInfo.getExpiryTimestampMillis()).isLessThan(
+                testEndTimeMs + BLOB_EXPIRY_DURATION_MS);
+
+        // Check that commit time is reasonable
+        final long commitTimeMs = blobInfo.getCommitters().getCommitter(
+                0).getCommitTimestampMillis();
+        assertThat(commitTimeMs).isGreaterThan(testStartTimeMs);
+        assertThat(commitTimeMs).isLessThan(testEndTimeMs);
+
+        // Check that WHITELIST and PRIVATE access mode flags are set
+        assertThat(blobInfo.getCommitters().getCommitter(0).getAccessMode()).isEqualTo(0b1001);
+        assertThat(blobInfo.getCommitters().getCommitter(0).getNumWhitelistedPackage()).isEqualTo(
+                1);
+
+        assertThat(blobInfo.getLeasees().getLeaseeCount()).isGreaterThan(0);
+        assertThat(blobInfo.getLeasees().getLeasee(0).getUid()).isEqualTo(getUid());
+
+        // Check that lease expiry time is reasonable
+        final long leaseExpiryMs = blobInfo.getLeasees().getLeasee(
+                0).getLeaseExpiryTimestampMillis();
+        assertThat(leaseExpiryMs).isGreaterThan(testStartTimeMs + BLOB_LEASE_EXPIRY_DURATION_MS);
+        assertThat(leaseExpiryMs).isLessThan(testEndTimeMs + BLOB_LEASE_EXPIRY_DURATION_MS);
+    }
+
     private void assertDataUsageAtomDataExpected(long rxb, long txb, long rxp, long txp) {
         assertThat(rxb).isGreaterThan(0L);
         assertThat(txb).isGreaterThan(0L);
@@ -2077,7 +2034,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     private void doTestMobileBytesTransferThat(int atomTag, ThrowingPredicate p)
             throws Throwable {
-        if (statsdDisabled()) return;
         if (!hasFeature(FEATURE_TELEPHONY, true)) return;
 
         // Get MobileBytesTransfer as a simple gauge metric.
@@ -2117,9 +2073,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPackageInstallerV2MetricsReported() throws Throwable {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_INCREMENTAL_DELIVERY, true)) return;
         final AtomsProto.PackageInstallerV2Reported report = installPackageUsingV2AndGetReport(
                 new String[]{TEST_INSTALL_APK});
@@ -2134,9 +2087,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testPackageInstallerV2MetricsReportedForSplits() throws Throwable {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_INCREMENTAL_DELIVERY, true)) return;
 
         final AtomsProto.PackageInstallerV2Reported report = installPackageUsingV2AndGetReport(
@@ -2154,9 +2104,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
     }
 
     public void testAppForegroundBackground() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         Set<Integer> onStates = new HashSet<>(Arrays.asList(
                 AppUsageEventOccurred.EventType.MOVE_TO_FOREGROUND_VALUE));
         Set<Integer> offStates = new HashSet<>(Arrays.asList(
