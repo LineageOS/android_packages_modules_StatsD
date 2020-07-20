@@ -72,7 +72,7 @@ public class UidMapTests extends DeviceAtomTestCase {
         final String result = getDevice().installPackage(
                 buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), false, true);
 
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         ConfigMetricsReportList reports = getReportList();
         assertThat(reports.getReportsCount()).isGreaterThan(0);
