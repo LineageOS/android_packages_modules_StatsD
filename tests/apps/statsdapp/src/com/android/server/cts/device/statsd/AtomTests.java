@@ -271,7 +271,7 @@ public class AtomTests {
                 Log.e(TAG, "Could not enable bluetooth to trigger state reset");
                 return;
             }
-            sleep(2_000); // Wait for Bluetooth to fully turn on.
+            sleep(3_000); // Wait for Bluetooth to fully turn on.
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
