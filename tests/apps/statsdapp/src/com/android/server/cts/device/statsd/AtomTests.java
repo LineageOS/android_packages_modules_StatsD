@@ -78,7 +78,7 @@ import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
 
 import com.android.compatibility.common.util.ShellIdentityUtils;
-import com.android.utils.blob.DummyBlobData;
+import com.android.utils.blob.FakeBlobData;
 
 import com.google.common.io.BaseEncoding;
 
@@ -964,7 +964,7 @@ public class AtomTests {
         BlobStoreManager bsm = context.getSystemService(BlobStoreManager.class);
         final long leaseExpiryMs = System.currentTimeMillis() + BLOB_LEASE_EXPIRY_DURATION_MS;
 
-        final DummyBlobData blobData = new DummyBlobData.Builder(context).setExpiryDurationMs(
+        final FakeBlobData blobData = new FakeBlobData.Builder(context).setExpiryDurationMs(
                 BLOB_EXPIRY_DURATION_MS).setFileSize(BLOB_FILE_SIZE_BYTES).build();
 
         blobData.prepare();
@@ -1041,7 +1041,7 @@ public class AtomTests {
     }
 
 
-    private void commitBlob(Context context, BlobStoreManager bsm, DummyBlobData blobData)
+    private void commitBlob(Context context, BlobStoreManager bsm, FakeBlobData blobData)
             throws Exception {;
         final long sessionId = bsm.createSession(blobData.getBlobHandle());
         try (BlobStoreManager.Session session = bsm.openSession(sessionId)) {
