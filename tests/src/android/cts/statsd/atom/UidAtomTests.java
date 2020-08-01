@@ -416,6 +416,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testDeviceCalculatedPowerBlameUid() throws Exception {
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+        if (!hasBattery()) {
+            return;
+        }
 
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
