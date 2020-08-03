@@ -1903,7 +1903,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(atomId, (atom) -> {
             final AtomsProto.BytesTransferByTagAndMetered data =
                     ((Atom) atom).getBytesTransferByTagAndMetered();
-            if (data.getUid() == appUid) {
+            if (data.getUid() == appUid && data.getTag() == 0 /*app traffic generated on tag 0*/) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
                         data.getRxPackets(), data.getTxPackets());
                 return true; // found
