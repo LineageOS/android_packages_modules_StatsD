@@ -320,4 +320,9 @@ public class DeviceAtomTestCase extends AtomTestCase {
                 "settings get global netstats_combine_subtype_enabled").trim();
         return output.equals("1");
     }
+
+    void setNetworkStatsCombinedSubTypeEnabled(boolean enable) throws Exception {
+        getDevice().executeShellCommand("settings put global netstats_combine_subtype_enabled "
+                + (enable ? "1" : "0"));
+    }
 }
