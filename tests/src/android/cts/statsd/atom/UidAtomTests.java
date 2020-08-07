@@ -365,35 +365,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 atom -> atom.getCameraStateChanged().getState().getNumber());
     }
 
-    public void testCpuTimePerUid() throws Exception {
-        if (!hasFeature(FEATURE_WATCH, false)) return;
-        StatsdConfig.Builder config = createConfigBuilder();
-        addGaugeAtomWithDimensions(config, Atom.CPU_TIME_PER_UID_FIELD_NUMBER, null);
-
-        uploadConfig(config);
-
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testSimpleCpu");
-
-        Thread.sleep(WAIT_TIME_SHORT);
-        setAppBreadcrumbPredicate();
-        Thread.sleep(WAIT_TIME_LONG);
-
-        List<Atom> atomList = getGaugeMetricDataList();
-
-        // TODO: We don't have atom matching on gauge yet. Let's refactor this after that feature is
-        // implemented.
-        boolean found = false;
-        int uid = getUid();
-        for (Atom atom : atomList) {
-            if (atom.getCpuTimePerUid().getUid() == uid) {
-                found = true;
-                assertThat(atom.getCpuTimePerUid().getUserTimeMicros()).isGreaterThan(0L);
-                assertThat(atom.getCpuTimePerUid().getSysTimeMicros()).isGreaterThan(0L);
-            }
-        }
-        assertWithMessage(String.format("did not find uid %d", uid)).that(found).isTrue();
-    }
-
     public void testDeviceCalculatedPowerUse() throws Exception {
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
@@ -1926,21 +1897,6 @@ public class UidAtomTests extends DeviceAtomTestCase {
             }
             return false;
         });
-    }
-
-    public void testIsolatedToHostUidMapping() throws Exception {
-        createAndUploadConfig(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER, /*useAttribution=*/false);
-        Thread.sleep(WAIT_TIME_SHORT);
-
-        // Create an isolated service from which An AppBreadcrumbReported atom is written.
-        runDeviceTests(DEVICE_SIDE_TEST_PACKAGE, ".AtomTests", "testIsolatedProcessService");
-
-        List<EventMetricData> data = getEventMetricDataList();
-        assertThat(data).hasSize(1);
-        AppBreadcrumbReported atom = data.get(0).getAtom().getAppBreadcrumbReported();
-        assertThat(atom.getUid()).isEqualTo(getUid());
-        assertThat(atom.getLabel()).isEqualTo(0);
-        assertThat(atom.getState()).isEqualTo(AppBreadcrumbReported.State.START);
     }
 
     public void testPushedBlobStoreStats() throws Exception {

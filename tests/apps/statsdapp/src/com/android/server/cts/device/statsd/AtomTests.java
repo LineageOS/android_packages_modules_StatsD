@@ -934,20 +934,6 @@ public class AtomTests {
         }
     }
 
-    @Test
-    public void testIsolatedProcessService() throws Exception {
-        Context context = InstrumentationRegistry.getContext();
-        int uid = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0).uid;
-
-        // Start the isolated service, which logs an AppBreadcrumbReported atom, and then exit
-        // shortly afterwards.
-        Intent intent = new Intent(context, IsolatedProcessService.class);
-        context.startService(intent);
-        sleep(500);
-        context.stopService(intent);
-    }
-
-
     // Constants for testBlobStore
     private static final long BLOB_COMMIT_CALLBACK_TIMEOUT_SEC = 5;
     private static final long BLOB_EXPIRY_DURATION_MS = 24 * 60 * 60 * 1000;
