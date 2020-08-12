@@ -23,7 +23,7 @@
 #include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "metrics/metrics_test_helper.h"
 #include "src/condition/ConditionTracker.h"
-#include "src/matchers/LogMatchingTracker.h"
+#include "src/matchers/AtomMatchingTracker.h"
 #include "src/metrics/CountMetricProducer.h"
 #include "src/metrics/GaugeMetricProducer.h"
 #include "src/metrics/MetricProducer.h"
