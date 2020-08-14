@@ -115,6 +115,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
             "com.android.cts.device.statsd.emptyapp";
     private static final String TEST_REMOTE_DIR = "/data/local/tmp/statsd";
     private static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
+    private static final String ACTION_LONG_SLEEP_WHILE_TOP = "action.long_sleep_top";
 
     private static final int WAIT_TIME_FOR_CONFIG_UPDATE_MS = 200;
     private static final int EXTRA_WAIT_TIME_MS = 5_000; // as buffer when app starting/stopping.
@@ -2112,18 +2113,48 @@ public class UidAtomTests extends DeviceAtomTestCase {
                 AppUsageEventOccurred.EventType.MOVE_TO_BACKGROUND_VALUE));
 
         List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
-        createAndUploadConfig(Atom.APP_USAGE_EVENT_OCCURRED_FIELD_NUMBER, false);  // False: does not use attribution.
+        createAndUploadConfig(Atom.APP_USAGE_EVENT_OCCURRED_FIELD_NUMBER, false);
         Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
 
         getDevice().executeShellCommand(String.format(
-            "am start -n '%s' -e %s %s",
-            "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity",
-            "action", ACTION_SHOW_APPLICATION_OVERLAY));
+                "am start -n '%s' -e %s %s",
+                "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity",
+                "action", ACTION_SHOW_APPLICATION_OVERLAY));
         final int waitTime = EXTRA_WAIT_TIME_MS + 5_000; // Overlay may need to sit there a while.
         Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
 
         List<EventMetricData> data = getEventMetricDataList();
-        Function<Atom, Integer> appUsageStateFunction = atom -> atom.getAppUsageEventOccurred().getEventType().getNumber();
+        Function<Atom, Integer> appUsageStateFunction =
+                atom -> atom.getAppUsageEventOccurred().getEventType().getNumber();
+        popUntilFind(data, onStates, appUsageStateFunction); // clear out initial appusage states.s
+        assertStatesOccurred(stateSet, data, 0, appUsageStateFunction);
+    }
+
+    public void testAppForceStopUsageEvent() throws Exception {
+        Set<Integer> onStates = new HashSet<>(Arrays.asList(
+                AppUsageEventOccurred.EventType.MOVE_TO_FOREGROUND_VALUE));
+        Set<Integer> offStates = new HashSet<>(Arrays.asList(
+                AppUsageEventOccurred.EventType.MOVE_TO_BACKGROUND_VALUE));
+
+        List<Set<Integer>> stateSet = Arrays.asList(onStates, offStates); // state sets, in order
+        createAndUploadConfig(Atom.APP_USAGE_EVENT_OCCURRED_FIELD_NUMBER, false);
+        Thread.sleep(WAIT_TIME_FOR_CONFIG_UPDATE_MS);
+
+        getDevice().executeShellCommand(String.format(
+                "am start -n '%s' -e %s %s",
+                "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity",
+                "action", ACTION_LONG_SLEEP_WHILE_TOP));
+        final int waitTime = EXTRA_WAIT_TIME_MS + 5_000;
+        Thread.sleep(waitTime);
+
+        getDevice().executeShellCommand(String.format(
+                "am force-stop %s",
+                "com.android.server.cts.device.statsd/.StatsdCtsForegroundActivity"));
+        Thread.sleep(waitTime + STATSD_REPORT_WAIT_TIME_MS);
+
+        List<EventMetricData> data = getEventMetricDataList();
+        Function<Atom, Integer> appUsageStateFunction =
+                atom -> atom.getAppUsageEventOccurred().getEventType().getNumber();
         popUntilFind(data, onStates, appUsageStateFunction); // clear out initial appusage states.
         assertStatesOccurred(stateSet, data, 0, appUsageStateFunction);
     }
