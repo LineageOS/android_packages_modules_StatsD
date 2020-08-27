@@ -264,7 +264,7 @@ public class AtomTests {
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             bluetoothAdapter.disable();
-            sleep(500);
+            sleep(1500);
 
             // Trigger State.RESET so that new state is State.OFF.
             if (!bluetoothAdapter.enable()) {
