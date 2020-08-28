@@ -114,5 +114,5 @@
          android:label="CTS tests of android.os.statsd stats collection">
         <meta-data android:name="listener"
              android:value="com.android.cts.runner.CtsTestRunListener"/>
-    </instrumentation>/&gt;
+    </instrumentation>
 </manifest>
