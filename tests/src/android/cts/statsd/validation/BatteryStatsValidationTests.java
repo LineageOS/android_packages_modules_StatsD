@@ -15,8 +15,8 @@
  */
 package android.cts.statsd.validation;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.cts.statsd.atom.DeviceAtomTestCase;
 import android.os.BatteryStatsProto;
@@ -73,25 +73,22 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
         List<CountMetricData> countMetricData = getCountMetricDataList();
-        assertEquals(1, countMetricData.size());
-        assertEquals(1, countMetricData.get(0).getBucketInfoCount());
-        assertTrue(countMetricData.get(0).getBucketInfo(0).getCount() >= 2);
-        assertEquals(batterystatsProto.getSystem().getMisc().getNumConnectivityChanges(),
-                countMetricData.get(0).getBucketInfo(0).getCount());
+        assertThat(countMetricData).hasSize(1);
+        assertThat(countMetricData.get(0).getBucketInfoCount()).isEqualTo(1);
+        assertThat(countMetricData.get(0).getBucketInfo(0).getCount()).isAtLeast(2L);
+        assertThat(countMetricData.get(0).getBucketInfo(0).getCount()).isEqualTo(
+                (long) batterystatsProto.getSystem().getMisc().getNumConnectivityChanges());
     }
     */
 
     public void testPowerUse() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
         resetBatteryStats();
         unplugDevice();
 
-        final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.8; // ratio that statsd and bs can differ
+        final double ALLOWED_FRACTIONAL_DIFFERENCE = 0.7; // ratio that statsd and bs can differ
 
-        StatsdConfig.Builder config = getPulledConfig();
+        StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config, Atom.DEVICE_CALCULATED_POWER_USE_FIELD_NUMBER, null);
         uploadConfig(config);
         unplugDevice();
@@ -108,19 +105,16 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
         // Extract statsd data
         Atom atom = atomList.get(0);
         long statsdPowerNas = atom.getDeviceCalculatedPowerUse().getComputedPowerNanoAmpSecs();
-        assertTrue("Statsd: Non-positive power value.", statsdPowerNas > 0);
+        assertThat(statsdPowerNas).isGreaterThan(0L);
 
         // Extract BatteryStats data
         double bsPowerNas = batterystatsProto.getSystem().getPowerUseSummary().getComputedPowerMah()
                 * 1_000_000L * 3600L; /* mAh to nAs */
-        assertTrue("BatteryStats: Non-positive power value.", bsPowerNas > 0);
+        assertThat(bsPowerNas).isGreaterThan(0d);
 
-        assertTrue(
-                String.format("Statsd (%d) < Batterystats (%f)", statsdPowerNas, bsPowerNas),
-                statsdPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * bsPowerNas);
-        assertTrue(
-                String.format("Batterystats (%f) < Statsd (%d)", bsPowerNas, statsdPowerNas),
-                bsPowerNas > ALLOWED_FRACTIONAL_DIFFERENCE * statsdPowerNas);
+        assertThat((double) statsdPowerNas)
+                .isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * bsPowerNas);
+        assertThat(bsPowerNas).isGreaterThan(ALLOWED_FRACTIONAL_DIFFERENCE * statsdPowerNas);
     }
 
     public void testServiceStartCount() throws Exception {
@@ -135,16 +129,17 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
         List<CountMetricData> countMetricData = getCountMetricDataList();
-        assertTrue(countMetricData.size() > 0);
+        assertThat(countMetricData).isNotEmpty();
         int uid = getUid();
         long countFromStatsd = 0;
         for (CountMetricData data : countMetricData) {
             List<DimensionsValue> dims = data.getDimensionLeafValuesInWhatList();
             if (dims.get(0).getValueInt() == uid) {
-                assertEquals(DEVICE_SIDE_TEST_PACKAGE, dims.get(1).getValueStr());
-                assertEquals(dims.get(2).getValueStr(), DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME);
+                assertThat(dims.get(1).getValueStr()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+                assertThat(dims.get(2).getValueStr())
+                        .isEqualTo(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME);
                 countFromStatsd = data.getBucketInfo(0).getCount();
-                assertTrue(countFromStatsd > 0);
+                assertThat(countFromStatsd).isGreaterThan(0L);
             }
         }
         long countFromBS = 0;
@@ -155,16 +150,16 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
                         for (Service svc : pkg.getServicesList()) {
                             if (svc.getName().equals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME)) {
                                 countFromBS = svc.getStartCount();
-                                assertTrue(countFromBS > 0);
+                                assertThat(countFromBS).isGreaterThan(0L);
                             }
                         }
                     }
                 }
             }
         }
-        assertTrue(countFromStatsd > 0);
-        assertTrue(countFromBS > 0);
-        assertEquals(countFromBS, countFromStatsd);
+        assertThat(countFromStatsd).isGreaterThan(0L);
+        assertThat(countFromBS).isGreaterThan(0L);
+        assertThat(countFromBS).isEqualTo(countFromStatsd);
     }
 
     public void testServiceLaunchCount() throws Exception {
@@ -179,16 +174,17 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
 
         BatteryStatsProto batterystatsProto = getBatteryStatsProto();
         List<CountMetricData> countMetricData = getCountMetricDataList();
-        assertTrue(countMetricData.size() > 0);
+        assertThat(countMetricData).isNotEmpty();
         int uid = getUid();
         long countFromStatsd = 0;
         for (CountMetricData data : countMetricData) {
             List<DimensionsValue> dims = data.getDimensionLeafValuesInWhatList();
             if (dims.get(0).getValueInt() == uid) {
-                assertEquals(DEVICE_SIDE_TEST_PACKAGE, dims.get(1).getValueStr());
-                assertEquals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME, dims.get(2).getValueStr());
+                assertThat(dims.get(1).getValueStr()).isEqualTo(DEVICE_SIDE_TEST_PACKAGE);
+                assertThat(dims.get(2).getValueStr())
+                        .isEqualTo(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME);
                 countFromStatsd = data.getBucketInfo(0).getCount();
-                assertTrue(countFromStatsd > 0);
+                assertThat(countFromStatsd).isGreaterThan(0L);
             }
         }
         long countFromBS = 0;
@@ -199,15 +195,15 @@ public class BatteryStatsValidationTests extends DeviceAtomTestCase {
                         for (Service svc : pkg.getServicesList()) {
                             if (svc.getName().equals(DEVICE_SIDE_TEST_FOREGROUND_SERVICE_NAME)) {
                                 countFromBS = svc.getLaunchCount();
-                                assertTrue(countFromBS > 0);
+                                assertThat(countFromBS).isGreaterThan(0L);
                             }
                         }
                     }
                 }
             }
         }
-        assertTrue(countFromStatsd > 0);
-        assertTrue(countFromBS > 0);
-        assertEquals(countFromBS, countFromStatsd);
+        assertThat(countFromStatsd).isGreaterThan(0L);
+        assertThat(countFromBS).isGreaterThan(0L);
+        assertThat(countFromBS).isEqualTo(countFromStatsd);
     }
 }

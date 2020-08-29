@@ -15,6 +15,8 @@
  */
 package android.cts.statsd.metric;
 
+import static com.google.common.truth.Truth.assertThat;
+
 import android.cts.statsd.atom.DeviceAtomTestCase;
 
 import com.android.internal.os.StatsdConfigProto;
@@ -87,6 +89,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         EventActivation metric1Act1 =
                 MetricsUtils.createEventActivation(act1TtlSecs, act1MatcherId, act1CancelMatcherId)
+                    .setActivationType(ActivationType.ACTIVATE_IMMEDIATELY)
                     .build();
 
         EventActivation metric1Act2 =
@@ -106,7 +109,6 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         MetricActivation metric1Activation = MetricActivation.newBuilder()
                 .setMetricId(metric1Id)
-                .setActivationType(ActivationType.ACTIVATE_IMMEDIATELY)
                 .addEventActivation(metric1Act1)
                 .addEventActivation(metric1Act2)
                 .build();
@@ -152,10 +154,6 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testCancellation() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
         final int act1TtlSecs = 5;
         final int act2TtlSecs = 8;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
@@ -253,17 +251,13 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testRestart() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
-        final int act1TtlSecs = 100;
-        final int act2TtlSecs = 200;
+        final int act1TtlSecs = 200;
+        final int act2TtlSecs = 400;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -276,9 +270,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 100 seconds
+        // Metric 2 Activation 1: 200 seconds
         // Metric 2 Activation 2: 0 seconds
         rebootDeviceAndWaitUntilReady();
 
@@ -304,7 +298,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 1 Activation 1: 0 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds
-        // Metric 2 Activation 2: 200 seconds
+        // Metric 2 Activation 2: 400 seconds
         doAppBreadcrumbReported(act2MatcherId);
         Thread.sleep(10L);
 
@@ -315,10 +309,10 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
-        // Metric 2 Activation 2: 200 seconds
+        // Metric 2 Activation 2: 400 seconds
         doAppBreadcrumbReported(act1MatcherId);
         Thread.sleep(10L);
 
@@ -328,17 +322,17 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 50 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds (will activate after boot)
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
-        // Metric 2 Activation 2: 150 seconds
+        // Metric 2 Activation 2: 300 seconds
         Thread.sleep(act1TtlSecs * 1000L / 2);
 
         // Time remaining:
-        // Metric 1 Activation 1: 50 seconds
-        // Metric 1 Activation 2: 200 seconds
-        // Metric 2 Activation 1: 100 seconds
-        // Metric 2 Activation 2: 150 seconds
+        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 2: 400 seconds
+        // Metric 2 Activation 1: 200 seconds
+        // Metric 2 Activation 2: 300 seconds
         rebootDeviceAndWaitUntilReady();
 
         // Fourth logged event for Metric 1.
@@ -349,9 +343,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Expire Metric 1 Activation 1.
         // Time remaining:
         // Metric 1 Activation 1: 0 seconds
-        // Metric 1 Activation 2: 150 seconds
-        // Metric 2 Activation 1: 50 seconds
-        // Metric 2 Activation 2: 100 seconds
+        // Metric 1 Activation 2: 300 seconds
+        // Metric 2 Activation 1: 100 seconds
+        // Metric 2 Activation 2: 200 seconds
         Thread.sleep(act1TtlSecs * 1000L / 2);
 
         // Fifth logged event for Metric 1.
@@ -374,7 +368,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         ConfigMetricsReportList reportList = getReportList();
         List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
-        assertEquals(3, reports.size());
+        assertThat(reports).hasSize(3);
 
         // Report before restart.
         ConfigMetricsReport report = reports.get(0);
@@ -409,17 +403,13 @@ public class MetricActivationTests extends DeviceAtomTestCase {
      * Metric 3: No activations; always active
      **/
     public void testMultipleActivations() throws Exception {
-        if (statsdDisabled()) {
-            return;
-        }
-
-        final int act1TtlSecs = 100;
-        final int act2TtlSecs = 200;
+        final int act1TtlSecs = 200;
+        final int act2TtlSecs = 400;
         uploadConfig(createConfig(act1TtlSecs, act2TtlSecs));
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -432,7 +422,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 50 seconds
+        // Metric 1 Activation 1: 100 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -445,7 +435,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
         // Metric 2 Activation 1: 0 seconds (will activate after boot)
         // Metric 2 Activation 2: 0 seconds
@@ -458,9 +448,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         logAllMetrics();
 
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 100 seconds
+        // Metric 2 Activation 1: 200 seconds
         // Metric 2 Activation 2: 0 seconds
         rebootDeviceAndWaitUntilReady();
 
@@ -471,9 +461,9 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         // Trigger Metric 1 Activation 1 and Metric 2 Activation 1.
         // Time remaining:
-        // Metric 1 Activation 1: 100 seconds
+        // Metric 1 Activation 1: 200 seconds
         // Metric 1 Activation 2: 0 seconds
-        // Metric 2 Activation 1: 100 seconds
+        // Metric 2 Activation 1: 200 seconds
         // Metric 2 Activation 2: 0 seconds
         doAppBreadcrumbReported(act1MatcherId);
         Thread.sleep(10L);
@@ -510,7 +500,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
         ConfigMetricsReportList reportList = getReportList();
         List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
-        assertEquals(3, reports.size());
+        assertThat(reports).hasSize(3);
 
         // Report before restart.
         ConfigMetricsReport report = reports.get(0);
@@ -538,7 +528,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
 
     private void verifyMetrics(ConfigMetricsReport report, int metric1Count, int metric2Count,
             int metric3Count) throws Exception {
-        assertEquals(3, report.getMetricsCount());
+        assertThat(report.getMetricsCount()).isEqualTo(3);
 
         verifyMetric(
                 report.getMetrics(0),   // StatsLogReport
@@ -563,17 +553,14 @@ public class MetricActivationTests extends DeviceAtomTestCase {
     private void verifyMetric(StatsLogReport metricReport, long metricId, int metricMatcherLabel,
             int dataCount) {
         LogUtil.CLog.d("Got the following event metric data: " + metricReport.toString());
-        assertEquals(metricId, metricReport.getMetricId());
-        if (dataCount > 0) {
-            assertTrue(metricReport.hasEventMetrics());
-        } else {
-            assertFalse(metricReport.hasEventMetrics());
-        }
+        assertThat(metricReport.getMetricId()).isEqualTo(metricId);
+        assertThat(metricReport.hasEventMetrics()).isEqualTo(dataCount > 0);
+
         StatsLogReport.EventMetricDataWrapper eventData = metricReport.getEventMetrics();
-        assertEquals(dataCount, eventData.getDataCount());
+        assertThat(eventData.getDataCount()).isEqualTo(dataCount);
         for (int i = 0; i < eventData.getDataCount(); i++) {
             AppBreadcrumbReported atom = eventData.getData(i).getAtom().getAppBreadcrumbReported();
-            assertEquals(metricMatcherLabel, atom.getLabel());
+            assertThat(atom.getLabel()).isEqualTo(metricMatcherLabel);
         }
     }
 }

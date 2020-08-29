@@ -20,17 +20,27 @@ java_test_host {
     // tag this module as a cts test artifact
     test_suites: [
         "cts",
-        "vts10",
         "general-tests",
+        "mts",
+        "vts10",
     ],
 
     libs: [
-        "cts-tradefed",
-        "tradefed",
         "compatibility-host-util",
+        "cts-tradefed",
         "host-libprotobuf-java-full",
         "platformprotos",
-        "truth-host-prebuilt",
+        "tradefed",
+        "truth-prebuilt",
     ],
-    data: ["**/*.pbtxt"],
+    static_libs: [
+        "core_cts_test_resources",
+        "perfetto_config-full",
+    ],
+    data: [
+        "**/*.pbtxt",
+        ":CtsStatsdApp",
+        ":CtsStatsdEmptyApp",
+        ":CtsStatsdEmptySplitApp",
+    ],
 }
