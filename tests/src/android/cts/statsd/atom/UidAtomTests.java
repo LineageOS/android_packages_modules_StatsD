@@ -1294,7 +1294,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
     private static void assertIonHeapSize(List<Atom> atoms) {
         assertThat(atoms).hasSize(1);
         IonHeapSize ionHeapSize = atoms.get(0).getIonHeapSize();
-        assertThat(ionHeapSize.getTotalSizeKb()).isGreaterThan(0);
+        assertThat(ionHeapSize.getTotalSizeKb()).isAtLeast(0);
     }
 
     /**
