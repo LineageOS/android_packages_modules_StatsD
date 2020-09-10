@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 The Android Open Source Project
+ * Copyright (C) 2020 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,18 @@
 
 #pragma once
 
-#include <stddef.h>
-#include <stdint.h>
+/**
+ * Helpers to manage the statsd socket.
+ **/
 
 #ifdef __cplusplus
 extern "C" {
 #endif  // __CPLUSPLUS
-void stats_log_close();
-int stats_log_is_closed();
-int write_buffer_to_statsd(void* buffer, size_t size, uint32_t atomId);
+
+/**
+ * Closes the statsd socket file descriptor.
+ **/
+void AStatsSocket_close();
 #ifdef __cplusplus
 }
 #endif  // __CPLUSPLUS
