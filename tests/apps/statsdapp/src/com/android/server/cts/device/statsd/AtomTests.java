@@ -17,7 +17,6 @@
 package com.android.server.cts.device.statsd;
 
 import static com.android.compatibility.common.util.SystemUtil.runShellCommand;
-
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import android.accounts.Account;
@@ -68,22 +67,18 @@ import android.os.Process;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.Log;
 import android.util.StatsEvent;
 import android.util.StatsLog;
-
 import androidx.annotation.NonNull;
 import androidx.test.InstrumentationRegistry;
-
 import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.utils.blob.DummyBlobData;
-
+import com.android.utils.blob.FakeBlobData;
 import com.google.common.io.BaseEncoding;
-
-import org.junit.Test;
-
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -93,6 +88,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import org.junit.Test;
 
 public class AtomTests {
     private static final String TAG = AtomTests.class.getSimpleName();
@@ -258,23 +254,38 @@ public class AtomTests {
             int uid = Process.myUid();
             int whatAtomId = 9_999;
 
+            // Get the current setting for bluetooth background scanning.
+            // Set to 0 if the setting is not found or an error occurs.
+            int initialBleScanGlobalSetting = Settings.Global.getInt(
+                    InstrumentationRegistry.getTargetContext().getContentResolver(),
+                    Settings.Global.BLE_SCAN_ALWAYS_AVAILABLE, 0);
+
+            // Turn off bluetooth background scanning.
+            Settings.Global.putInt(InstrumentationRegistry.getTargetContext().getContentResolver(),
+                    Settings.Global.BLE_SCAN_ALWAYS_AVAILABLE, 0);
+
             // Change state to State.ON.
             bleScanner.startScan(null, scanSettings, scanCallback);
-            sleep(500);
+            sleep(6_000);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
+
             bluetoothAdapter.disable();
-            sleep(1500);
+            sleep(6_000);
 
             // Trigger State.RESET so that new state is State.OFF.
             if (!bluetoothAdapter.enable()) {
                 Log.e(TAG, "Could not enable bluetooth to trigger state reset");
                 return;
             }
-            sleep(3_000); // Wait for Bluetooth to fully turn on.
+            sleep(6_000); // Wait for Bluetooth to fully turn on.
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
+
+            // Set bluetooth background scanning to original setting.
+            Settings.Global.putInt(InstrumentationRegistry.getTargetContext().getContentResolver(),
+                    Settings.Global.BLE_SCAN_ALWAYS_AVAILABLE, initialBleScanGlobalSetting);
         });
     }
 
