@@ -28,6 +28,7 @@ import android.telephony.NetworkTypeEnum;
 
 import com.android.compatibility.common.tradefed.build.CompatibilityBuildHelper;
 import com.android.compatibility.common.util.PropertyUtil;
+import com.android.internal.os.StatsdConfigProto.FieldValueMatcher;
 import com.android.internal.os.StatsdConfigProto.StatsdConfig;
 import com.android.os.AtomsProto;
 import com.android.os.AtomsProto.ANROccurred;
@@ -73,6 +74,7 @@ import com.android.os.AtomsProto.ScheduledJobStateChanged;
 import com.android.os.AtomsProto.SettingSnapshot;
 import com.android.os.AtomsProto.SyncStateChanged;
 import com.android.os.AtomsProto.TestAtomReported;
+import com.android.os.AtomsProto.UiEventReported;
 import com.android.os.AtomsProto.VibratorStateChanged;
 import com.android.os.AtomsProto.WakelockStateChanged;
 import com.android.os.AtomsProto.WakeupAlarmOccurred;
@@ -93,6 +95,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Statsd atom tests that are done via app, for atoms that report a uid.
@@ -733,15 +736,15 @@ public class UidAtomTests extends DeviceAtomTestCase {
             return;
         }
 
-        final int atomTag = Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER;
-
-        Set<Integer> entered = new HashSet<>(
-                Arrays.asList(PictureInPictureStateChanged.State.ENTERED_VALUE));
-
-        // Add state sets to the list in order.
-        List<Set<Integer>> stateSet = Arrays.asList(entered);
-
-        createAndUploadConfig(atomTag, false);
+        StatsdConfig.Builder conf = createConfigBuilder();
+        // PictureInPictureStateChanged atom is used prior to rvc-qpr
+        addAtomEvent(conf, Atom.PICTURE_IN_PICTURE_STATE_CHANGED_FIELD_NUMBER,
+                /*useAttribution=*/false);
+        // Picture-in-picture logs' been migrated to UiEvent since rvc-qpr
+        FieldValueMatcher.Builder pkgMatcher = createFvm(UiEventReported.PACKAGE_NAME_FIELD_NUMBER)
+                .setEqString(DEVICE_SIDE_TEST_PACKAGE);
+        addAtomEvent(conf, Atom.UI_EVENT_REPORTED_FIELD_NUMBER, Arrays.asList(pkgMatcher));
+        uploadConfig(conf);
 
         LogUtil.CLog.d("Playing video in Picture-in-Picture mode");
         runActivity("VideoPlayerActivity", "action", "action.play_video_picture_in_picture_mode");
@@ -749,9 +752,34 @@ public class UidAtomTests extends DeviceAtomTestCase {
         // Sorted list of events in order in which they occurred.
         List<EventMetricData> data = getEventMetricDataList();
 
-        // Assert that the events happened in the expected order.
-        assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
-                atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
+        // Filter out the PictureInPictureStateChanged and UiEventReported atom
+        List<EventMetricData> pictureInPictureStateChangedData = data.stream()
+                .filter(e -> e.getAtom().hasPictureInPictureStateChanged())
+                .collect(Collectors.toList());
+        List<EventMetricData> uiEventReportedData = data.stream()
+                .filter(e -> e.getAtom().hasUiEventReported())
+                .collect(Collectors.toList());
+
+        if (!pictureInPictureStateChangedData.isEmpty()) {
+            LogUtil.CLog.d("Assert using PictureInPictureStateChanged");
+            Set<Integer> entered = new HashSet<>(
+                    Arrays.asList(PictureInPictureStateChanged.State.ENTERED_VALUE));
+            List<Set<Integer>> stateSet = Arrays.asList(entered);
+            assertStatesOccurred(stateSet, data, WAIT_TIME_LONG,
+                    atom -> atom.getPictureInPictureStateChanged().getState().getNumber());
+        } else if (!uiEventReportedData.isEmpty()) {
+            LogUtil.CLog.d("Assert using UiEventReported");
+            // See PipUiEventEnum for definitions
+            final int enterPipEventId = 603;
+            // Assert that log for entering PiP happens exactly once, we do not use
+            // assertStateOccurred here since PiP may log something else when activity finishes.
+            List<EventMetricData> entered = uiEventReportedData.stream()
+                    .filter(e -> e.getAtom().getUiEventReported().getEventId() == enterPipEventId)
+                    .collect(Collectors.toList());
+            assertThat(entered).hasSize(1);
+        } else {
+            fail("No logging event from PictureInPictureStateChanged nor UiEventReported");
+        }
     }
 
     public void testScheduledJobState() throws Exception {
