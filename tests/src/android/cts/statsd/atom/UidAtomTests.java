@@ -417,6 +417,12 @@ public class UidAtomTests extends DeviceAtomTestCase {
     public void testDeviceCalculatedPowerBlameUid() throws Exception {
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
 
+        String kernelVersion = getDevice().executeShellCommand("uname -r");
+        if (kernelVersion.contains("3.18")) {
+            LogUtil.CLog.d("Skipping calculated power blame uid test.");
+            return;
+        }
+
         StatsdConfig.Builder config = createConfigBuilder();
         addGaugeAtomWithDimensions(config,
                 Atom.DEVICE_CALCULATED_POWER_BLAME_UID_FIELD_NUMBER, null);
