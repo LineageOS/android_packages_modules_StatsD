@@ -209,6 +209,12 @@ public class AtomTestCase extends BaseTestCase {
         builder.setDurationMs(10000);
         builder.setAllowUserBuildTracing(true);
 
+        TraceConfig.IncidentReportConfig incident = TraceConfig.IncidentReportConfig
+            .newBuilder()
+            .setDestinationPackage("foo.bar.baz")
+            .build();
+        builder.setIncidentReportConfig(incident);
+
         // To avoid being hit with guardrails firing in multiple test runs back
         // to back, we set a unique session key for each config.
         Random random = new Random();
