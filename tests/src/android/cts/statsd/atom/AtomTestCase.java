@@ -272,6 +272,7 @@ public class AtomTestCase extends BaseTestCase {
           .addAllowedLogSource("AID_RADIO")
           .addAllowedLogSource("AID_ROOT")
           .addAllowedLogSource("AID_STATSD")
+          .addAllowedLogSource("com.android.systemui")
           .addAllowedLogSource(DeviceAtomTestCase.DEVICE_SIDE_TEST_PACKAGE)
           .addDefaultPullPackages("AID_RADIO")
           .addDefaultPullPackages("AID_SYSTEM")
