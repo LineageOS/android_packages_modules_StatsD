@@ -204,6 +204,7 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PHONE_CALL_MICROPHONE, 100);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PHONE_CALL_CAMERA, 101);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECORD_AUDIO_HOTWORD, 102);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_ONGOING_CALLS, 103);
     }
 
     @Test
