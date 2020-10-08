@@ -22,7 +22,6 @@ java_test_host {
         "cts",
         "general-tests",
         "mts",
-        "vts10",
     ],
 
     libs: [
