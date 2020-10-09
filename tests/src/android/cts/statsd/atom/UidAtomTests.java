@@ -419,6 +419,9 @@ public class UidAtomTests extends DeviceAtomTestCase {
 
     public void testDeviceCalculatedPowerBlameUid() throws Exception {
         if (!hasFeature(FEATURE_LEANBACK_ONLY, false)) return;
+        if (!hasBattery()) {
+            return;
+        }
 
         String kernelVersion = getDevice().executeShellCommand("uname -r");
         if (kernelVersion.contains("3.18")) {
@@ -1933,7 +1936,7 @@ public class UidAtomTests extends DeviceAtomTestCase {
         doTestMobileBytesTransferThat(atomId, (atom) -> {
             final AtomsProto.BytesTransferByTagAndMetered data =
                     ((Atom) atom).getBytesTransferByTagAndMetered();
-            if (data.getUid() == appUid) {
+            if (data.getUid() == appUid && data.getTag() == 0 /*app traffic generated on tag 0*/) {
                 assertDataUsageAtomDataExpected(data.getRxBytes(), data.getTxBytes(),
                         data.getRxPackets(), data.getTxPackets());
                 return true; // found
