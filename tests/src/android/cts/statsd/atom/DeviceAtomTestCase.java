@@ -194,7 +194,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
     }
 
     /**
-     * Required to successfully start a background service from adb in O.
+     * Required to successfully start a background service from adb in Android O.
      */
     protected void allowBackgroundServices() throws Exception {
         getDevice().executeShellCommand(String.format(
