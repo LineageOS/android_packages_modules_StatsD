@@ -201,6 +201,9 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED, 97);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER, 98);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_NO_ISOLATED_STORAGE, 99);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_100, 100);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_101, 101);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_102, 102);
     }
 
     @Test
