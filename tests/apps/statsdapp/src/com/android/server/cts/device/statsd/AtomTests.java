@@ -204,6 +204,7 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_100, 100);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_101, 101);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_102, 102);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_ONGOING_CALLS, 103);
     }
 
     @Test
