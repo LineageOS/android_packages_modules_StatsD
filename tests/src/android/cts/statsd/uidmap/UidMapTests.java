@@ -96,7 +96,7 @@ public class UidMapTests extends DeviceAtomTestCase {
         // Now enable re-installation.
         getDevice().installPackage(buildHelper.getTestFile(DEVICE_SIDE_TEST_APK), true, true);
 
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         ConfigMetricsReportList reports = getReportList();
         assertThat(reports.getReportsCount()).isGreaterThan(0);
@@ -119,7 +119,7 @@ public class UidMapTests extends DeviceAtomTestCase {
         int uid = getUid();
         getDevice().uninstallPackage(DEVICE_SIDE_TEST_PACKAGE);
 
-        Thread.sleep(WAIT_TIME_SHORT);
+        Thread.sleep(WAIT_TIME_LONG);
 
         ConfigMetricsReportList reports = getReportList();
         assertThat(reports.getReportsCount()).isGreaterThan(0);
