@@ -200,6 +200,7 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PHONE_CALL_CAMERA, 101);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECORD_AUDIO_HOTWORD, 102);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_ONGOING_CALLS, 103);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_USE_ICC_AUTH_WITH_DEVICE_IDENTIFIER, 105);
     }
 
     @Test
