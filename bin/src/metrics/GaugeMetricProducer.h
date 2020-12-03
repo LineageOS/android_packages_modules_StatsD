@@ -26,7 +26,7 @@
 #include "../matchers/matcher_util.h"
 #include "../matchers/EventMatcherWizard.h"
 #include "MetricProducer.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "../stats_util.h"
 
 namespace android {
