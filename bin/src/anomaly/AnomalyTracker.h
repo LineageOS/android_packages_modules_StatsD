@@ -23,8 +23,8 @@
 
 #include "AlarmMonitor.h"
 #include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"  // Alert
-#include "frameworks/base/cmds/statsd/src/statsd_metadata.pb.h"  // AlertMetadata
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // Alert
+#include "packages/modules/StatsD/bin/src/statsd_metadata.pb.h"  // AlertMetadata
 #include "stats_util.h"  // HashableDimensionKey and DimToValMap
 
 namespace android {

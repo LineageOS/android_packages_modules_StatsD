@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frameworks/base/cmds/statsd/src/statsd_metadata.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_metadata.pb.h"
 #include "src/StatsLogProcessor.h"
 #include "src/stats_log_util.h"
 #include "tests/statsd_test_util.h"

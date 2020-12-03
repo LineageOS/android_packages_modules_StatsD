@@ -21,8 +21,8 @@
 
 #include <android-base/file.h>
 #include <cutils/multiuser.h>
-#include <frameworks/base/cmds/statsd/src/active_config_list.pb.h>
-#include <frameworks/base/cmds/statsd/src/experiment_ids.pb.h>
+#include <packages/modules/StatsD/bin/src/active_config_list.pb.h>
+#include <packages/modules/StatsD/bin/src/experiment_ids.pb.h>
 
 #include "android-base/stringprintf.h"
 #include "external/StatsPullerManager.h"

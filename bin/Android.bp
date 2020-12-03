@@ -406,3 +406,18 @@ filegroup {
     name: "statsd-config-proto-def",
     srcs: ["src/statsd_config.proto"],
 }
+
+// Filegroup for all statsd protos
+filegroup {
+    name: "statsd_internal_protos",
+    srcs: [
+        "src/active_config_list.proto",
+        "src/experiment_ids.proto",
+        "src/shell/shell_config.proto",
+        "src/shell/shell_data.proto",
+        "src/statsd_config.proto",
+        "src/statsd_metadata.proto",
+        "src/stats_log.proto",
+        "src/uid_data.proto",
+    ],
+}
