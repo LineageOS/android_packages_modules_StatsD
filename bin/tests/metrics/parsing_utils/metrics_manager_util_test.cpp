@@ -23,7 +23,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "src/condition/ConditionTracker.h"
 #include "src/matchers/AtomMatchingTracker.h"
 #include "src/metrics/CountMetricProducer.h"

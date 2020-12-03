@@ -21,7 +21,7 @@
 #include <vector>
 
 #include "AtomMatchingTracker.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "packages/UidMap.h"
 
 namespace android {

@@ -17,7 +17,7 @@
 #ifndef METRIC_PRODUCER_H
 #define METRIC_PRODUCER_H
 
-#include <frameworks/base/cmds/statsd/src/active_config_list.pb.h>
+#include <packages/modules/StatsD/bin/src/active_config_list.pb.h>
 #include <utils/RefBase.h>
 
 #include <unordered_map>

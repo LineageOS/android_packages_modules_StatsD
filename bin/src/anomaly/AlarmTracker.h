@@ -20,7 +20,7 @@
 
 #include "AlarmMonitor.h"
 #include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"  // Alarm
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // Alarm
 
 #include <stdlib.h>
 #include <utils/RefBase.h>

@@ -21,7 +21,7 @@ package android.os.statsd;
 option java_package = "com.android.os";
 option java_outer_classname = "ShellConfig";
 
-import "frameworks/base/cmds/statsd/src/statsd_config.proto";
+import "packages/modules/StatsD/bin/src/statsd_config.proto";
 
 message PulledAtomSubscription {
     optional SimpleAtomMatcher matcher = 1;

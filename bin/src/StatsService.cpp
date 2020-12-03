@@ -29,8 +29,8 @@
 #include <android-base/file.h>
 #include <android-base/strings.h>
 #include <cutils/multiuser.h>
-#include <frameworks/base/cmds/statsd/src/statsd_config.pb.h>
-#include <frameworks/base/cmds/statsd/src/uid_data.pb.h>
+#include <packages/modules/StatsD/bin/src/statsd_config.pb.h>
+#include <packages/modules/StatsD/bin/src/uid_data.pb.h>
 #include <private/android_filesystem_config.h>
 #include <statslog_statsd.h>
 #include <stdio.h>

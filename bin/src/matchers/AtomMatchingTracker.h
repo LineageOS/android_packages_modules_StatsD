@@ -17,7 +17,7 @@
 #ifndef ATOM_MATCHING_TRACKER_H
 #define ATOM_MATCHING_TRACKER_H
 
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "logd/LogEvent.h"
 #include "matchers/matcher_util.h"
 

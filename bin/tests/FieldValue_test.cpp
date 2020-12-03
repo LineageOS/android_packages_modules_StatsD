@@ -15,8 +15,8 @@
  */
 #include <gtest/gtest.h>
 
-#include "frameworks/base/cmds/statsd/src/stats_log.pb.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/stats_log.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "matchers/matcher_util.h"
 #include "src/logd/LogEvent.h"
 #include "stats_event.h"

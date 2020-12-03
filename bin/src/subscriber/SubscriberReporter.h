@@ -21,7 +21,7 @@
 #include <utils/String16.h>
 
 #include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"  // subscription
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // subscription
 #include "HashableDimensionKey.h"
 
 #include <mutex>

@@ -19,7 +19,7 @@
 #include "logd/LogEvent.h"
 
 #include <vector>
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "packages/UidMap.h"
 #include "stats_util.h"
 

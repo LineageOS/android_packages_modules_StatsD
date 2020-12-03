@@ -15,7 +15,7 @@
  */
 #include "HashableDimensionKey.h"
 
-#include "frameworks/base/cmds/statsd/src/statsd_metadata.pb.h"  // AlertMetadata
+#include "packages/modules/StatsD/bin/src/statsd_metadata.pb.h"  // AlertMetadata
 
 namespace android {
 namespace os {

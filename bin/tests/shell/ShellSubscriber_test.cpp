@@ -20,8 +20,8 @@
 
 #include <vector>
 
-#include "frameworks/base/cmds/statsd/src/shell/shell_config.pb.h"
-#include "frameworks/base/cmds/statsd/src/shell/shell_data.pb.h"
+#include "packages/modules/StatsD/bin/src/shell/shell_config.pb.h"
+#include "packages/modules/StatsD/bin/src/shell/shell_data.pb.h"
 #include "frameworks/proto_logging/stats/atoms.pb.h"
 #include "stats_event.h"
 #include "tests/metrics/metrics_test_helper.h"
