@@ -17,7 +17,7 @@
 
 #include <gtest/gtest.h>
 
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "statsd_test_util.h"
 
 #ifdef __ANDROID__

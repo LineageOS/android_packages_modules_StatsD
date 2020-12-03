@@ -24,8 +24,8 @@
 #include <thread>
 
 #include "external/StatsPullerManager.h"
-#include "frameworks/base/cmds/statsd/src/shell/shell_config.pb.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/shell/shell_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "logd/LogEvent.h"
 #include "packages/UidMap.h"
 

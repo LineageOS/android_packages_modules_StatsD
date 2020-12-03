@@ -20,8 +20,8 @@
 
 #include "StatsService.h"
 #include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/stats_log.pb.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/stats_log.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "guardrail/StatsdStats.h"
 #include "logd/LogEvent.h"
 #include "packages/UidMap.h"

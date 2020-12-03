@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 #include "annotations.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "matchers/matcher_util.h"
 #include "stats_event.h"
 #include "stats_log_util.h"

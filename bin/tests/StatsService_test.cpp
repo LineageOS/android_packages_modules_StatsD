@@ -14,7 +14,7 @@
 
 #include "StatsService.h"
 #include "config/ConfigKey.h"
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 
 #include <android/binder_interface_utils.h>
 #include <gmock/gmock.h>

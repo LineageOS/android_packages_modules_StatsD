@@ -23,8 +23,8 @@
 #include "packages/UidMap.h"
 #include "external/StatsPullerManager.h"
 
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"
-#include "frameworks/base/cmds/statsd/src/statsd_metadata.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
+#include "packages/modules/StatsD/bin/src/statsd_metadata.pb.h"
 
 #include <stdio.h>
 #include <unordered_map>

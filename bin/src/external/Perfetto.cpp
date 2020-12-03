@@ -18,7 +18,7 @@
 #include "config/ConfigKey.h"
 #include "Log.h"
 
-#include "frameworks/base/cmds/statsd/src/statsd_config.pb.h"  // Alert
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // Alert
 
 #include <android-base/unique_fd.h>
 #include <inttypes.h>
