@@ -107,7 +107,7 @@ public final class StatsLog {
      *                             0x04: FLAG_REQUIRE_LOW_LATENCY_MONITOR
      * @param state            current install state. Defined as State enums in
      *                         BinaryPushStateChanged atom in
-     *                         frameworks/base/cmds/statsd/src/atoms.proto
+     *                         frameworks/proto_logging/stats/atoms.proto
      * @param experimentIds    experiment ids.
      * @return True if the log request was sent to statsd.
      */
