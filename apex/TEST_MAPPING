@@ -1,0 +1,19 @@
+{
+  "presubmit" : [
+    {
+      "name" : "FrameworkStatsdTest"
+    },
+    {
+      "name" : "LibStatsPullTests"
+    }
+  ],
+
+  "postsubmit" : [
+    {
+      "name" : "CtsStatsdHostTestCases"
+    },
+    {
+      "name" : "GtsStatsdHostTestCases"
+    }
+  ]
+}
