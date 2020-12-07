@@ -500,12 +500,10 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         builder.addPredicate(predicateA);
 
         FieldMatcher.Builder dimensionsBuilder = FieldMatcher.newBuilder()
-                .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER);
-        dimensionsBuilder.addChild(FieldMatcher.newBuilder()
-                .setField(AppBreadcrumbReported.LABEL_FIELD_NUMBER)
-                .setPosition(Position.FIRST)
+                .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER);
+        dimensionsBuilder
                 .addChild(FieldMatcher.newBuilder().setField(
-                        AppBreadcrumbReported.LABEL_FIELD_NUMBER)));
+                        AppBreadcrumbReported.LABEL_FIELD_NUMBER));
         Predicate predicateB =
             Predicate.newBuilder()
                 .setId(MetricsUtils.StringToId("Predicate_B"))
@@ -527,12 +525,9 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
                 .setBucket(StatsdConfigProto.TimeUnit.CTS)
                 .setDimensionsInWhat(
                     FieldMatcher.newBuilder()
-                        .setField(Atom.BATTERY_SAVER_MODE_STATE_CHANGED_FIELD_NUMBER)
-                        .addChild(FieldMatcher.newBuilder()
-                                      .setField(AppBreadcrumbReported.STATE_FIELD_NUMBER)
-                                      .setPosition(Position.FIRST)
-                                      .addChild(FieldMatcher.newBuilder().setField(
-                                          AppBreadcrumbReported.LABEL_FIELD_NUMBER)))));
+                            .setField(Atom.APP_BREADCRUMB_REPORTED_FIELD_NUMBER)
+                            .addChild(FieldMatcher.newBuilder().setField(
+                                    AppBreadcrumbReported.LABEL_FIELD_NUMBER))));
 
         // Upload config.
         uploadConfig(builder);
@@ -554,10 +549,21 @@ public class DurationMetricsTests extends DeviceAtomTestCase {
         assertThat(metricReport.hasDurationMetrics()).isTrue();
         StatsLogReport.DurationMetricDataWrapper durationData
                 = metricReport.getDurationMetrics();
-        assertThat(durationData.getDataCount()).isEqualTo(1);
-        assertThat(durationData.getData(0).getBucketInfoCount()).isGreaterThan(1);
+        assertThat(durationData.getDataCount()).isEqualTo(2);
+        assertThat(durationData.getData(0).getBucketInfoCount()).isGreaterThan(3);
+        assertThat(durationData.getData(1).getBucketInfoCount()).isGreaterThan(3);
+        long totalDuration = 0;
         for (DurationBucketInfo bucketInfo : durationData.getData(0).getBucketInfoList()) {
-            assertThat(bucketInfo.getDurationNanos()).isIn(Range.openClosed(0L, (long)1e9));
+            assertThat(bucketInfo.getDurationNanos()).isIn(Range.openClosed(0L, (long) 1e9));
+            totalDuration += bucketInfo.getDurationNanos();
         }
+        // Duration for both labels is expected to be 4s.
+        assertThat(totalDuration).isIn(Range.open((long) 3e9, (long) 8e9));
+        totalDuration = 0;
+        for (DurationBucketInfo bucketInfo : durationData.getData(1).getBucketInfoList()) {
+            assertThat(bucketInfo.getDurationNanos()).isIn(Range.openClosed(0L, (long) 1e9));
+            totalDuration += bucketInfo.getDurationNanos();
+        }
+        assertThat(totalDuration).isIn(Range.open((long) 3e9, (long) 8e9));
     }
 }
