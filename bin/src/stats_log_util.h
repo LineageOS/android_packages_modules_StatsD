@@ -77,6 +77,10 @@ int64_t NanoToMillis(const int64_t nano);
 
 int64_t MillisToNano(const int64_t millis);
 
+// Helper function to write a stats field to ProtoOutputStream if it's a non-zero value.
+void writeNonZeroStatToStream(const uint64_t fieldId, const int value,
+                              ProtoOutputStream* protoOutput);
+
 // Helper function to write PulledAtomStats to ProtoOutputStream
 void writePullerStatsToStream(const std::pair<int, StatsdStats::PulledAtomStats>& pair,
                               ProtoOutputStream* protoOutput);

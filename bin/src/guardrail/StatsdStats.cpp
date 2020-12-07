@@ -521,6 +521,15 @@ void StatsdStats::noteLateLogEventSkipped(int64_t metricId) {
     getAtomMetricStats(metricId).lateLogEventSkipped++;
 }
 
+void StatsdStats::noteLateLogEvent(int64_t metricId, int64_t extraDurationNs) {
+    lock_guard<std::mutex> lock(mLock);
+    AtomMetricStats& metricStats = getAtomMetricStats(metricId);
+    metricStats.lateLogEvent++;
+    metricStats.sumLateLogEventExtraDurationNs += extraDurationNs;
+    metricStats.maxLateLogEventExtraDurationNs =
+            std::max(metricStats.maxLateLogEventExtraDurationNs, extraDurationNs);
+}
+
 void StatsdStats::noteSkippedForwardBuckets(int64_t metricId) {
     lock_guard<std::mutex> lock(mLock);
     getAtomMetricStats(metricId).skippedForwardBuckets++;
@@ -558,11 +567,11 @@ void StatsdStats::noteBucketCount(int64_t metricId) {
 
 void StatsdStats::noteBucketBoundaryDelayNs(int64_t metricId, int64_t timeDelayNs) {
     lock_guard<std::mutex> lock(mLock);
-    AtomMetricStats& pullStats = getAtomMetricStats(metricId);
-    pullStats.maxBucketBoundaryDelayNs =
-            std::max(pullStats.maxBucketBoundaryDelayNs, timeDelayNs);
-    pullStats.minBucketBoundaryDelayNs =
-            std::min(pullStats.minBucketBoundaryDelayNs, timeDelayNs);
+    AtomMetricStats& metricStats = getAtomMetricStats(metricId);
+    metricStats.maxBucketBoundaryDelayNs =
+            std::max(metricStats.maxBucketBoundaryDelayNs, timeDelayNs);
+    metricStats.minBucketBoundaryDelayNs =
+            std::min(metricStats.minBucketBoundaryDelayNs, timeDelayNs);
 }
 
 void StatsdStats::noteAtomError(int atomTag, bool pull) {

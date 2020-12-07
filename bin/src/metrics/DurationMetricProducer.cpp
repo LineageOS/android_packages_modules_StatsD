@@ -298,6 +298,12 @@ void DurationMetricProducer::onStateChanged(const int64_t eventTimeNs, const int
 
     flushIfNeededLocked(eventTimeNs);
 
+    // Log late event and extra duration.
+    if (eventTimeNs < mCurrentBucketStartTimeNs) {
+        StatsdStats::getInstance().noteLateLogEvent(mMetricId,
+                                                    mCurrentBucketStartTimeNs - eventTimeNs);
+    }
+
     // Each duration tracker is mapped to a different whatKey (a set of values from the
     // dimensionsInWhat fields). We notify all trackers iff the primaryKey field values from the
     // state change event are a subset of the tracker's whatKey field values.
@@ -416,6 +422,12 @@ void DurationMetricProducer::onSlicedConditionMayChangeLocked(bool overallCondit
         return;
     }
 
+    // Log late event and extra duration.
+    if (eventTime < mCurrentBucketStartTimeNs) {
+        StatsdStats::getInstance().noteLateLogEvent(mMetricId,
+                                                    mCurrentBucketStartTimeNs - eventTime);
+    }
+
     flushIfNeededLocked(eventTime);
 
     if (!mConditionSliced) {
@@ -431,6 +443,12 @@ void DurationMetricProducer::onActiveStateChangedLocked(const int64_t& eventTime
     if (!mConditionSliced) {
         if (ConditionState::kTrue != mCondition) {
             return;
+        }
+
+        // Log late event and extra duration.
+        if (eventTimeNs < mCurrentBucketStartTimeNs) {
+            StatsdStats::getInstance().noteLateLogEvent(mMetricId,
+                                                        mCurrentBucketStartTimeNs - eventTimeNs);
         }
 
         if (mIsActive) {
@@ -457,6 +475,12 @@ void DurationMetricProducer::onConditionChangedLocked(const bool conditionMet,
 
     if (!mIsActive) {
         return;
+    }
+
+    // Log late event and extra duration.
+    if (eventTime < mCurrentBucketStartTimeNs) {
+        StatsdStats::getInstance().noteLateLogEvent(mMetricId,
+                                                    mCurrentBucketStartTimeNs - eventTime);
     }
 
     flushIfNeededLocked(eventTime);
@@ -673,6 +697,12 @@ void DurationMetricProducer::handleMatchedLogEventValuesLocked(const size_t matc
                                                                const int64_t eventTimeNs) {
     if (eventTimeNs < mTimeBaseNs) {
         return;
+    }
+
+    // Log late event and extra duration.
+    if (eventTimeNs < mCurrentBucketStartTimeNs) {
+        StatsdStats::getInstance().noteLateLogEvent(mMetricId,
+                                                    mCurrentBucketStartTimeNs - eventTimeNs);
     }
 
     if (mIsActive) {
