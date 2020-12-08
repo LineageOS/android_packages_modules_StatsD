@@ -45,7 +45,7 @@ filegroup {
     visibility: [
         "//frameworks/base", // For the "global" stubs.
         "//frameworks/base/apex/statsd:__subpackages__",
-        "//packages/modules/StatsD/apex:__subpackages__",
+        "//packages/modules/StatsD/framework:__subpackages__",
     ],
 }
 java_sdk_library {
@@ -75,7 +75,7 @@ java_sdk_library {
 
     impl_library_visibility: [
         "//frameworks/base/apex/statsd/framework/test:__subpackages__",
-        "//packages/modules/StatsD/apex/framework/test:__subpackages__",
+        "//packages/modules/StatsD/framework/test:__subpackages__",
     ],
 
     apex_available: [
@@ -83,3 +83,29 @@ java_sdk_library {
         "test_com.android.os.statsd",
     ],
 }
+
+// JNI library for StatsLog.write
+cc_library_shared {
+    name: "libstats_jni",
+    srcs: ["jni/**/*.cpp"],
+    header_libs: ["libnativehelper_header_only"],
+    shared_libs: [
+        "liblog",  // Has a stable abi - should not be copied into apex.
+        "libstatssocket",
+    ],
+    stl: "libc++_static",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wextra",
+        "-Wno-unused-parameter",
+    ],
+    apex_available: [
+        "com.android.os.statsd",
+        "test_com.android.os.statsd",
+    ],
+    visibility: [
+        "//packages/modules/StatsD/apex:__subpackages__",
+    ],
+}
+
