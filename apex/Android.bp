@@ -58,24 +58,3 @@ prebuilt_etc {
     installable: false,
 }
 
-// JNI library for StatsLog.write
-cc_library_shared {
-    name: "libstats_jni",
-    srcs: ["jni/**/*.cpp"],
-    header_libs: ["libnativehelper_header_only"],
-    shared_libs: [
-        "liblog",  // Has a stable abi - should not be copied into apex.
-        "libstatssocket",
-    ],
-    stl: "libc++_static",
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wextra",
-        "-Wno-unused-parameter",
-    ],
-    apex_available: [
-        "com.android.os.statsd",
-        "test_com.android.os.statsd",
-    ],
-}
