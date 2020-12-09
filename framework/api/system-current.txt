@@ -105,6 +105,14 @@ package android.util {
   public final class StatsLog {
     method public static void write(@NonNull android.util.StatsEvent);
     method public static void writeRaw(@NonNull byte[], int);
+    field public static final byte ANNOTATION_ID_DEFAULT_STATE = 6; // 0x6
+    field public static final byte ANNOTATION_ID_EXCLUSIVE_STATE = 4; // 0x4
+    field public static final byte ANNOTATION_ID_IS_UID = 1; // 0x1
+    field public static final byte ANNOTATION_ID_PRIMARY_FIELD = 3; // 0x3
+    field public static final byte ANNOTATION_ID_PRIMARY_FIELD_FIRST_UID = 5; // 0x5
+    field public static final byte ANNOTATION_ID_STATE_NESTED = 8; // 0x8
+    field public static final byte ANNOTATION_ID_TRIGGER_STATE_RESET = 7; // 0x7
+    field public static final byte ANNOTATION_ID_TRUNCATE_TIMESTAMP = 2; // 0x2
   }
 
 }
