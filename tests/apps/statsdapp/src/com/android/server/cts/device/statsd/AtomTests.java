@@ -201,9 +201,9 @@ public class AtomTests {
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED, 97);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER, 98);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_NO_ISOLATED_STORAGE, 99);
-        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_100, 100);
-        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_101, 101);
-        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RESERVED_102, 102);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PHONE_CALL_MICROPHONE, 100);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_PHONE_CALL_CAMERA, 101);
+        APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_RECORD_AUDIO_HOTWORD, 102);
         APP_OPS_ENUM_MAP.put(AppOpsManager.OPSTR_MANAGE_ONGOING_CALLS, 103);
     }
 
@@ -268,14 +268,14 @@ public class AtomTests {
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             bluetoothAdapter.disable();
-            sleep(500);
+            sleep(1500);
 
             // Trigger State.RESET so that new state is State.OFF.
             if (!bluetoothAdapter.enable()) {
                 Log.e(TAG, "Could not enable bluetooth to trigger state reset");
                 return;
             }
-            sleep(2_000); // Wait for Bluetooth to fully turn on.
+            sleep(3_000); // Wait for Bluetooth to fully turn on.
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
             writeSliceByBleScanStateChangedAtom(whatAtomId, uid, false, false, false);
