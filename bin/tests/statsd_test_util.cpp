@@ -445,6 +445,21 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
     return dimensions;
 }
 
+CountMetric createCountMetric(string name, int64_t what, optional<int64_t> condition,
+                              vector<int64_t> states) {
+    CountMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what);
+    metric.set_bucket(TEN_MINUTES);
+    if (condition) {
+        metric.set_condition(condition.value());
+    }
+    for (const int64_t state : states) {
+        metric.add_slice_by_state(state);
+    }
+    return metric;
+}
+
 GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
                               optional<int64_t> condition, optional<int64_t> triggerEvent) {
     GaugeMetric metric;
@@ -1123,6 +1138,14 @@ void ValidateStateValue(const google::protobuf::RepeatedPtrField<StateValue>& st
             FAIL() << "State value should have either a value or a group id";
     }
 }
+
+void ValidateCountBucket(const CountBucketInfo& countBucket, int64_t startTimeNs, int64_t endTimeNs,
+                         int64_t count) {
+    EXPECT_EQ(countBucket.start_bucket_elapsed_nanos(), startTimeNs);
+    EXPECT_EQ(countBucket.end_bucket_elapsed_nanos(), endTimeNs);
+    EXPECT_EQ(countBucket.count(), count);
+}
+
 bool EqualsTo(const DimensionsValue& s1, const DimensionsValue& s2) {
     if (s1.field() != s2.field()) {
         return false;
