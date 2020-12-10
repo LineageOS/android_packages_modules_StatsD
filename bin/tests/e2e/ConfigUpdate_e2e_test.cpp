@@ -55,6 +55,256 @@ public:
 };
 }  // Anonymous namespace.
 
+TEST_F(ConfigUpdateE2eTest, TestCountMetric) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+
+    AtomMatcher syncStartMatcher = CreateSyncStartAtomMatcher();
+    *config.add_atom_matcher() = syncStartMatcher;
+    AtomMatcher wakelockAcquireMatcher = CreateAcquireWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockAcquireMatcher;
+    AtomMatcher wakelockReleaseMatcher = CreateReleaseWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockReleaseMatcher;
+    AtomMatcher screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    AtomMatcher screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOffMatcher;
+
+    Predicate holdingWakelockPredicate = CreateHoldingWakelockPredicate();
+    // The predicate is dimensioning by first attribution node by uid.
+    *holdingWakelockPredicate.mutable_simple_predicate()->mutable_dimensions() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    *config.add_predicate() = holdingWakelockPredicate;
+
+    Predicate screenOnPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = screenOnPredicate;
+
+    Predicate* combination = config.add_predicate();
+    combination->set_id(StringToId("ScreenOnAndHoldingWL)"));
+    combination->mutable_combination()->set_operation(LogicalOperation::AND);
+    addPredicateToPredicateCombination(screenOnPredicate, combination);
+    addPredicateToPredicateCombination(holdingWakelockPredicate, combination);
+
+    State uidProcessState = CreateUidProcessState();
+    *config.add_state() = uidProcessState;
+
+    CountMetric countPersist =
+            createCountMetric("CountSyncPerUidWhileScreenOnHoldingWLSliceProcessState",
+                              syncStartMatcher.id(), combination->id(), {uidProcessState.id()});
+    *countPersist.mutable_dimensions_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    // Links between sync state atom and condition of uid is holding wakelock.
+    MetricConditionLink* links = countPersist.add_links();
+    links->set_condition(holdingWakelockPredicate.id());
+    *links->mutable_fields_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *links->mutable_fields_in_condition() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    MetricStateLink* stateLink = countPersist.add_state_link();
+    stateLink->set_state_atom_id(util::UID_PROCESS_STATE_CHANGED);
+    *stateLink->mutable_fields_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *stateLink->mutable_fields_in_state() =
+            CreateDimensions(util::UID_PROCESS_STATE_CHANGED, {1 /*uid*/});
+
+    CountMetric countChange = createCountMetric("Count*WhileScreenOn", syncStartMatcher.id(),
+                                                screenOnPredicate.id(), {});
+    CountMetric countRemove = createCountMetric("CountSync", syncStartMatcher.id(), nullopt, {});
+    *config.add_count_metric() = countRemove;
+    *config.add_count_metric() = countPersist;
+    *config.add_count_metric() = countChange;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, key);
+
+    int app1Uid = 123, app2Uid = 456;
+    vector<int> attributionUids1 = {app1Uid};
+    vector<string> attributionTags1 = {"App1"};
+    vector<int> attributionUids2 = {app2Uid};
+    vector<string> attributionTags2 = {"App2"};
+
+    // Initialize log events before update. Counts are for countPersist since others are simpler.
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 2 * NS_PER_SEC, app1Uid,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND));
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 3 * NS_PER_SEC, app2Uid,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 5 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // Not counted.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 10 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 15 * NS_PER_SEC,
+                                                attributionUids1, attributionTags1, "wl1"));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 20 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // Counted. uid1 = 1.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 21 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Not counted.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 25 * NS_PER_SEC,
+                                                attributionUids2, attributionTags2, "wl2"));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 30 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // Counted. uid1 = 2.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 31 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Counted. uid2 = 1
+    events.push_back(CreateReleaseWakelockEvent(bucketStartTimeNs + 35 * NS_PER_SEC,
+                                                attributionUids1, attributionTags1, "wl1"));
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Do update. Add matchers/conditions in different order to force indices to change.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+
+    *newConfig.add_atom_matcher() = screenOnMatcher;
+    *newConfig.add_atom_matcher() = screenOffMatcher;
+    *newConfig.add_atom_matcher() = syncStartMatcher;
+    *newConfig.add_atom_matcher() = wakelockAcquireMatcher;
+    *newConfig.add_atom_matcher() = wakelockReleaseMatcher;
+    *newConfig.add_predicate() = *combination;
+    *newConfig.add_predicate() = holdingWakelockPredicate;
+    *newConfig.add_predicate() = screenOnPredicate;
+    *newConfig.add_state() = uidProcessState;
+
+    countChange.set_what(screenOnMatcher.id());
+    *newConfig.add_count_metric() = countChange;
+    CountMetric countNew = createCountMetric("CountWlWhileScreenOn", wakelockAcquireMatcher.id(),
+                                             screenOnPredicate.id(), {});
+    *newConfig.add_count_metric() = countNew;
+    *newConfig.add_count_metric() = countPersist;
+
+    uint64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // Send events after the update. Counts reset to 0 since this is a new bucket.
+    events.clear();
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 65 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // Not counted.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 66 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Counted. uid2 = 1.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 70 * NS_PER_SEC,
+                                                attributionUids1, attributionTags1, "wl1"));
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 75 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 80 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Not counted.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 85 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 90 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // Counted. uid1 = 1.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 11 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Counted. uid2 = 2.
+    // Flushes bucket.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + bucketSizeNs + NS_PER_SEC,
+                                                attributionUids1, attributionTags1, "wl2"));
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+    uint64_t dumpTimeNs = bucketStartTimeNs + bucketSizeNs + 10 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 2);
+
+    // Report from before update.
+    ConfigMetricsReport report = reports.reports(0);
+    ASSERT_EQ(report.metrics_size(), 3);
+    // Count syncs. There were 5 syncs before the update.
+    StatsLogReport countRemoveBefore = report.metrics(0);
+    EXPECT_EQ(countRemoveBefore.metric_id(), countRemove.id());
+    EXPECT_TRUE(countRemoveBefore.has_count_metrics());
+    ASSERT_EQ(countRemoveBefore.count_metrics().data_size(), 1);
+    auto data = countRemoveBefore.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 5);
+
+    // Uid 1 had 2 syncs, uid 2 had 1 sync.
+    StatsLogReport countPersistBefore = report.metrics(1);
+    EXPECT_EQ(countPersistBefore.metric_id(), countPersist.id());
+    EXPECT_TRUE(countPersistBefore.has_count_metrics());
+    StatsLogReport::CountMetricDataWrapper countMetrics;
+    sortMetricDataByDimensionsValue(countPersistBefore.count_metrics(), &countMetrics);
+    ASSERT_EQ(countMetrics.data_size(), 2);
+    data = countMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app1Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 2);
+
+    data = countMetrics.data(1);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app2Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 1);
+
+    // Counts syncs while screen on. There were 4 before the update.
+    StatsLogReport countChangeBefore = report.metrics(2);
+    EXPECT_EQ(countChangeBefore.metric_id(), countChange.id());
+    EXPECT_TRUE(countChangeBefore.has_count_metrics());
+    ASSERT_EQ(countChangeBefore.count_metrics().data_size(), 1);
+    data = countChangeBefore.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 4);
+
+    // Report from after update.
+    report = reports.reports(1);
+    ASSERT_EQ(report.metrics_size(), 3);
+    // Count screen on while screen is on. There was 1 after the update.
+    StatsLogReport countChangeAfter = report.metrics(0);
+    EXPECT_EQ(countChangeAfter.metric_id(), countChange.id());
+    EXPECT_TRUE(countChangeAfter.has_count_metrics());
+    ASSERT_EQ(countChangeAfter.count_metrics().data_size(), 1);
+    data = countChangeAfter.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 1);
+
+    // Count wl acquires while screen on. There were 2, one in each bucket.
+    StatsLogReport countNewAfter = report.metrics(1);
+    EXPECT_EQ(countNewAfter.metric_id(), countNew.id());
+    EXPECT_TRUE(countNewAfter.has_count_metrics());
+    ASSERT_EQ(countNewAfter.count_metrics().data_size(), 1);
+    data = countNewAfter.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 1);
+    ValidateCountBucket(data.bucket_info(1), bucketStartTimeNs + bucketSizeNs, dumpTimeNs, 1);
+
+    // Uid 1 had 1 sync, uid 2 had 2 syncs.
+    StatsLogReport countPersistAfter = report.metrics(2);
+    EXPECT_EQ(countPersistAfter.metric_id(), countPersist.id());
+    EXPECT_TRUE(countPersistAfter.has_count_metrics());
+    countMetrics.Clear();
+    sortMetricDataByDimensionsValue(countPersistAfter.count_metrics(), &countMetrics);
+    ASSERT_EQ(countMetrics.data_size(), 2);
+    data = countMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app1Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 1);
+
+    data = countMetrics.data(1);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app2Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 2);
+}
+
 TEST_F(ConfigUpdateE2eTest, TestNewDurationExistingWhat) {
     StatsdConfig config;
     config.add_allowed_log_source("AID_ROOT");
