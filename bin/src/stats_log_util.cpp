@@ -99,6 +99,9 @@ const int FIELD_ID_MIN_BUCKET_BOUNDARY_DELAY_NS = 9;
 const int FIELD_ID_MAX_BUCKET_BOUNDARY_DELAY_NS = 10;
 const int FIELD_ID_BUCKET_UNKNOWN_CONDITION = 11;
 const int FIELD_ID_BUCKET_COUNT = 12;
+const int FIELD_ID_LATE_LOG_EVENT = 13;
+const int FIELD_ID_SUM_LATE_LOG_EVENT_EXTRA_DURATION_NS = 14;
+const int FIELD_ID_MAX_LATE_LOG_EVENT_EXTRA_DURATION_NS = 15;
 
 namespace {
 
@@ -462,6 +465,13 @@ int64_t TimeUnitToBucketSizeInMillis(TimeUnit unit) {
     }
 }
 
+void writeNonZeroStatToStream(const uint64_t fieldId, const int value,
+                              util::ProtoOutputStream* protoOutput) {
+    if (value != 0) {
+        protoOutput->write(fieldId, value);
+    }
+}
+
 void writePullerStatsToStream(const std::pair<int, StatsdStats::PulledAtomStats>& pair,
                               util::ProtoOutputStream* protoOutput) {
     uint64_t token = protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_ID_PULLED_ATOM_STATS |
@@ -485,14 +495,12 @@ void writePullerStatsToStream(const std::pair<int, StatsdStats::PulledAtomStats>
                        (long long)pair.second.pullTimeout);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_PULL_EXCEED_MAX_DELAY,
                        (long long)pair.second.pullExceedMaxDelay);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_PULL_FAILED,
-                       (long long)pair.second.pullFailed);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_EMPTY_DATA,
-                       (long long)pair.second.emptyData);
+    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_PULL_FAILED, (long long)pair.second.pullFailed);
+    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_EMPTY_DATA, (long long)pair.second.emptyData);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_PULL_REGISTERED_COUNT,
-                       (long long) pair.second.registeredCount);
+                       (long long)pair.second.registeredCount);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_PULL_UNREGISTERED_COUNT,
-                       (long long) pair.second.unregisteredCount);
+                       (long long)pair.second.unregisteredCount);
     protoOutput->write(FIELD_TYPE_INT32 | FIELD_ID_ATOM_ERROR_COUNT, pair.second.atomErrorCount);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BINDER_CALL_FAIL_COUNT,
                        (long long)pair.second.binderCallFailCount);
@@ -517,29 +525,37 @@ void writeAtomMetricStatsToStream(const std::pair<int64_t, StatsdStats::AtomMetr
                                   util::ProtoOutputStream *protoOutput) {
     uint64_t token = protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_ID_ATOM_METRIC_STATS |
                                         FIELD_COUNT_REPEATED);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_METRIC_ID, (long long)pair.first);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_HARD_DIMENSION_LIMIT_REACHED,
-                       (long long)pair.second.hardDimensionLimitReached);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_LATE_LOG_EVENT_SKIPPED,
-                       (long long)pair.second.lateLogEventSkipped);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_SKIPPED_FORWARD_BUCKETS,
-                       (long long)pair.second.skippedForwardBuckets);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BAD_VALUE_TYPE,
-                       (long long)pair.second.badValueType);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_CONDITION_CHANGE_IN_NEXT_BUCKET,
-                       (long long)pair.second.conditionChangeInNextBucket);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_INVALIDATED_BUCKET,
-                       (long long)pair.second.invalidatedBucket);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_DROPPED,
-                       (long long)pair.second.bucketDropped);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_MIN_BUCKET_BOUNDARY_DELAY_NS,
-                       (long long)pair.second.minBucketBoundaryDelayNs);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_MAX_BUCKET_BOUNDARY_DELAY_NS,
-                       (long long)pair.second.maxBucketBoundaryDelayNs);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_UNKNOWN_CONDITION,
-                       (long long)pair.second.bucketUnknownCondition);
-    protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_COUNT,
-                       (long long)pair.second.bucketCount);
+
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_METRIC_ID, (long long)pair.first,
+                             protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_HARD_DIMENSION_LIMIT_REACHED,
+                             (long long)pair.second.hardDimensionLimitReached, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_LATE_LOG_EVENT_SKIPPED,
+                             (long long)pair.second.lateLogEventSkipped, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_SKIPPED_FORWARD_BUCKETS,
+                             (long long)pair.second.skippedForwardBuckets, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_BAD_VALUE_TYPE,
+                             (long long)pair.second.badValueType, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_CONDITION_CHANGE_IN_NEXT_BUCKET,
+                             (long long)pair.second.conditionChangeInNextBucket, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_INVALIDATED_BUCKET,
+                             (long long)pair.second.invalidatedBucket, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_DROPPED,
+                             (long long)pair.second.bucketDropped, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_MIN_BUCKET_BOUNDARY_DELAY_NS,
+                             (long long)pair.second.minBucketBoundaryDelayNs, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_MAX_BUCKET_BOUNDARY_DELAY_NS,
+                             (long long)pair.second.maxBucketBoundaryDelayNs, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_UNKNOWN_CONDITION,
+                             (long long)pair.second.bucketUnknownCondition, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_COUNT,
+                             (long long)pair.second.bucketCount, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_LATE_LOG_EVENT,
+                             (long long)pair.second.lateLogEvent, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_SUM_LATE_LOG_EVENT_EXTRA_DURATION_NS,
+                             (long long)pair.second.sumLateLogEventExtraDurationNs, protoOutput);
+    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_MAX_LATE_LOG_EVENT_EXTRA_DURATION_NS,
+                             (long long)pair.second.maxLateLogEventExtraDurationNs, protoOutput);
     protoOutput->end(token);
 }
 
