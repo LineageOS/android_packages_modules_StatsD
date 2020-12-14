@@ -69,27 +69,6 @@ StatsdConfig CreateStatsdConfigForPushedEvent(const GaugeMetric::SamplingType sa
     return config;
 }
 
-std::unique_ptr<LogEvent> CreateAppStartOccurredEvent(
-        uint64_t timestampNs, const int uid, const string& pkg_name,
-        AppStartOccurred::TransitionType type, const string& activity_name,
-        const string& calling_pkg_name, const bool is_instant_app, int64_t activity_start_msec) {
-    AStatsEvent* statsEvent = AStatsEvent_obtain();
-    AStatsEvent_setAtomId(statsEvent, util::APP_START_OCCURRED);
-    AStatsEvent_overwriteTimestamp(statsEvent, timestampNs);
-
-    AStatsEvent_writeInt32(statsEvent, uid);
-    AStatsEvent_writeString(statsEvent, pkg_name.c_str());
-    AStatsEvent_writeInt32(statsEvent, type);
-    AStatsEvent_writeString(statsEvent, activity_name.c_str());
-    AStatsEvent_writeString(statsEvent, calling_pkg_name.c_str());
-    AStatsEvent_writeInt32(statsEvent, is_instant_app);
-    AStatsEvent_writeInt32(statsEvent, activity_start_msec);
-
-    std::unique_ptr<LogEvent> logEvent = std::make_unique<LogEvent>(/*uid=*/0, /*pid=*/0);
-    parseStatsEventToLogEvent(statsEvent, logEvent.get());
-    return logEvent;
-}
-
 }  // namespace
 
 TEST(GaugeMetricE2eTest, TestMultipleFieldsForPushedEvent) {
