@@ -53,16 +53,17 @@ typedef std::unordered_map<MetricDimensionKey, std::vector<GaugeAtom>>
 // This gauge metric producer first register the puller to automatically pull the gauge at the
 // beginning of each bucket. If the condition is met, insert it to the bucket info. Otherwise
 // proactively pull the gauge when the condition is changed to be true. Therefore, the gauge metric
-// producer always reports the guage at the earliest time of the bucket when the condition is met.
-class GaugeMetricProducer : public virtual MetricProducer, public virtual PullDataReceiver {
+// producer always reports the gauge at the earliest time of the bucket when the condition is met.
+class GaugeMetricProducer : public MetricProducer, public virtual PullDataReceiver {
 public:
     GaugeMetricProducer(
             const ConfigKey& key, const GaugeMetric& gaugeMetric, const int conditionIndex,
             const vector<ConditionState>& initialConditionCache,
-            const sp<ConditionWizard>& conditionWizard, const int whatMatcherIndex,
-            const sp<EventMatcherWizard>& matcherWizard, const int pullTagId,
-            const int triggerAtomId, const int atomId, const int64_t timeBaseNs,
-            const int64_t startTimeNs, const sp<StatsPullerManager>& pullerManager,
+            const sp<ConditionWizard>& conditionWizard, const uint64_t protoHash,
+            const int whatMatcherIndex, const sp<EventMatcherWizard>& matcherWizard,
+            const int pullTagId, const int triggerAtomId, const int atomId,
+            const int64_t timeBaseNs, const int64_t startTimeNs,
+            const sp<StatsPullerManager>& pullerManager,
             const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap = {},
             const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                     eventDeactivationMap = {});
@@ -95,6 +96,10 @@ public:
             pullAndMatchEventsLocked(eventTimeNs);
         }
     };
+
+    MetricType getMetricType() const override {
+        return METRIC_TYPE_GAUGE;
+    }
 
 protected:
     void onMatchedLogEventInternalLocked(
@@ -137,7 +142,23 @@ private:
 
     void pullAndMatchEventsLocked(const int64_t timestampNs);
 
-    const int mWhatMatcherIndex;
+    bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) override;
+
+    int mWhatMatcherIndex;
 
     sp<EventMatcherWizard> mEventMatcherWizard;
 
@@ -204,6 +225,8 @@ private:
 
     FRIEND_TEST(GaugeMetricProducerTest_PartialBucket, TestPushedEvents);
     FRIEND_TEST(GaugeMetricProducerTest_PartialBucket, TestPulled);
+
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateGaugeMetrics);
 };
 
 }  // namespace statsd

@@ -26,6 +26,7 @@
 #include "anomaly/AnomalyTracker.h"
 #include "condition/ConditionWizard.h"
 #include "config/ConfigKey.h"
+#include "matchers/EventMatcherWizard.h"
 #include "matchers/matcher_util.h"
 #include "packages/PackageInfoListener.h"
 #include "state/StateListener.h"
@@ -87,6 +88,13 @@ enum BucketDropReason {
     NO_DATA = 9
 };
 
+enum MetricType {
+    METRIC_TYPE_EVENT = 1,
+    METRIC_TYPE_COUNT = 2,
+    METRIC_TYPE_DURATION = 3,
+    METRIC_TYPE_GAUGE = 4,
+    METRIC_TYPE_VALUE = 5,
+};
 struct Activation {
     Activation(const ActivationType& activationType, const int64_t ttlNs)
         : ttl_ns(ttlNs),
@@ -130,7 +138,7 @@ class MetricProducer : public virtual android::RefBase, public virtual StateList
 public:
     MetricProducer(const int64_t& metricId, const ConfigKey& key, const int64_t timeBaseNs,
                    const int conditionIndex, const vector<ConditionState>& initialConditionCache,
-                   const sp<ConditionWizard>& wizard,
+                   const sp<ConditionWizard>& wizard, const uint64_t protoHash,
                    const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap,
                    const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                            eventDeactivationMap,
@@ -143,6 +151,34 @@ public:
                                     const vector<ConditionState>& initialConditionCache) const {
         return conditionIndex >= 0 ? initialConditionCache[conditionIndex] : ConditionState::kTrue;
     }
+
+    // Update appropriate state on config updates. Primarily, all indices need to be updated.
+    // This metric and all of its dependencies are guaranteed to be preserved across the update.
+    // This function also updates several maps used by metricsManager.
+    // This function clears all anomaly trackers. All anomaly trackers need to be added again.
+    bool onConfigUpdated(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        return onConfigUpdatedLocked(config, configIndex, metricIndex, allAtomMatchingTrackers,
+                                     oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap,
+                                     matcherWizard, allConditionTrackers, conditionTrackerMap,
+                                     wizard, metricToActivationMap, trackerToMetricMap,
+                                     conditionToMetricMap, activationAtomTrackerToMetricMap,
+                                     deactivationAtomTrackerToMetricMap, metricsWithActivation);
+    };
 
     /**
      * Force a partial bucket split on app upgrade
@@ -202,6 +238,22 @@ public:
                 dumpLatency, str_set, protoOutput);
     }
 
+    virtual bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation);
+
     void clearPastBuckets(const int64_t dumpTimeNs) {
         std::lock_guard<std::mutex> lock(mMutex);
         return clearPastBucketsLocked(dumpTimeNs);
@@ -259,9 +311,15 @@ public:
             int64_t currentTimeNs, const DumpReportReason reason, ProtoOutputStream* proto);
 
     // Start: getters/setters
-    inline const int64_t& getMetricId() const {
+    inline int64_t getMetricId() const {
         return mMetricId;
     }
+
+    inline uint64_t getProtoHash() const {
+        return mProtoHash;
+    }
+
+    virtual MetricType getMetricType() const = 0;
 
     // For test only.
     inline int64_t getCurrentBucketNum() const {
@@ -278,15 +336,23 @@ public:
         return mSlicedStateAtoms;
     }
 
-    /* If alert is valid, adds an AnomalyTracker and returns it. If invalid, returns nullptr. */
+    inline bool isValid() const {
+        return mValid;
+    }
+
+    /* Adds an AnomalyTracker and returns it. */
     virtual sp<AnomalyTracker> addAnomalyTracker(const Alert &alert,
                                                  const sp<AlarmMonitor>& anomalyAlarmMonitor) {
         std::lock_guard<std::mutex> lock(mMutex);
         sp<AnomalyTracker> anomalyTracker = new AnomalyTracker(alert, mConfigKey);
-        if (anomalyTracker != nullptr) {
-            mAnomalyTrackers.push_back(anomalyTracker);
-        }
+        mAnomalyTrackers.push_back(anomalyTracker);
         return anomalyTracker;
+    }
+
+    /* Adds an AnomalyTracker that has already been created */
+    virtual void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) {
+        std::lock_guard<std::mutex> lock(mMutex);
+        mAnomalyTrackers.push_back(anomalyTracker);
     }
     // End: getters/setters
 protected:
@@ -400,7 +466,13 @@ protected:
 
     const int64_t mMetricId;
 
+    // Hash of the Metric's proto bytes from StatsdConfig, including any activations.
+    // Used to determine if the definition of this metric has changed across a config update.
+    const uint64_t mProtoHash;
+
     const ConfigKey mConfigKey;
+
+    bool mValid;
 
     // The time when this metric producer was first created. The end time for the current bucket
     // can be computed from this based on mCurrentBucketNum.
@@ -500,6 +572,14 @@ protected:
     FRIEND_TEST(ValueMetricE2eTest, TestInitialConditionChanges);
 
     FRIEND_TEST(MetricsManagerTest, TestInitialConditions);
+
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateMetricActivations);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateCountMetrics);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateEventMetrics);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateGaugeMetrics);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateDurationMetrics);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateMetricsMultipleTypes);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateAlerts);
 };
 
 }  // namespace statsd

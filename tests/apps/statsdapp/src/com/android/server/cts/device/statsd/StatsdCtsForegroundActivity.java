@@ -46,7 +46,6 @@ public class StatsdCtsForegroundActivity extends Activity {
     public static final String ACTION_LONG_SLEEP_WHILE_TOP = "action.long_sleep_top";
     public static final String ACTION_SHOW_APPLICATION_OVERLAY = "action.show_application_overlay";
     public static final String ACTION_SHOW_NOTIFICATION = "action.show_notification";
-    public static final String ACTION_CRASH = "action.crash";
     public static final String ACTION_CREATE_CHANNEL_GROUP = "action.create_channel_group";
     public static final String ACTION_POLL_NETWORK_STATS = "action.poll_network_stats";
 
@@ -82,9 +81,6 @@ public class StatsdCtsForegroundActivity extends Activity {
                 break;
             case ACTION_SHOW_NOTIFICATION:
                 doShowNotification();
-                break;
-            case ACTION_CRASH:
-                doCrash();
                 break;
             case ACTION_CREATE_CHANNEL_GROUP:
                 doCreateChannelGroup();
@@ -192,10 +188,5 @@ public class StatsdCtsForegroundActivity extends Activity {
         } finally {
             finish();
         }
-    }
-
-    @SuppressWarnings("ConstantOverflow")
-    private void doCrash() {
-        Log.e(TAG, "About to crash the app with 1/0 " + (long) 1 / 0);
     }
 }

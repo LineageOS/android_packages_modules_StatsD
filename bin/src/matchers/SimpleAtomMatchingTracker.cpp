@@ -17,7 +17,7 @@
 #define DEBUG false  // STOPSHIP if true
 #include "Log.h"
 
-#include "SimpleLogMatchingTracker.h"
+#include "SimpleAtomMatchingTracker.h"
 
 namespace android {
 namespace os {
@@ -26,11 +26,11 @@ namespace statsd {
 using std::unordered_map;
 using std::vector;
 
-
-SimpleLogMatchingTracker::SimpleLogMatchingTracker(const int64_t& id, const int index,
-                                                   const SimpleAtomMatcher& matcher,
-                                                   const UidMap& uidMap)
-    : LogMatchingTracker(id, index), mMatcher(matcher), mUidMap(uidMap) {
+SimpleAtomMatchingTracker::SimpleAtomMatchingTracker(const int64_t& id, const int index,
+                                                     const uint64_t protoHash,
+                                                     const SimpleAtomMatcher& matcher,
+                                                     const sp<UidMap>& uidMap)
+    : AtomMatchingTracker(id, index, protoHash), mMatcher(matcher), mUidMap(uidMap) {
     if (!matcher.has_atom_id()) {
         mInitialized = false;
     } else {
@@ -39,20 +39,28 @@ SimpleLogMatchingTracker::SimpleLogMatchingTracker(const int64_t& id, const int 
     }
 }
 
-SimpleLogMatchingTracker::~SimpleLogMatchingTracker() {
+SimpleAtomMatchingTracker::~SimpleAtomMatchingTracker() {
 }
 
-bool SimpleLogMatchingTracker::init(const vector<AtomMatcher>& allLogMatchers,
-                                    const vector<sp<LogMatchingTracker>>& allTrackers,
-                                    const unordered_map<int64_t, int>& matcherMap,
-                                    vector<bool>& stack) {
+bool SimpleAtomMatchingTracker::init(const vector<AtomMatcher>& allAtomMatchers,
+                                     const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+                                     const unordered_map<int64_t, int>& matcherMap,
+                                     vector<bool>& stack) {
     // no need to do anything.
     return mInitialized;
 }
 
-void SimpleLogMatchingTracker::onLogEvent(const LogEvent& event,
-                                          const vector<sp<LogMatchingTracker>>& allTrackers,
-                                          vector<MatchingState>& matcherResults) {
+bool SimpleAtomMatchingTracker::onConfigUpdated(
+        const AtomMatcher& matcher, const int index,
+        const unordered_map<int64_t, int>& atomMatchingTrackerMap) {
+    mIndex = index;
+    // Do not need to update mMatcher since the matcher must be identical across the update.
+    return mInitialized;
+}
+
+void SimpleAtomMatchingTracker::onLogEvent(
+        const LogEvent& event, const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        vector<MatchingState>& matcherResults) {
     if (matcherResults[mIndex] != MatchingState::kNotComputed) {
         VLOG("Matcher %lld already evaluated ", (long long)mId);
         return;
@@ -65,7 +73,7 @@ void SimpleLogMatchingTracker::onLogEvent(const LogEvent& event,
 
     bool matched = matchesSimple(mUidMap, mMatcher, event);
     matcherResults[mIndex] = matched ? MatchingState::kMatched : MatchingState::kNotMatched;
-    VLOG("Stats SimpleLogMatcher %lld matched? %d", (long long)mId, matched);
+    VLOG("Stats SimpleAtomMatcher %lld matched? %d", (long long)mId, matched);
 }
 
 }  // namespace statsd

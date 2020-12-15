@@ -17,9 +17,11 @@
 #define DEBUG false  // STOPSHIP if true
 #include "Log.h"
 
-#include "../guardrail/StatsdStats.h"
 #include "GaugeMetricProducer.h"
-#include "../stats_log_util.h"
+
+#include "guardrail/StatsdStats.h"
+#include "metrics/parsing_utils/metrics_manager_util.h"
+#include "stats_log_util.h"
 
 using android::util::FIELD_COUNT_REPEATED;
 using android::util::FIELD_TYPE_BOOL;
@@ -71,13 +73,14 @@ const int FIELD_ID_END_BUCKET_ELAPSED_MILLIS = 8;
 GaugeMetricProducer::GaugeMetricProducer(
         const ConfigKey& key, const GaugeMetric& metric, const int conditionIndex,
         const vector<ConditionState>& initialConditionCache, const sp<ConditionWizard>& wizard,
-        const int whatMatcherIndex, const sp<EventMatcherWizard>& matcherWizard,
-        const int pullTagId, const int triggerAtomId, const int atomId, const int64_t timeBaseNs,
-        const int64_t startTimeNs, const sp<StatsPullerManager>& pullerManager,
+        const uint64_t protoHash, const int whatMatcherIndex,
+        const sp<EventMatcherWizard>& matcherWizard, const int pullTagId, const int triggerAtomId,
+        const int atomId, const int64_t timeBaseNs, const int64_t startTimeNs,
+        const sp<StatsPullerManager>& pullerManager,
         const unordered_map<int, shared_ptr<Activation>>& eventActivationMap,
         const unordered_map<int, vector<shared_ptr<Activation>>>& eventDeactivationMap)
     : MetricProducer(metric.id(), key, timeBaseNs, conditionIndex, initialConditionCache, wizard,
-                     eventActivationMap, eventDeactivationMap, /*slicedStateAtoms=*/{},
+                     protoHash, eventActivationMap, eventDeactivationMap, /*slicedStateAtoms=*/{},
                      /*stateGroupMap=*/{}),
       mWhatMatcherIndex(whatMatcherIndex),
       mEventMatcherWizard(matcherWizard),
@@ -151,6 +154,64 @@ GaugeMetricProducer::~GaugeMetricProducer() {
     if (mIsPulled && mSamplingType == GaugeMetric::RANDOM_ONE_SAMPLE) {
         mPullerManager->UnRegisterReceiver(mPullTagId, mConfigKey, this);
     }
+}
+
+bool GaugeMetricProducer::onConfigUpdatedLocked(
+        const StatsdConfig& config, const int configIndex, const int metricIndex,
+        const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        const unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+        const unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+        const sp<EventMatcherWizard>& matcherWizard,
+        const vector<sp<ConditionTracker>>& allConditionTrackers,
+        const unordered_map<int64_t, int>& conditionTrackerMap, const sp<ConditionWizard>& wizard,
+        const unordered_map<int64_t, int>& metricToActivationMap,
+        unordered_map<int, vector<int>>& trackerToMetricMap,
+        unordered_map<int, vector<int>>& conditionToMetricMap,
+        unordered_map<int, vector<int>>& activationAtomTrackerToMetricMap,
+        unordered_map<int, vector<int>>& deactivationAtomTrackerToMetricMap,
+        vector<int>& metricsWithActivation) {
+    if (!MetricProducer::onConfigUpdatedLocked(
+                config, configIndex, metricIndex, allAtomMatchingTrackers,
+                oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap, matcherWizard,
+                allConditionTrackers, conditionTrackerMap, wizard, metricToActivationMap,
+                trackerToMetricMap, conditionToMetricMap, activationAtomTrackerToMetricMap,
+                deactivationAtomTrackerToMetricMap, metricsWithActivation)) {
+        return false;
+    }
+
+    const GaugeMetric& metric = config.gauge_metric(configIndex);
+    // Update appropriate indices: mWhatMatcherIndex, mConditionIndex and MetricsManager maps.
+    if (!handleMetricWithAtomMatchingTrackers(metric.what(), metricIndex, /*enforceOneAtom=*/false,
+                                              allAtomMatchingTrackers, newAtomMatchingTrackerMap,
+                                              trackerToMetricMap, mWhatMatcherIndex)) {
+        return false;
+    }
+
+    // Need to update maps since the index changed, but mTriggerAtomId will not change.
+    int triggerTrackerIndex;
+    if (metric.has_trigger_event() &&
+        !handleMetricWithAtomMatchingTrackers(metric.trigger_event(), metricIndex,
+                                              /*enforceOneAtom=*/true, allAtomMatchingTrackers,
+                                              newAtomMatchingTrackerMap, trackerToMetricMap,
+                                              triggerTrackerIndex)) {
+        return false;
+    }
+
+    if (metric.has_condition() &&
+        !handleMetricWithConditions(metric.condition(), metricIndex, conditionTrackerMap,
+                                    metric.links(), allConditionTrackers, mConditionTrackerIndex,
+                                    conditionToMetricMap)) {
+        return false;
+    }
+    sp<EventMatcherWizard> tmpEventWizard = mEventMatcherWizard;
+    mEventMatcherWizard = matcherWizard;
+
+    // If this is a config update, we must have just forced a partial bucket. Pull if needed to get
+    // data for the new bucket.
+    if (mIsActive && mIsPulled && mSamplingType == GaugeMetric::RANDOM_ONE_SAMPLE) {
+        pullAndMatchEventsLocked(mCurrentBucketStartTimeNs);
+    }
+    return true;
 }
 
 void GaugeMetricProducer::dumpStatesLocked(FILE* out, bool verbose) const {

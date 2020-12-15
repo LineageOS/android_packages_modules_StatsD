@@ -27,18 +27,23 @@ namespace android {
 namespace os {
 namespace statsd {
 
-class SimpleConditionTracker : public virtual ConditionTracker {
+class SimpleConditionTracker : public ConditionTracker {
 public:
-    SimpleConditionTracker(const ConfigKey& key, const int64_t& id, const int index,
-                           const SimplePredicate& simplePredicate,
-                           const std::unordered_map<int64_t, int>& trackerNameIndexMap);
+    SimpleConditionTracker(const ConfigKey& key, const int64_t& id, const uint64_t protoHash,
+                           const int index, const SimplePredicate& simplePredicate,
+                           const std::unordered_map<int64_t, int>& atomMatchingTrackerMap);
 
     ~SimpleConditionTracker();
 
     bool init(const std::vector<Predicate>& allConditionConfig,
               const std::vector<sp<ConditionTracker>>& allConditionTrackers,
               const std::unordered_map<int64_t, int>& conditionIdIndexMap, std::vector<bool>& stack,
-              std::vector<ConditionState>& initialConditionCache) override;
+              std::vector<ConditionState>& conditionCache) override;
+
+    bool onConfigUpdated(const std::vector<Predicate>& allConditionProtos, const int index,
+                         const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+                         const std::unordered_map<int64_t, int>& atomMatchingTrackerMap,
+                         const std::unordered_map<int64_t, int>& conditionTrackerMap) override;
 
     void evaluateCondition(const LogEvent& event,
                            const std::vector<MatchingState>& eventMatcherValues,
@@ -69,14 +74,9 @@ public:
         }
     }
 
-    void getTrueSlicedDimensions(
-            const std::vector<sp<ConditionTracker>>& allConditions,
-            std::set<HashableDimensionKey>* dimensions) const override {
-        for (const auto& itr : mSlicedConditionState) {
-            if (itr.second > 0) {
-                dimensions->insert(itr.first);
-            }
-        }
+    const std::map<HashableDimensionKey, int>* getSlicedDimensionMap(
+            const std::vector<sp<ConditionTracker>>& allConditions) const override {
+        return &mSlicedConditionState;
     }
 
     bool IsChangedDimensionTrackable() const  override { return true; }
@@ -112,9 +112,10 @@ private:
     std::set<HashableDimensionKey> mLastChangedToTrueDimensions;
     std::set<HashableDimensionKey> mLastChangedToFalseDimensions;
 
-    int mDimensionTag;
-
     std::map<HashableDimensionKey, int> mSlicedConditionState;
+
+    void setMatcherIndices(const SimplePredicate& predicate,
+                           const std::unordered_map<int64_t, int>& logTrackerMap);
 
     void handleStopAll(std::vector<ConditionState>& conditionCache,
                        std::vector<bool>& changedCache);
@@ -129,6 +130,7 @@ private:
     FRIEND_TEST(SimpleConditionTrackerTest, TestSlicedCondition);
     FRIEND_TEST(SimpleConditionTrackerTest, TestSlicedWithNoOutputDim);
     FRIEND_TEST(SimpleConditionTrackerTest, TestStopAll);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateConditions);
 };
 
 }  // namespace statsd

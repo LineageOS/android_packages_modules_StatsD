@@ -25,6 +25,7 @@
 #include "src/StatsLogProcessor.h"
 #include "src/hash.h"
 #include "src/logd/LogEvent.h"
+#include "src/matchers/EventMatcherWizard.h"
 #include "src/packages/UidMap.h"
 #include "src/stats_log_util.h"
 #include "stats_event.h"
@@ -191,6 +192,9 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields);
 
+GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
+                              optional<int64_t> condition, optional<int64_t> triggerEvent);
+
 // START: get primary key functions
 // These functions take in atom field information and create FieldValues which are stored in the
 // given HashableDimensionKey.
@@ -335,6 +339,9 @@ void sortLogEventsByTimestamp(std::vector<std::unique_ptr<LogEvent>> *events);
 
 int64_t StringToId(const string& str);
 
+sp<EventMatcherWizard> createEventMatcherWizard(
+        int tagId, int matcherIndex, const std::vector<FieldValueMatcher>& fieldValueMatchers = {});
+
 void ValidateWakelockAttributionUidAndTagDimension(const DimensionsValue& value, const int atomId,
                                                    const int uid, const string& tag);
 void ValidateUidDimension(const DimensionsValue& value, int node_idx, int atomId, int uid);
@@ -343,6 +350,8 @@ void ValidateAttributionUidAndTagDimension(
     const DimensionsValue& value, int atomId, int uid, const std::string& tag);
 void ValidateAttributionUidAndTagDimension(
     const DimensionsValue& value, int node_idx, int atomId, int uid, const std::string& tag);
+void ValidateStateValue(const google::protobuf::RepeatedPtrField<StateValue>& stateValues,
+                        int atomId, int64_t value);
 
 struct DimensionsPair {
     DimensionsPair(DimensionsValue m1, google::protobuf::RepeatedPtrField<StateValue> m2)

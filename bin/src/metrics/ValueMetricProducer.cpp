@@ -18,11 +18,13 @@
 #include "Log.h"
 
 #include "ValueMetricProducer.h"
-#include "../guardrail/StatsdStats.h"
-#include "../stats_log_util.h"
 
 #include <limits.h>
 #include <stdlib.h>
+
+#include "../guardrail/StatsdStats.h"
+#include "../stats_log_util.h"
+#include "metrics/parsing_utils/metrics_manager_util.h"
 
 using android::util::FIELD_COUNT_REPEATED;
 using android::util::FIELD_TYPE_BOOL;
@@ -79,16 +81,17 @@ const Value ZERO_DOUBLE((int64_t)0);
 ValueMetricProducer::ValueMetricProducer(
         const ConfigKey& key, const ValueMetric& metric, const int conditionIndex,
         const vector<ConditionState>& initialConditionCache,
-        const sp<ConditionWizard>& conditionWizard, const int whatMatcherIndex,
-        const sp<EventMatcherWizard>& matcherWizard, const int pullTagId, const int64_t timeBaseNs,
-        const int64_t startTimeNs, const sp<StatsPullerManager>& pullerManager,
+        const sp<ConditionWizard>& conditionWizard, const uint64_t protoHash,
+        const int whatMatcherIndex, const sp<EventMatcherWizard>& matcherWizard,
+        const int pullTagId, const int64_t timeBaseNs, const int64_t startTimeNs,
+        const sp<StatsPullerManager>& pullerManager,
         const unordered_map<int, shared_ptr<Activation>>& eventActivationMap,
         const unordered_map<int, vector<shared_ptr<Activation>>>& eventDeactivationMap,
         const vector<int>& slicedStateAtoms,
         const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap)
     : MetricProducer(metric.id(), key, timeBaseNs, conditionIndex, initialConditionCache,
-                     conditionWizard, eventActivationMap, eventDeactivationMap, slicedStateAtoms,
-                     stateGroupMap),
+                     conditionWizard, protoHash, eventActivationMap, eventDeactivationMap,
+                     slicedStateAtoms, stateGroupMap),
       mWhatMatcherIndex(whatMatcherIndex),
       mEventMatcherWizard(matcherWizard),
       mPullerManager(pullerManager),
@@ -181,6 +184,48 @@ ValueMetricProducer::~ValueMetricProducer() {
     if (mIsPulled) {
         mPullerManager->UnRegisterReceiver(mPullTagId, mConfigKey, this);
     }
+}
+
+bool ValueMetricProducer::onConfigUpdatedLocked(
+        const StatsdConfig& config, const int configIndex, const int metricIndex,
+        const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        const unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+        const unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+        const sp<EventMatcherWizard>& matcherWizard,
+        const vector<sp<ConditionTracker>>& allConditionTrackers,
+        const unordered_map<int64_t, int>& conditionTrackerMap, const sp<ConditionWizard>& wizard,
+        const unordered_map<int64_t, int>& metricToActivationMap,
+        unordered_map<int, vector<int>>& trackerToMetricMap,
+        unordered_map<int, vector<int>>& conditionToMetricMap,
+        unordered_map<int, vector<int>>& activationAtomTrackerToMetricMap,
+        unordered_map<int, vector<int>>& deactivationAtomTrackerToMetricMap,
+        vector<int>& metricsWithActivation) {
+    if (!MetricProducer::onConfigUpdatedLocked(
+                config, configIndex, metricIndex, allAtomMatchingTrackers,
+                oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap, matcherWizard,
+                allConditionTrackers, conditionTrackerMap, wizard, metricToActivationMap,
+                trackerToMetricMap, conditionToMetricMap, activationAtomTrackerToMetricMap,
+                deactivationAtomTrackerToMetricMap, metricsWithActivation)) {
+        return false;
+    }
+
+    const ValueMetric& metric = config.value_metric(configIndex);
+    // Update appropriate indices: mWhatMatcherIndex, mConditionIndex and MetricsManager maps.
+    if (!handleMetricWithAtomMatchingTrackers(metric.what(), metricIndex, /*enforceOneAtom=*/false,
+                                              allAtomMatchingTrackers, newAtomMatchingTrackerMap,
+                                              trackerToMetricMap, mWhatMatcherIndex)) {
+        return false;
+    }
+
+    if (metric.has_condition() &&
+        !handleMetricWithConditions(metric.condition(), metricIndex, conditionTrackerMap,
+                                    metric.links(), allConditionTrackers, mConditionTrackerIndex,
+                                    conditionToMetricMap)) {
+        return false;
+    }
+    sp<EventMatcherWizard> tmpEventWizard = mEventMatcherWizard;
+    mEventMatcherWizard = matcherWizard;
+    return true;
 }
 
 void ValueMetricProducer::onStateChanged(int64_t eventTimeNs, int32_t atomId,
@@ -300,7 +345,6 @@ void ValueMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
             protoOutput->write(FIELD_TYPE_INT32 | FIELD_ID_BUCKET_DROP_REASON, dropEvent.reason);
             protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_DROP_TIME,
                                (long long)(NanoToMillis(dropEvent.dropTimeNs)));
-            ;
             protoOutput->end(dropEventToken);
         }
         protoOutput->end(wrapperToken);
@@ -345,8 +389,11 @@ void ValueMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
                 protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_NUM,
                                    (long long)(getBucketNumFromEndTimeNs(bucket.mBucketEndNs)));
             }
-            // only write the condition timer value if the metric has a condition.
-            if (mConditionTrackerIndex >= 0) {
+            // We only write the condition timer value if the metric has a
+            // condition and/or is sliced by state.
+            // If the metric is sliced by state, the condition timer value is
+            // also sliced by state to reflect time spent in that state.
+            if (mConditionTrackerIndex >= 0 || !mSlicedStateAtoms.empty()) {
                 protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_CONDITION_TRUE_NS,
                                    (long long)bucket.mConditionTrueNs);
             }
@@ -411,7 +458,7 @@ void ValueMetricProducer::skipCurrentBucket(const int64_t dropTimeNs,
 
 void ValueMetricProducer::resetBase() {
     for (auto& slice : mCurrentBaseInfo) {
-        for (auto& baseInfo : slice.second) {
+        for (auto& baseInfo : slice.second.baseInfos) {
             baseInfo.hasBase = false;
         }
     }
@@ -453,6 +500,8 @@ void ValueMetricProducer::onActiveStateChangedLocked(const int64_t& eventTimeNs)
 
     // Let condition timer know of new active state.
     mConditionTimer.onConditionChanged(mIsActive, eventTimeNs);
+
+    updateCurrentSlicedBucketConditionTimers(mIsActive, eventTimeNs);
 }
 
 void ValueMetricProducer::onConditionChangedLocked(const bool condition,
@@ -475,6 +524,8 @@ void ValueMetricProducer::onConditionChangedLocked(const bool condition,
         invalidateCurrentBucket(eventTimeNs, BucketDropReason::EVENT_IN_WRONG_BUCKET);
         mCondition = ConditionState::kUnknown;
         mConditionTimer.onConditionChanged(mCondition, eventTimeNs);
+
+        updateCurrentSlicedBucketConditionTimers(mCondition, eventTimeNs);
         return;
     }
 
@@ -516,6 +567,29 @@ void ValueMetricProducer::onConditionChangedLocked(const bool condition,
 
     flushIfNeededLocked(eventTimeNs);
     mConditionTimer.onConditionChanged(mCondition, eventTimeNs);
+
+    updateCurrentSlicedBucketConditionTimers(mCondition, eventTimeNs);
+}
+
+void ValueMetricProducer::updateCurrentSlicedBucketConditionTimers(bool newCondition,
+                                                                   int64_t eventTimeNs) {
+    if (mSlicedStateAtoms.empty()) {
+        return;
+    }
+
+    // Utilize the current state key of each DimensionsInWhat key to determine
+    // which condition timers to update.
+    //
+    // Assumes that the MetricDimensionKey exists in `mCurrentSlicedBucket`.
+    bool inPulledData;
+    for (const auto& [dimensionInWhatKey, dimensionInWhatInfo] : mCurrentBaseInfo) {
+        // If the new condition is true, turn ON the condition timer only if
+        // the DimensionInWhat key was present in the pulled data.
+        inPulledData = dimensionInWhatInfo.hasCurrentState;
+        mCurrentSlicedBucket[MetricDimensionKey(dimensionInWhatKey,
+                                                dimensionInWhatInfo.currentState)]
+                .conditionTimer.onConditionChanged(newCondition && inPulledData, eventTimeNs);
+    }
 }
 
 void ValueMetricProducer::prepareFirstBucketLocked() {
@@ -617,15 +691,21 @@ void ValueMetricProducer::accumulateEvents(const std::vector<std::shared_ptr<Log
     // 2. A superset of the current mStateChangePrimaryKey
     // was not found in the new pulled data (i.e. not in mMatchedDimensionInWhatKeys)
     // then we need to reset the base.
-    for (auto& slice : mCurrentSlicedBucket) {
-        const auto& whatKey = slice.first.getDimensionKeyInWhat();
+    for (auto& [metricDimensionKey, currentValueBucket] : mCurrentSlicedBucket) {
+        const auto& whatKey = metricDimensionKey.getDimensionKeyInWhat();
         bool presentInPulledData =
                 mMatchedMetricDimensionKeys.find(whatKey) != mMatchedMetricDimensionKeys.end();
         if (!presentInPulledData && whatKey.contains(mStateChangePrimaryKey.second)) {
             auto it = mCurrentBaseInfo.find(whatKey);
-            for (auto& baseInfo : it->second) {
+            for (auto& baseInfo : it->second.baseInfos) {
                 baseInfo.hasBase = false;
             }
+            // Set to false when DimensionInWhat key is not present in a pull.
+            // Used in onMatchedLogEventInternalLocked() to ensure the condition
+            // timer is turned on the next pull when data is present.
+            it->second.hasCurrentState = false;
+            // Turn OFF condition timer for keys not present in pulled data.
+            currentValueBucket.conditionTimer.onConditionChanged(false, eventElapsedTimeNs);
         }
     }
     mMatchedMetricDimensionKeys.clear();
@@ -652,7 +732,7 @@ void ValueMetricProducer::dumpStatesLocked(FILE* out, bool verbose) const {
             (unsigned long)mCurrentSlicedBucket.size());
     if (verbose) {
         for (const auto& it : mCurrentSlicedBucket) {
-          for (const auto& interval : it.second) {
+          for (const auto& interval : it.second.intervals) {
               fprintf(out, "\t(what)%s\t(states)%s  (value)%s\n",
                       it.first.getDimensionKeyInWhat().toString().c_str(),
                       it.first.getStateValuesKey().toString().c_str(),
@@ -733,6 +813,11 @@ bool getDoubleOrLong(const LogEvent& event, const Matcher& matcher, Value& ret) 
     return false;
 }
 
+bool ValueMetricProducer::multipleBucketsSkipped(const int64_t numBucketsForward) {
+    // Skip buckets if this is a pulled metric or a pushed metric that is diffed.
+    return numBucketsForward > 1 && (mIsPulled || mUseDiff);
+}
+
 void ValueMetricProducer::onMatchedLogEventInternalLocked(
         const size_t matcherIndex, const MetricDimensionKey& eventKey,
         const ConditionKey& conditionKey, bool condition, const LogEvent& event,
@@ -783,23 +868,28 @@ void ValueMetricProducer::onMatchedLogEventInternalLocked(
         return;
     }
 
-    vector<BaseInfo>& baseInfos = mCurrentBaseInfo[whatKey];
+    const auto& returnVal =
+            mCurrentBaseInfo.emplace(whatKey, DimensionsInWhatInfo(getUnknownStateKey()));
+    DimensionsInWhatInfo& dimensionsInWhatInfo = returnVal.first->second;
+    const HashableDimensionKey oldStateKey = dimensionsInWhatInfo.currentState;
+    vector<BaseInfo>& baseInfos = dimensionsInWhatInfo.baseInfos;
     if (baseInfos.size() < mFieldMatchers.size()) {
         VLOG("Resizing number of intervals to %d", (int)mFieldMatchers.size());
         baseInfos.resize(mFieldMatchers.size());
     }
 
-    for (BaseInfo& baseInfo : baseInfos) {
-        if (!baseInfo.hasCurrentState) {
-            baseInfo.currentState = getUnknownStateKey();
-            baseInfo.hasCurrentState = true;
-        }
+    // Ensure we turn on the condition timer in the case where dimensions
+    // were missing on a previous pull due to a state change.
+    bool stateChange = oldStateKey != stateKey;
+    if (!dimensionsInWhatInfo.hasCurrentState) {
+        stateChange = true;
+        dimensionsInWhatInfo.hasCurrentState = true;
     }
 
     // We need to get the intervals stored with the previous state key so we can
     // close these value intervals.
-    const auto oldStateKey = baseInfos[0].currentState;
-    vector<Interval>& intervals = mCurrentSlicedBucket[MetricDimensionKey(whatKey, oldStateKey)];
+    vector<Interval>& intervals =
+            mCurrentSlicedBucket[MetricDimensionKey(whatKey, oldStateKey)].intervals;
     if (intervals.size() < mFieldMatchers.size()) {
         VLOG("Resizing number of intervals to %d", (int)mFieldMatchers.size());
         intervals.resize(mFieldMatchers.size());
@@ -813,14 +903,14 @@ void ValueMetricProducer::onMatchedLogEventInternalLocked(
     // Discussion here: http://ag/6124370.
     bool useAnomalyDetection = true;
 
+    dimensionsInWhatInfo.hasCurrentState = true;
+    dimensionsInWhatInfo.currentState = stateKey;
     for (int i = 0; i < (int)mFieldMatchers.size(); i++) {
         const Matcher& matcher = mFieldMatchers[i];
         BaseInfo& baseInfo = baseInfos[i];
         Interval& interval = intervals[i];
         interval.valueIndex = i;
         Value value;
-        baseInfo.hasCurrentState = true;
-        baseInfo.currentState = stateKey;
         if (!getDoubleOrLong(event, matcher, value)) {
             VLOG("Failed to get value %d from event %s", i, event.ToString().c_str());
             StatsdStats::getInstance().noteBadValueType(mMetricId);
@@ -910,8 +1000,20 @@ void ValueMetricProducer::onMatchedLogEventInternalLocked(
         interval.sampleSize += 1;
     }
 
-    // Only trigger the tracker if all intervals are correct
-    if (useAnomalyDetection) {
+    // State change.
+    if (!mSlicedStateAtoms.empty() && stateChange) {
+        // Turn OFF the condition timer for the previous state key.
+        mCurrentSlicedBucket[MetricDimensionKey(whatKey, oldStateKey)]
+                .conditionTimer.onConditionChanged(false, eventTimeNs);
+
+        // Turn ON the condition timer for the new state key.
+        mCurrentSlicedBucket[MetricDimensionKey(whatKey, stateKey)]
+                .conditionTimer.onConditionChanged(true, eventTimeNs);
+    }
+
+    // Only trigger the tracker if all intervals are correct and we have not skipped the bucket due
+    // to MULTIPLE_BUCKETS_SKIPPED.
+    if (useAnomalyDetection && !multipleBucketsSkipped(calcBucketsForwardCount(eventTimeNs))) {
         // TODO: propgate proper values down stream when anomaly support doubles
         long wholeBucketVal = intervals[0].value.long_value;
         auto prev = mCurrentFullBucket.find(eventKey);
@@ -961,9 +1063,7 @@ void ValueMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
     int64_t bucketEndTime = fullBucketEndTimeNs;
     int64_t numBucketsForward = calcBucketsForwardCount(eventTimeNs);
 
-    // Skip buckets if this is a pulled metric or a pushed metric that is diffed.
-    if (numBucketsForward > 1 && (mIsPulled || mUseDiff)) {
-
+    if (multipleBucketsSkipped(numBucketsForward)) {
         VLOG("Skipping forward %lld buckets", (long long)numBucketsForward);
         StatsdStats::getInstance().noteSkippedForwardBuckets(mMetricId);
         // Something went wrong. Maybe the device was sleeping for a long time. It is better
@@ -985,12 +1085,18 @@ void ValueMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
     if (!mCurrentBucketIsSkipped) {
         bool bucketHasData = false;
         // The current bucket is large enough to keep.
-        for (const auto& slice : mCurrentSlicedBucket) {
-            ValueBucket bucket = buildPartialBucket(bucketEndTime, slice.second);
-            bucket.mConditionTrueNs = conditionTrueDuration;
+        for (auto& [metricDimensionKey, currentValueBucket] : mCurrentSlicedBucket) {
+            PastValueBucket bucket =
+                    buildPartialBucket(bucketEndTime, currentValueBucket.intervals);
+            if (!mSlicedStateAtoms.empty()) {
+                bucket.mConditionTrueNs =
+                        currentValueBucket.conditionTimer.newBucketStart(bucketEndTime);
+            } else {
+                bucket.mConditionTrueNs = conditionTrueDuration;
+            }
             // it will auto create new vector of ValuebucketInfo if the key is not found.
             if (bucket.valueIndex.size() > 0) {
-                auto& bucketList = mPastBuckets[slice.first];
+                auto& bucketList = mPastBuckets[metricDimensionKey];
                 bucketList.push_back(bucket);
                 bucketHasData = true;
             }
@@ -1018,17 +1124,24 @@ void ValueMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
                 buildDropEvent(eventTimeNs, BucketDropReason::NO_DATA));
         mSkippedBuckets.emplace_back(bucketInGap);
     }
-
     appendToFullBucket(eventTimeNs > fullBucketEndTimeNs);
     initCurrentSlicedBucket(nextBucketStartTimeNs);
     // Update the condition timer again, in case we skipped buckets.
     mConditionTimer.newBucketStart(nextBucketStartTimeNs);
+
+    // NOTE: Update the condition timers in `mCurrentSlicedBucket` only when slicing
+    // by state. Otherwise, the "global" condition timer will be used.
+    if (!mSlicedStateAtoms.empty()) {
+        for (auto& [metricDimensionKey, currentValueBucket] : mCurrentSlicedBucket) {
+            currentValueBucket.conditionTimer.newBucketStart(nextBucketStartTimeNs);
+        }
+    }
     mCurrentBucketNum += numBucketsForward;
 }
 
-ValueBucket ValueMetricProducer::buildPartialBucket(int64_t bucketEndTime,
-                                                    const std::vector<Interval>& intervals) {
-    ValueBucket bucket;
+PastValueBucket ValueMetricProducer::buildPartialBucket(int64_t bucketEndTime,
+                                                        const std::vector<Interval>& intervals) {
+    PastValueBucket bucket;
     bucket.mBucketStartNs = mCurrentBucketStartTimeNs;
     bucket.mBucketEndNs = bucketEndTime;
     for (const auto& interval : intervals) {
@@ -1055,7 +1168,7 @@ void ValueMetricProducer::initCurrentSlicedBucket(int64_t nextBucketStartTimeNs)
     // Cleanup data structure to aggregate values.
     for (auto it = mCurrentSlicedBucket.begin(); it != mCurrentSlicedBucket.end();) {
         bool obsolete = true;
-        for (auto& interval : it->second) {
+        for (auto& interval : it->second.intervals) {
             interval.hasValue = false;
             interval.sampleSize = 0;
             if (interval.seenNewData) {
@@ -1064,6 +1177,17 @@ void ValueMetricProducer::initCurrentSlicedBucket(int64_t nextBucketStartTimeNs)
             interval.seenNewData = false;
         }
 
+        if (obsolete && !mSlicedStateAtoms.empty()) {
+            // When slicing by state, only delete the MetricDimensionKey when the
+            // state key in the MetricDimensionKey is not the current state key.
+            const HashableDimensionKey& dimensionInWhatKey = it->first.getDimensionKeyInWhat();
+            const auto& currentBaseInfoItr = mCurrentBaseInfo.find(dimensionInWhatKey);
+
+            if ((currentBaseInfoItr != mCurrentBaseInfo.end()) &&
+                (it->first.getStateValuesKey() == currentBaseInfoItr->second.currentState)) {
+                obsolete = false;
+            }
+        }
         if (obsolete) {
             it = mCurrentSlicedBucket.erase(it);
         } else {
@@ -1099,11 +1223,11 @@ void ValueMetricProducer::appendToFullBucket(const bool isFullBucketReached) {
         // Accumulate partial buckets with current value and then send to anomaly tracker.
         if (mCurrentFullBucket.size() > 0) {
             for (const auto& slice : mCurrentSlicedBucket) {
-                if (hitFullBucketGuardRailLocked(slice.first)) {
+                if (hitFullBucketGuardRailLocked(slice.first) || slice.second.intervals.empty()) {
                     continue;
                 }
                 // TODO: fix this when anomaly can accept double values
-                auto& interval = slice.second[0];
+                auto& interval = slice.second.intervals[0];
                 if (interval.hasValue) {
                     mCurrentFullBucket[slice.first] += interval.value.long_value;
                 }
@@ -1120,9 +1244,9 @@ void ValueMetricProducer::appendToFullBucket(const bool isFullBucketReached) {
             // Skip aggregating the partial buckets since there's no previous partial bucket.
             for (const auto& slice : mCurrentSlicedBucket) {
                 for (auto& tracker : mAnomalyTrackers) {
-                    if (tracker != nullptr) {
+                    if (tracker != nullptr && !slice.second.intervals.empty()) {
                         // TODO: fix this when anomaly can accept double values
-                        auto& interval = slice.second[0];
+                        auto& interval = slice.second.intervals[0];
                         if (interval.hasValue) {
                             tracker->addPastBucket(slice.first, interval.value.long_value,
                                                    mCurrentBucketNum);
@@ -1134,10 +1258,12 @@ void ValueMetricProducer::appendToFullBucket(const bool isFullBucketReached) {
     } else {
         // Accumulate partial bucket.
         for (const auto& slice : mCurrentSlicedBucket) {
-            // TODO: fix this when anomaly can accept double values
-            auto& interval = slice.second[0];
-            if (interval.hasValue) {
-                mCurrentFullBucket[slice.first] += interval.value.long_value;
+            if (!slice.second.intervals.empty()) {
+                // TODO: fix this when anomaly can accept double values
+                auto& interval = slice.second.intervals[0];
+                if (interval.hasValue) {
+                    mCurrentFullBucket[slice.first] += interval.value.long_value;
+                }
             }
         }
     }

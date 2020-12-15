@@ -16,7 +16,8 @@
 
 #include "Log.h"
 
-#include "CombinationLogMatchingTracker.h"
+#include "CombinationAtomMatchingTracker.h"
+
 #include "matchers/matcher_util.h"
 
 namespace android {
@@ -27,17 +28,18 @@ using std::set;
 using std::unordered_map;
 using std::vector;
 
-CombinationLogMatchingTracker::CombinationLogMatchingTracker(const int64_t& id, const int index)
-    : LogMatchingTracker(id, index) {
+CombinationAtomMatchingTracker::CombinationAtomMatchingTracker(const int64_t& id, const int index,
+                                                               const uint64_t protoHash)
+    : AtomMatchingTracker(id, index, protoHash) {
 }
 
-CombinationLogMatchingTracker::~CombinationLogMatchingTracker() {
+CombinationAtomMatchingTracker::~CombinationAtomMatchingTracker() {
 }
 
-bool CombinationLogMatchingTracker::init(const vector<AtomMatcher>& allLogMatchers,
-                                         const vector<sp<LogMatchingTracker>>& allTrackers,
-                                         const unordered_map<int64_t, int>& matcherMap,
-                                         vector<bool>& stack) {
+bool CombinationAtomMatchingTracker::init(
+        const vector<AtomMatcher>& allAtomMatchers,
+        const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        const unordered_map<int64_t, int>& matcherMap, vector<bool>& stack) {
     if (mInitialized) {
         return true;
     }
@@ -45,7 +47,7 @@ bool CombinationLogMatchingTracker::init(const vector<AtomMatcher>& allLogMatche
     // mark this node as visited in the recursion stack.
     stack[mIndex] = true;
 
-    AtomMatcher_Combination matcher = allLogMatchers[mIndex].combination();
+    AtomMatcher_Combination matcher = allAtomMatchers[mIndex].combination();
 
     // LogicalOperation is missing in the config
     if (!matcher.has_operation()) {
@@ -73,14 +75,15 @@ bool CombinationLogMatchingTracker::init(const vector<AtomMatcher>& allLogMatche
             return false;
         }
 
-        if (!allTrackers[childIndex]->init(allLogMatchers, allTrackers, matcherMap, stack)) {
+        if (!allAtomMatchingTrackers[childIndex]->init(allAtomMatchers, allAtomMatchingTrackers,
+                                                       matcherMap, stack)) {
             ALOGW("child matcher init failed %lld", (long long)child);
             return false;
         }
 
         mChildren.push_back(childIndex);
 
-        const set<int>& childTagIds = allTrackers[childIndex]->getAtomIds();
+        const set<int>& childTagIds = allAtomMatchingTrackers[childIndex]->getAtomIds();
         mAtomIds.insert(childTagIds.begin(), childTagIds.end());
     }
 
@@ -90,9 +93,26 @@ bool CombinationLogMatchingTracker::init(const vector<AtomMatcher>& allLogMatche
     return true;
 }
 
-void CombinationLogMatchingTracker::onLogEvent(const LogEvent& event,
-                                               const vector<sp<LogMatchingTracker>>& allTrackers,
-                                               vector<MatchingState>& matcherResults) {
+bool CombinationAtomMatchingTracker::onConfigUpdated(
+        const AtomMatcher& matcher, const int index,
+        const unordered_map<int64_t, int>& atomMatchingTrackerMap) {
+    mIndex = index;
+    mChildren.clear();
+    AtomMatcher_Combination combinationMatcher = matcher.combination();
+    for (const int64_t child : combinationMatcher.matcher()) {
+        const auto& pair = atomMatchingTrackerMap.find(child);
+        if (pair == atomMatchingTrackerMap.end()) {
+            ALOGW("Matcher %lld not found in the config", (long long)child);
+            return false;
+        }
+        mChildren.push_back(pair->second);
+    }
+    return true;
+}
+
+void CombinationAtomMatchingTracker::onLogEvent(
+        const LogEvent& event, const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        vector<MatchingState>& matcherResults) {
     // this event has been processed.
     if (matcherResults[mIndex] != MatchingState::kNotComputed) {
         return;
@@ -106,8 +126,8 @@ void CombinationLogMatchingTracker::onLogEvent(const LogEvent& event,
     // evaluate children matchers if they haven't been evaluated.
     for (const int childIndex : mChildren) {
         if (matcherResults[childIndex] == MatchingState::kNotComputed) {
-            const sp<LogMatchingTracker>& child = allTrackers[childIndex];
-            child->onLogEvent(event, allTrackers, matcherResults);
+            const sp<AtomMatchingTracker>& child = allAtomMatchingTrackers[childIndex];
+            child->onLogEvent(event, allAtomMatchingTrackers, matcherResults);
         }
     }
 

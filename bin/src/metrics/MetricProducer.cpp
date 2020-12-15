@@ -20,6 +20,7 @@
 #include "MetricProducer.h"
 
 #include "../guardrail/StatsdStats.h"
+#include "metrics/parsing_utils/metrics_manager_util.h"
 #include "state/StateTracker.h"
 
 using android::util::FIELD_COUNT_REPEATED;
@@ -46,14 +47,16 @@ const int FIELD_ID_ACTIVE_EVENT_ACTIVATION_STATE = 3;
 MetricProducer::MetricProducer(
         const int64_t& metricId, const ConfigKey& key, const int64_t timeBaseNs,
         const int conditionIndex, const vector<ConditionState>& initialConditionCache,
-        const sp<ConditionWizard>& wizard,
+        const sp<ConditionWizard>& wizard, const uint64_t protoHash,
         const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap,
         const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                 eventDeactivationMap,
         const vector<int>& slicedStateAtoms,
         const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap)
     : mMetricId(metricId),
+      mProtoHash(protoHash),
       mConfigKey(key),
+      mValid(true),
       mTimeBaseNs(timeBaseNs),
       mCurrentBucketStartTimeNs(timeBaseNs),
       mCurrentBucketNum(0),
@@ -69,6 +72,38 @@ MetricProducer::MetricProducer(
       mIsActive(mEventActivationMap.empty()),
       mSlicedStateAtoms(slicedStateAtoms),
       mStateGroupMap(stateGroupMap) {
+}
+
+bool MetricProducer::onConfigUpdatedLocked(
+        const StatsdConfig& config, const int configIndex, const int metricIndex,
+        const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        const unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+        const unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+        const sp<EventMatcherWizard>& matcherWizard,
+        const vector<sp<ConditionTracker>>& allConditionTrackers,
+        const unordered_map<int64_t, int>& conditionTrackerMap, const sp<ConditionWizard>& wizard,
+        const unordered_map<int64_t, int>& metricToActivationMap,
+        unordered_map<int, vector<int>>& trackerToMetricMap,
+        unordered_map<int, vector<int>>& conditionToMetricMap,
+        unordered_map<int, vector<int>>& activationAtomTrackerToMetricMap,
+        unordered_map<int, vector<int>>& deactivationAtomTrackerToMetricMap,
+        vector<int>& metricsWithActivation) {
+    sp<ConditionWizard> tmpWizard = mWizard;
+    mWizard = wizard;
+
+    unordered_map<int, shared_ptr<Activation>> newEventActivationMap;
+    unordered_map<int, vector<shared_ptr<Activation>>> newEventDeactivationMap;
+    if (!handleMetricActivationOnConfigUpdate(
+                config, mMetricId, metricIndex, metricToActivationMap, oldAtomMatchingTrackerMap,
+                newAtomMatchingTrackerMap, mEventActivationMap, activationAtomTrackerToMetricMap,
+                deactivationAtomTrackerToMetricMap, metricsWithActivation, newEventActivationMap,
+                newEventDeactivationMap)) {
+        return false;
+    }
+    mEventActivationMap = newEventActivationMap;
+    mEventDeactivationMap = newEventDeactivationMap;
+    mAnomalyTrackers.clear();
+    return true;
 }
 
 void MetricProducer::onMatchedLogEventLocked(const size_t matcherIndex, const LogEvent& event) {

@@ -25,8 +25,9 @@ namespace statsd {
 using std::unordered_map;
 using std::vector;
 
-CombinationConditionTracker::CombinationConditionTracker(const int64_t& id, const int index)
-    : ConditionTracker(id, index) {
+CombinationConditionTracker::CombinationConditionTracker(const int64_t& id, const int index,
+                                                         const uint64_t protoHash)
+    : ConditionTracker(id, index, protoHash) {
     VLOG("creating CombinationConditionTracker %lld", (long long)mConditionId);
 }
 
@@ -38,9 +39,23 @@ bool CombinationConditionTracker::init(const vector<Predicate>& allConditionConf
                                        const vector<sp<ConditionTracker>>& allConditionTrackers,
                                        const unordered_map<int64_t, int>& conditionIdIndexMap,
                                        vector<bool>& stack,
-                                       vector<ConditionState>& initialConditionCache) {
+                                       vector<ConditionState>& conditionCache) {
     VLOG("Combination predicate init() %lld", (long long)mConditionId);
     if (mInitialized) {
+        // All the children are guaranteed to be initialized, but the recursion is needed to
+        // fill the conditionCache properly, since another combination condition or metric
+        // might rely on this. The recursion is needed to compute the current condition.
+
+        // Init is called instead of isConditionMet so that the ConditionKey can be filled with the
+        // default key for sliced conditions, since we do not know all indirect descendants here.
+        for (const int childIndex : mChildren) {
+            if (conditionCache[childIndex] == ConditionState::kNotEvaluated) {
+                allConditionTrackers[childIndex]->init(allConditionConfig, allConditionTrackers,
+                                                       conditionIdIndexMap, stack, conditionCache);
+            }
+        }
+        conditionCache[mIndex] =
+                evaluateCombinationCondition(mChildren, mLogicalOperation, conditionCache);
         return true;
     }
 
@@ -74,9 +89,8 @@ bool CombinationConditionTracker::init(const vector<Predicate>& allConditionConf
             return false;
         }
 
-        bool initChildSucceeded =
-                childTracker->init(allConditionConfig, allConditionTrackers, conditionIdIndexMap,
-                                   stack, initialConditionCache);
+        bool initChildSucceeded = childTracker->init(allConditionConfig, allConditionTrackers,
+                                                     conditionIdIndexMap, stack, conditionCache);
 
         if (!initChildSucceeded) {
             ALOGW("Child initialization failed %lld ", (long long)child);
@@ -92,20 +106,63 @@ bool CombinationConditionTracker::init(const vector<Predicate>& allConditionConf
             mUnSlicedChildren.push_back(childIndex);
         }
         mChildren.push_back(childIndex);
-        mTrackerIndex.insert(childTracker->getLogTrackerIndex().begin(),
-                             childTracker->getLogTrackerIndex().end());
+        mTrackerIndex.insert(childTracker->getAtomMatchingTrackerIndex().begin(),
+                             childTracker->getAtomMatchingTrackerIndex().end());
     }
 
-    mUnSlicedPartCondition = evaluateCombinationCondition(mUnSlicedChildren, mLogicalOperation,
-                                                          initialConditionCache);
-    initialConditionCache[mIndex] =
-            evaluateCombinationCondition(mChildren, mLogicalOperation, initialConditionCache);
+    mUnSlicedPartCondition =
+            evaluateCombinationCondition(mUnSlicedChildren, mLogicalOperation, conditionCache);
+    conditionCache[mIndex] =
+            evaluateCombinationCondition(mChildren, mLogicalOperation, conditionCache);
 
     // unmark this node in the recursion stack.
     stack[mIndex] = false;
 
     mInitialized = true;
 
+    return true;
+}
+
+bool CombinationConditionTracker::onConfigUpdated(
+        const vector<Predicate>& allConditionProtos, const int index,
+        const vector<sp<ConditionTracker>>& allConditionTrackers,
+        const unordered_map<int64_t, int>& atomMatchingTrackerMap,
+        const unordered_map<int64_t, int>& conditionTrackerMap) {
+    ConditionTracker::onConfigUpdated(allConditionProtos, index, allConditionTrackers,
+                                      atomMatchingTrackerMap, conditionTrackerMap);
+    mTrackerIndex.clear();
+    mChildren.clear();
+    mUnSlicedChildren.clear();
+    mSlicedChildren.clear();
+    Predicate_Combination combinationCondition = allConditionProtos[mIndex].combination();
+
+    for (const int64_t child : combinationCondition.predicate()) {
+        const auto& it = conditionTrackerMap.find(child);
+
+        if (it == conditionTrackerMap.end()) {
+            ALOGW("Predicate %lld not found in the config", (long long)child);
+            return false;
+        }
+
+        int childIndex = it->second;
+        const sp<ConditionTracker>& childTracker = allConditionTrackers[childIndex];
+
+        // Ensures that the child's tracker indices are updated.
+        if (!childTracker->onConfigUpdated(allConditionProtos, childIndex, allConditionTrackers,
+                                           atomMatchingTrackerMap, conditionTrackerMap)) {
+            ALOGW("Child update failed %lld ", (long long)child);
+            return false;
+        }
+
+        if (allConditionTrackers[childIndex]->isSliced()) {
+            mSlicedChildren.push_back(childIndex);
+        } else {
+            mUnSlicedChildren.push_back(childIndex);
+        }
+        mChildren.push_back(childIndex);
+        mTrackerIndex.insert(childTracker->getAtomMatchingTrackerIndex().begin(),
+                             childTracker->getAtomMatchingTrackerIndex().end());
+    }
     return true;
 }
 
