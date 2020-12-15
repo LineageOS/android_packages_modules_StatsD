@@ -40,10 +40,11 @@ class DurationMetricProducer : public MetricProducer {
 public:
     DurationMetricProducer(
             const ConfigKey& key, const DurationMetric& durationMetric, const int conditionIndex,
-            const vector<ConditionState>& initialConditionCache, const size_t startIndex,
-            const size_t stopIndex, const size_t stopAllIndex, const bool nesting,
-            const sp<ConditionWizard>& wizard, const FieldMatcher& internalDimensions,
-            const int64_t timeBaseNs, const int64_t startTimeNs,
+            const vector<ConditionState>& initialConditionCache, const int whatIndex,
+            const int startIndex, const int stopIndex, const int stopAllIndex, const bool nesting,
+            const sp<ConditionWizard>& wizard, const uint64_t protoHash,
+            const FieldMatcher& internalDimensions, const int64_t timeBaseNs,
+            const int64_t startTimeNs,
             const unordered_map<int, shared_ptr<Activation>>& eventActivationMap = {},
             const unordered_map<int, vector<shared_ptr<Activation>>>& eventDeactivationMap = {},
             const vector<int>& slicedStateAtoms = {},
@@ -54,9 +55,15 @@ public:
     sp<AnomalyTracker> addAnomalyTracker(const Alert &alert,
                                          const sp<AlarmMonitor>& anomalyAlarmMonitor) override;
 
+    void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) override;
+
     void onStateChanged(const int64_t eventTimeNs, const int32_t atomId,
                         const HashableDimensionKey& primaryKey, const FieldValue& oldState,
                         const FieldValue& newState) override;
+
+    MetricType getMetricType() const override {
+        return METRIC_TYPE_DURATION;
+    }
 
 protected:
     void onMatchedLogEventLocked(const size_t matcherIndex, const LogEvent& event) override;
@@ -67,8 +74,15 @@ protected:
             const std::map<int, HashableDimensionKey>& statePrimaryKeys) override;
 
 private:
+    // Initializes true dimensions of the 'what' predicate. Only to be called during initialization.
+    void initTrueDimensions(const int whatIndex, const int64_t startTimeNs);
+
+    void handleMatchedLogEventValuesLocked(const size_t matcherIndex,
+                                           const std::vector<FieldValue>& values,
+                                           const int64_t eventTimeNs);
     void handleStartEvent(const MetricDimensionKey& eventKey, const ConditionKey& conditionKeys,
-                          bool condition, const LogEvent& event);
+                          bool condition, const int64_t eventTimeNs,
+                          const vector<FieldValue>& eventValues);
 
     void onDumpReportLocked(const int64_t dumpTimeNs,
                             const bool include_current_partial_bucket,
@@ -107,16 +121,34 @@ private:
     void flushCurrentBucketLocked(const int64_t& eventTimeNs,
                                   const int64_t& nextBucketStartTimeNs) override;
 
+    bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) override;
+
+    void addAnomalyTrackerLocked(sp<AnomalyTracker>& anomalyTracker);
+
     const DurationMetric_AggregationType mAggregationType;
 
     // Index of the SimpleAtomMatcher which defines the start.
-    const size_t mStartIndex;
+    int mStartIndex;
 
     // Index of the SimpleAtomMatcher which defines the stop.
-    const size_t mStopIndex;
+    int mStopIndex;
 
     // Index of the SimpleAtomMatcher which defines the stop all for all dimensions.
-    const size_t mStopAllIndex;
+    int mStopAllIndex;
 
     // nest counting -- for the same key, stops must match the number of starts to make real stop
     const bool mNested;
@@ -143,9 +175,6 @@ private:
     std::unique_ptr<DurationTracker> createDurationTracker(
             const MetricDimensionKey& eventKey) const;
 
-    // This hides the base class's std::vector<sp<AnomalyTracker>> mAnomalyTrackers
-    std::vector<sp<DurationAnomalyTracker>> mAnomalyTrackers;
-
     // Util function to check whether the specified dimension hits the guardrail.
     bool hitGuardRailLocked(const MetricDimensionKey& newKey);
 
@@ -162,6 +191,9 @@ private:
                 TestSumDurationWithSplitInFollowingBucket);
     FRIEND_TEST(DurationMetricProducerTest_PartialBucket, TestMaxDuration);
     FRIEND_TEST(DurationMetricProducerTest_PartialBucket, TestMaxDurationWithSplitInNextBucket);
+
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateDurationMetrics);
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateAlerts);
 };
 
 }  // namespace statsd

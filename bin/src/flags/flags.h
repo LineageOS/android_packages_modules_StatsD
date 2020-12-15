@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-package com.android.server.cts.device.statsd;
+#pragma once
 
-import android.app.Service;
-import android.content.Intent;
-import android.os.IBinder;
-import android.util.StatsLog;
+#include <string>
 
-public class IsolatedProcessService extends Service {
-    private static final String TAG = "IsolatedProcessService";
+namespace android {
+namespace os {
+namespace statsd {
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        StatsLog.logStart(/*label=*/0);
-        return START_NOT_STICKY;
-    }
+const std::string STATSD_NATIVE_NAMESPACE = "statsd_native";
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-}
+const std::string PARTIAL_CONFIG_UPDATE_FLAG = "partial_config_update";
+
+std::string getFlagString(const std::string& flagName, const std::string& defaultValue);
+
+// Returns true IFF flagName has a value of "true".
+bool getFlagBool(const std::string& flagName, const std::string& defaultValue);
+
+}  // namespace statsd
+}  // namespace os
+}  // namespace android

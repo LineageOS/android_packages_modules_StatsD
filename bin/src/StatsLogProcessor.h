@@ -134,10 +134,8 @@ public:
     int64_t getLastReportTimeNs(const ConfigKey& key);
 
     inline void setPrintLogs(bool enabled) {
-#ifdef VERY_VERBOSE_PRINTING
         std::lock_guard<std::mutex> lock(mMetricsMutex);
         mPrintAllLogs = enabled;
-#endif
     }
 
     // Add a specific config key to the possible configs to dump ASAP.
@@ -189,8 +187,8 @@ private:
 
     void resetIfConfigTtlExpiredLocked(const int64_t timestampNs);
 
-    void OnConfigUpdatedLocked(
-        const int64_t currentTimestampNs, const ConfigKey& key, const StatsdConfig& config);
+    void OnConfigUpdatedLocked(const int64_t currentTimestampNs, const ConfigKey& key,
+                               const StatsdConfig& config, bool modularUpdate);
 
     void GetActiveConfigsLocked(const int uid, vector<int64_t>& outActiveConfigs);
 
@@ -292,9 +290,7 @@ private:
     // The time for the next anomaly alarm for alerts.
     int64_t mNextAnomalyAlarmTime = 0;
 
-#ifdef VERY_VERBOSE_PRINTING
     bool mPrintAllLogs = false;
-#endif
 
     FRIEND_TEST(StatsLogProcessorTest, TestOutOfOrderLogs);
     FRIEND_TEST(StatsLogProcessorTest, TestRateLimitByteSize);
@@ -341,6 +337,10 @@ private:
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithTwoDeactivations);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithSameDeactivation);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithTwoMetricsTwoDeactivations);
+
+    FRIEND_TEST(ConfigUpdateE2eAbTest, TestHashStrings);
+    FRIEND_TEST(ConfigUpdateE2eAbTest, TestUidMapVersionStringInstaller);
+    FRIEND_TEST(ConfigUpdateE2eAbTest, TestConfigTtl);
 
     FRIEND_TEST(CountMetricE2eTest, TestInitialConditionChanges);
     FRIEND_TEST(CountMetricE2eTest, TestSlicedState);

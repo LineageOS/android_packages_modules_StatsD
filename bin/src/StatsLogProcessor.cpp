@@ -24,12 +24,13 @@
 #include <packages/modules/StatsD/bin/src/active_config_list.pb.h>
 #include <packages/modules/StatsD/bin/src/experiment_ids.pb.h>
 
+#include "StatsService.h"
 #include "android-base/stringprintf.h"
 #include "external/StatsPullerManager.h"
+#include "flags/flags.h"
 #include "guardrail/StatsdStats.h"
 #include "logd/LogEvent.h"
 #include "metrics/CountMetricProducer.h"
-#include "StatsService.h"
 #include "state/StateManager.h"
 #include "stats_log_util.h"
 #include "stats_util.h"
@@ -408,11 +409,9 @@ void StatsLogProcessor::OnLogEvent(LogEvent* event, int64_t elapsedRealtimeNs) {
         onWatchdogRollbackOccurredLocked(event);
     }
 
-#ifdef VERY_VERBOSE_PRINTING
     if (mPrintAllLogs) {
         ALOGI("%s", event->ToString().c_str());
     }
-#endif
     resetIfConfigTtlExpiredLocked(eventElapsedTimeNs);
 
     // Hard-coded logic to update the isolated uid's in the uid-map.
@@ -525,22 +524,37 @@ void StatsLogProcessor::OnConfigUpdated(const int64_t timestampNs, const ConfigK
                                         const StatsdConfig& config) {
     std::lock_guard<std::mutex> lock(mMetricsMutex);
     WriteDataToDiskLocked(key, timestampNs, CONFIG_UPDATED, NO_TIME_CONSTRAINTS);
-    OnConfigUpdatedLocked(timestampNs, key, config);
+    bool modularUpdate = getFlagBool(PARTIAL_CONFIG_UPDATE_FLAG, "false");
+    OnConfigUpdatedLocked(timestampNs, key, config, modularUpdate);
 }
 
-void StatsLogProcessor::OnConfigUpdatedLocked(
-        const int64_t timestampNs, const ConfigKey& key, const StatsdConfig& config) {
+void StatsLogProcessor::OnConfigUpdatedLocked(const int64_t timestampNs, const ConfigKey& key,
+                                              const StatsdConfig& config, bool modularUpdate) {
     VLOG("Updated configuration for key %s", key.ToString().c_str());
-    sp<MetricsManager> newMetricsManager =
-            new MetricsManager(key, config, mTimeBaseNs, timestampNs, mUidMap, mPullerManager,
-                               mAnomalyAlarmMonitor, mPeriodicAlarmMonitor);
-    if (newMetricsManager->isConfigValid()) {
-        newMetricsManager->init();
-        mUidMap->OnConfigUpdated(key);
-        newMetricsManager->refreshTtl(timestampNs);
-        mMetricsManagers[key] = newMetricsManager;
-        VLOG("StatsdConfig valid");
+    // Create new config if this is not a modular update or if this is a new config.
+    const auto& it = mMetricsManagers.find(key);
+    bool configValid = false;
+    if (!modularUpdate || it == mMetricsManagers.end()) {
+        sp<MetricsManager> newMetricsManager =
+                new MetricsManager(key, config, mTimeBaseNs, timestampNs, mUidMap, mPullerManager,
+                                   mAnomalyAlarmMonitor, mPeriodicAlarmMonitor);
+        configValid = newMetricsManager->isConfigValid();
+        if (configValid) {
+            newMetricsManager->init();
+            mUidMap->OnConfigUpdated(key);
+            newMetricsManager->refreshTtl(timestampNs);
+            mMetricsManagers[key] = newMetricsManager;
+            VLOG("StatsdConfig valid");
+        }
     } else {
+        // Preserve the existing MetricsManager, update necessary components and metadata in place.
+        configValid = it->second->updateConfig(config, mTimeBaseNs, timestampNs,
+                                               mAnomalyAlarmMonitor, mPeriodicAlarmMonitor);
+        if (configValid) {
+            mUidMap->OnConfigUpdated(key);
+        }
+    }
+    if (!configValid) {
         // If there is any error in the config, don't use it.
         // Remove any existing config with the same key.
         ALOGE("StatsdConfig NOT valid");
@@ -706,7 +720,8 @@ void StatsLogProcessor::resetConfigsLocked(const int64_t timestampNs,
     for (const auto& key : configs) {
         StatsdConfig config;
         if (StorageManager::readConfigFromDisk(key, &config)) {
-            OnConfigUpdatedLocked(timestampNs, key, config);
+            // Force a full update when resetting a config.
+            OnConfigUpdatedLocked(timestampNs, key, config, /*modularUpdate=*/false);
             StatsdStats::getInstance().noteConfigReset(key);
         } else {
             ALOGE("Failed to read backup config from disk for : %s", key.ToString().c_str());

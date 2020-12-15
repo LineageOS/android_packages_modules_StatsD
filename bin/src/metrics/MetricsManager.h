@@ -25,7 +25,7 @@
 #include "packages/modules/StatsD/bin/src/statsd_config.pb.h"
 #include "packages/modules/StatsD/bin/src/statsd_metadata.pb.h"
 #include "logd/LogEvent.h"
-#include "matchers/LogMatchingTracker.h"
+#include "matchers/AtomMatchingTracker.h"
 #include "metrics/MetricProducer.h"
 #include "packages/UidMap.h"
 
@@ -45,6 +45,10 @@ public:
                    const sp<AlarmMonitor>& periodicAlarmMonitor);
 
     virtual ~MetricsManager();
+
+    bool updateConfig(const StatsdConfig& config, const int64_t timeBaseNs,
+                      const int64_t currentTimeNs, const sp<AlarmMonitor>& anomalyAlarmMonitor,
+                      const sp<AlarmMonitor>& periodicAlarmMonitor);
 
     // Return whether the configuration is valid.
     bool isConfigValid() const;
@@ -168,7 +172,7 @@ private:
     bool mVersionStringsInReport = false;
     bool mInstallerInReport = false;
 
-    const int64_t mTtlNs;
+    int64_t mTtlNs;
     int64_t mTtlEndNs;
 
     int64_t mLastReportTimeNs;
@@ -189,7 +193,7 @@ private:
     // To guard access to mAllowedLogSources
     mutable std::mutex mAllowedLogSourcesMutex;
 
-    const std::set<int32_t> mWhitelistedAtomIds;
+    std::set<int32_t> mWhitelistedAtomIds;
 
     // We can pull any atom from these uids.
     std::set<int32_t> mDefaultPullUids;
@@ -207,13 +211,12 @@ private:
     // Contains the annotations passed in with StatsdConfig.
     std::list<std::pair<const int64_t, const int32_t>> mAnnotations;
 
-    const bool mShouldPersistHistory;
-
+    bool mShouldPersistHistory;
 
     // All event tags that are interesting to my metrics.
     std::set<int> mTagIds;
 
-    // We only store the sp of LogMatchingTracker, MetricProducer, and ConditionTracker in
+    // We only store the sp of AtomMatchingTracker, MetricProducer, and ConditionTracker in
     // MetricsManager. There are relationships between them, and the relationships are denoted by
     // index instead of pointers. The reasons for this are: (1) the relationship between them are
     // complicated, so storing index instead of pointers reduces the risk that A holds B's sp, and B
@@ -221,7 +224,7 @@ private:
     // the related results from a cache using the index.
 
     // Hold all the atom matchers from the config.
-    std::vector<sp<LogMatchingTracker>> mAllAtomMatchers;
+    std::vector<sp<AtomMatchingTracker>> mAllAtomMatchingTrackers;
 
     // Hold all the conditions from the config.
     std::vector<sp<ConditionTracker>> mAllConditionTrackers;
@@ -235,23 +238,35 @@ private:
     // Hold all periodic alarm trackers.
     std::vector<sp<AlarmTracker>> mAllPeriodicAlarmTrackers;
 
+    // To make updating configs faster, we map the id of a AtomMatchingTracker, MetricProducer, and
+    // ConditionTracker to its index in the corresponding vector.
+
+    // Maps the id of an atom matching tracker to its index in mAllAtomMatchingTrackers.
+    std::unordered_map<int64_t, int> mAtomMatchingTrackerMap;
+
+    // Maps the id of a condition tracker to its index in mAllConditionTrackers.
+    std::unordered_map<int64_t, int> mConditionTrackerMap;
+
+    // Maps the id of a metric producer to its index in mAllMetricProducers.
+    std::unordered_map<int64_t, int> mMetricProducerMap;
+
     // To make the log processing more efficient, we want to do as much filtering as possible
     // before we go into individual trackers and conditions to match.
 
     // 1st filter: check if the event tag id is in mTagIds.
     // 2nd filter: if it is, we parse the event because there is at least one member is interested.
-    //             then pass to all LogMatchingTrackers (itself also filter events by ids).
-    // 3nd filter: for LogMatchingTrackers that matched this event, we pass this event to the
+    //             then pass to all AtomMatchingTrackers (itself also filter events by ids).
+    // 3nd filter: for AtomMatchingTrackers that matched this event, we pass this event to the
     //             ConditionTrackers and MetricProducers that use this matcher.
     // 4th filter: for ConditionTrackers that changed value due to this event, we pass
     //             new conditions to  metrics that use this condition.
 
     // The following map is initialized from the statsd_config.
 
-    // Maps from the index of the LogMatchingTracker to index of MetricProducer.
+    // Maps from the index of the AtomMatchingTracker to index of MetricProducer.
     std::unordered_map<int, std::vector<int>> mTrackerToMetricMap;
 
-    // Maps from LogMatchingTracker to ConditionTracker
+    // Maps from AtomMatchingTracker to ConditionTracker
     std::unordered_map<int, std::vector<int>> mTrackerToConditionMap;
 
     // Maps from ConditionTracker to MetricProducer
@@ -269,9 +284,21 @@ private:
 
     std::vector<int> mMetricIndexesWithActivation;
 
-    void initLogSourceWhiteList();
+    void initAllowedLogSources();
 
     void initPullAtomSources();
+
+    // Only called on config creation/update to initialize log sources from the config.
+    // Calls initAllowedLogSources and initPullAtomSources. Sets mConfigValid to false on error.
+    void createAllLogSourcesFromConfig(const StatsdConfig& config);
+
+    // Verifies the config meets guardrails and updates statsdStats.
+    // Sets mConfigValid to false on error. Should be called on config creation/update
+    void verifyGuardrailsAndUpdateStatsdStats();
+
+    // Initializes mIsAlwaysActive and mIsActive.
+    // Should be called on config creation/update.
+    void initializeConfigActiveStatus();
 
     // The metrics that don't need to be uploaded or even reported.
     std::set<int64_t> mNoReportMetricIds;
@@ -281,6 +308,9 @@ private:
 
     // The config is always active if any metric in the config does not have an activation signal.
     bool mIsAlwaysActive;
+
+    // Hashes of the States used in this config, keyed by the state id, used in config updates.
+    std::map<int64_t, uint64_t> mStateProtoHashes;
 
     FRIEND_TEST(WakelockDurationE2eTest, TestAggregatedPredicateDimensions);
     FRIEND_TEST(MetricConditionLinkE2eTest, TestMultiplePredicatesAndLinks);
@@ -304,6 +334,7 @@ private:
 
     FRIEND_TEST(AlarmE2eTest, TestMultipleAlarms);
     FRIEND_TEST(ConfigTtlE2eTest, TestCountMetric);
+    FRIEND_TEST(ConfigUpdateE2eAbTest, TestConfigTtl);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetric);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithOneDeactivation);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithTwoDeactivations);
@@ -311,6 +342,7 @@ private:
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithTwoMetricsTwoDeactivations);
 
     FRIEND_TEST(MetricsManagerTest, TestLogSources);
+    FRIEND_TEST(MetricsManagerTest, TestLogSourcesOnConfigUpdate);
 
     FRIEND_TEST(StatsLogProcessorTest, TestActiveConfigMetricDiskWriteRead);
     FRIEND_TEST(StatsLogProcessorTest, TestActivationOnBoot);

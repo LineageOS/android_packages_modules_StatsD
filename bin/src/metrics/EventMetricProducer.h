@@ -36,7 +36,7 @@ public:
     EventMetricProducer(
             const ConfigKey& key, const EventMetric& eventMetric, const int conditionIndex,
             const vector<ConditionState>& initialConditionCache, const sp<ConditionWizard>& wizard,
-            const int64_t startTimeNs,
+            const uint64_t protoHash, const int64_t startTimeNs,
             const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap = {},
             const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                     eventDeactivationMap = {},
@@ -44,6 +44,10 @@ public:
             const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap = {});
 
     virtual ~EventMetricProducer();
+
+    MetricType getMetricType() const override {
+        return METRIC_TYPE_EVENT;
+    }
 
 private:
     void onMatchedLogEventInternalLocked(
@@ -64,6 +68,22 @@ private:
 
     // Internal interface to handle sliced condition change.
     void onSlicedConditionMayChangeLocked(bool overallCondition, const int64_t eventTime) override;
+
+    bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) override;
 
     void dropDataLocked(const int64_t dropTimeNs) override;
 

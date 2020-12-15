@@ -31,7 +31,7 @@ namespace android {
 namespace os {
 namespace statsd {
 
-struct ValueBucket {
+struct PastValueBucket {
     int64_t mBucketStartNs;
     int64_t mBucketEndNs;
     std::vector<int> valueIndex;
@@ -41,21 +41,20 @@ struct ValueBucket {
     int64_t mConditionTrueNs;
 };
 
-
 // Aggregates values within buckets.
 //
 // There are different events that might complete a bucket
 // - a condition change
 // - an app upgrade
 // - an alarm set to the end of the bucket
-class ValueMetricProducer : public virtual MetricProducer, public virtual PullDataReceiver {
+class ValueMetricProducer : public MetricProducer, public virtual PullDataReceiver {
 public:
     ValueMetricProducer(
             const ConfigKey& key, const ValueMetric& valueMetric, const int conditionIndex,
             const vector<ConditionState>& initialConditionCache,
-            const sp<ConditionWizard>& conditionWizard, const int whatMatcherIndex,
-            const sp<EventMatcherWizard>& matcherWizard, const int pullTagId,
-            const int64_t timeBaseNs, const int64_t startTimeNs,
+            const sp<ConditionWizard>& conditionWizard, const uint64_t protoHash,
+            const int whatMatcherIndex, const sp<EventMatcherWizard>& matcherWizard,
+            const int pullTagId, const int64_t timeBaseNs, const int64_t startTimeNs,
             const sp<StatsPullerManager>& pullerManager,
             const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap = {},
             const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
@@ -92,6 +91,10 @@ public:
 
     void onStateChanged(int64_t eventTimeNs, int32_t atomId, const HashableDimensionKey& primaryKey,
                         const FieldValue& oldState, const FieldValue& newState) override;
+
+    MetricType getMetricType() const override {
+        return METRIC_TYPE_VALUE;
+    }
 
 protected:
     void onMatchedLogEventInternalLocked(
@@ -152,7 +155,23 @@ private:
     // causes the bucket to be invalidated will not notify StatsdStats.
     void skipCurrentBucket(const int64_t dropTimeNs, const BucketDropReason reason);
 
-    const int mWhatMatcherIndex;
+    bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) override;
+
+    int mWhatMatcherIndex;
 
     sp<EventMatcherWizard> mEventMatcherWizard;
 
@@ -173,7 +192,7 @@ private:
     // if this is pulled metric
     const bool mIsPulled;
 
-    // internal state of an ongoing aggregation bucket.
+    // Tracks the value information of one value field.
     typedef struct {
         // Index in multi value aggregation.
         int valueIndex;
@@ -188,25 +207,49 @@ private:
         bool seenNewData = false;
     } Interval;
 
+    // Internal state of an ongoing aggregation bucket.
+    typedef struct CurrentValueBucket {
+        // If the `MetricDimensionKey` state key is the current state key, then
+        // the condition timer will be updated later (e.g. condition/state/active
+        // state change) with the correct condition and time.
+        CurrentValueBucket() : intervals(), conditionTimer(ConditionTimer(false, 0)) {}
+        // Value information for each value field of the metric.
+        std::vector<Interval> intervals;
+        // Tracks how long the condition is true.
+        ConditionTimer conditionTimer;
+    } CurrentValueBucket;
+
+    // Holds base information for diffing values from one value field.
     typedef struct {
         // Holds current base value of the dimension. Take diff and update if necessary.
         Value base;
         // Whether there is a base to diff to.
         bool hasBase;
+    } BaseInfo;
+
+    // State key and base information for a specific DimensionsInWhat key.
+    typedef struct DimensionsInWhatInfo {
+        DimensionsInWhatInfo(const HashableDimensionKey& stateKey)
+            : baseInfos(), currentState(stateKey), hasCurrentState(false) {
+        }
+        std::vector<BaseInfo> baseInfos;
         // Last seen state value(s).
         HashableDimensionKey currentState;
         // Whether this dimensions in what key has a current state key.
         bool hasCurrentState;
-    } BaseInfo;
+    } DimensionsInWhatInfo;
 
-    std::unordered_map<MetricDimensionKey, std::vector<Interval>> mCurrentSlicedBucket;
+    // Tracks the internal state in the ongoing aggregation bucket for each DimensionsInWhat
+    // key and StateValuesKey pair.
+    std::unordered_map<MetricDimensionKey, CurrentValueBucket> mCurrentSlicedBucket;
 
-    std::unordered_map<HashableDimensionKey, std::vector<BaseInfo>> mCurrentBaseInfo;
+    // Tracks current state key and base information for each DimensionsInWhat key.
+    std::unordered_map<HashableDimensionKey, DimensionsInWhatInfo> mCurrentBaseInfo;
 
     std::unordered_map<MetricDimensionKey, int64_t> mCurrentFullBucket;
 
     // Save the past buckets and we can clear when the StatsLogReport is dumped.
-    std::unordered_map<MetricDimensionKey, std::vector<ValueBucket>> mPastBuckets;
+    std::unordered_map<MetricDimensionKey, std::vector<PastValueBucket>> mPastBuckets;
 
     const int64_t mMinBucketSizeNs;
 
@@ -219,11 +262,13 @@ private:
 
     void pullAndMatchEventsLocked(const int64_t timestampNs);
 
+    bool multipleBucketsSkipped(const int64_t numBucketsForward);
+
     void accumulateEvents(const std::vector<std::shared_ptr<LogEvent>>& allData,
                           int64_t originalPullTimeNs, int64_t eventElapsedTimeNs);
 
-    ValueBucket buildPartialBucket(int64_t bucketEndTime,
-                                   const std::vector<Interval>& intervals);
+    PastValueBucket buildPartialBucket(int64_t bucketEndTime,
+                                       const std::vector<Interval>& intervals);
 
     void initCurrentSlicedBucket(int64_t nextBucketStartTimeNs);
 
@@ -232,7 +277,11 @@ private:
     // Reset diff base and mHasGlobalBase
     void resetBase();
 
-    static const size_t kBucketSize = sizeof(ValueBucket{});
+    // Updates the condition timers in the current sliced bucket when there is a
+    // condition change or an active state change.
+    void updateCurrentSlicedBucketConditionTimers(bool newCondition, int64_t eventTimeNs);
+
+    static const size_t kBucketSize = sizeof(PastValueBucket{});
 
     const size_t mDimensionSoftLimit;
 
@@ -317,6 +366,11 @@ private:
     FRIEND_TEST(ValueMetricProducerTest, TestTrimUnusedDimensionKey);
     FRIEND_TEST(ValueMetricProducerTest, TestUseZeroDefaultBase);
     FRIEND_TEST(ValueMetricProducerTest, TestUseZeroDefaultBaseWithPullFailures);
+    FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithMultipleDimensions);
+    FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithMissingDataInStateChange);
+    FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithDataMissingInConditionChange);
+    FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithMissingDataThenFlushBucket);
+    FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithNoPullOnBucketBoundary);
 
     FRIEND_TEST(ValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenOneConditionFailed);
     FRIEND_TEST(ValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenInitialPullFailed);
@@ -331,6 +385,8 @@ private:
     FRIEND_TEST(ValueMetricProducerTest_PartialBucket, TestPushedEvents);
     FRIEND_TEST(ValueMetricProducerTest_PartialBucket, TestPulledValue);
     FRIEND_TEST(ValueMetricProducerTest_PartialBucket, TestPulledValueWhileConditionFalse);
+
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateValueMetrics);
 
     friend class ValueMetricProducerTestHelper;
 };
