@@ -205,6 +205,12 @@ bool GaugeMetricProducer::onConfigUpdatedLocked(
     }
     sp<EventMatcherWizard> tmpEventWizard = mEventMatcherWizard;
     mEventMatcherWizard = matcherWizard;
+
+    // If this is a config update, we must have just forced a partial bucket. Pull if needed to get
+    // data for the new bucket.
+    if (mIsActive && mIsPulled && mSamplingType == GaugeMetric::RANDOM_ONE_SAMPLE) {
+        pullAndMatchEventsLocked(mCurrentBucketStartTimeNs);
+    }
     return true;
 }
 

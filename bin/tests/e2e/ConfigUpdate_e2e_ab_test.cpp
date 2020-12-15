@@ -14,6 +14,7 @@
 
 #include <android-base/properties.h>
 #include <android-base/stringprintf.h>
+#include <android/binder_interface_utils.h>
 #include <gtest/gtest.h>
 
 #include "flags/flags.h"
@@ -30,6 +31,7 @@ namespace statsd {
 
 using android::base::SetProperty;
 using android::base::StringPrintf;
+using ::ndk::SharedRefBase;
 using namespace std;
 
 namespace {
@@ -317,6 +319,70 @@ TEST_P(ConfigUpdateE2eAbTest, TestConfigTtl) {
     vector<uint8_t> buffer;
     processor->onDumpReport(cfgKey, baseTimeNs + 3 * NS_PER_SEC, false, true, ADB_DUMP, FAST,
                             &buffer);
+}
+
+TEST_P(ConfigUpdateE2eAbTest, TestExistingGaugePullRandomOneSample) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+    config.add_default_pull_packages("AID_ROOT");  // Fake puller is registered with root.
+
+    AtomMatcher subsystemSleepMatcher =
+            CreateSimpleAtomMatcher("SubsystemSleep", util::SUBSYSTEM_SLEEP_STATE);
+    *config.add_atom_matcher() = subsystemSleepMatcher;
+
+    GaugeMetric metric = createGaugeMetric("GaugeSubsystemSleep", subsystemSleepMatcher.id(),
+                                           GaugeMetric::RANDOM_ONE_SAMPLE, nullopt, nullopt);
+    *metric.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+    *config.add_gauge_metric() = metric;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = getElapsedRealtimeNs();
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    sp<StatsLogProcessor> processor = CreateStatsLogProcessor(
+            bucketStartTimeNs, bucketStartTimeNs, config, key,
+            SharedRefBase::make<FakeSubsystemSleepCallback>(), util::SUBSYSTEM_SLEEP_STATE);
+
+    uint64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
+    processor->OnConfigUpdated(updateTimeNs, key, config);
+    uint64_t dumpTimeNs = bucketStartTimeNs + 90 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, NO_TIME_CONSTRAINTS, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 2);
+
+    // From after the update
+    ConfigMetricsReport report = reports.reports(1);
+    ASSERT_EQ(report.metrics_size(), 1);
+    // Count screen on while screen is on. There was 1 after the update.
+    StatsLogReport metricData = report.metrics(0);
+    EXPECT_EQ(metricData.metric_id(), metric.id());
+    EXPECT_TRUE(metricData.has_gauge_metrics());
+    StatsLogReport::GaugeMetricDataWrapper gaugeMetrics;
+    sortMetricDataByDimensionsValue(metricData.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+
+    GaugeMetricData data = metricData.gauge_metrics().data(0);
+    EXPECT_EQ(util::SUBSYSTEM_SLEEP_STATE, data.dimensions_in_what().field());
+    ASSERT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value_size());
+    EXPECT_EQ(1 /* subsystem name field */,
+              data.dimensions_in_what().value_tuple().dimensions_value(0).field());
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_str(),
+              "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ASSERT_EQ(1, data.bucket_info(0).atom_size());
+    ASSERT_EQ(1, data.bucket_info(0).elapsed_timestamp_nanos_size());
+    EXPECT_EQ(updateTimeNs, data.bucket_info(0).elapsed_timestamp_nanos(0));
+    EXPECT_EQ(MillisToNano(NanoToMillis(updateTimeNs)),
+              data.bucket_info(0).start_bucket_elapsed_nanos());
+    EXPECT_EQ(MillisToNano(NanoToMillis(dumpTimeNs)),
+              data.bucket_info(0).end_bucket_elapsed_nanos());
+    EXPECT_TRUE(data.bucket_info(0).atom(0).subsystem_sleep_state().subsystem_name().empty());
+    EXPECT_GT(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 0);
 }
 
 #else
