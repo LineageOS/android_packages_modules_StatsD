@@ -445,6 +445,23 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
     return dimensions;
 }
 
+GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
+                              optional<int64_t> condition, optional<int64_t> triggerEvent) {
+    GaugeMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what);
+    metric.set_bucket(TEN_MINUTES);
+    metric.set_sampling_type(samplingType);
+    if (condition) {
+        metric.set_condition(condition.value());
+    }
+    if (triggerEvent) {
+        metric.set_trigger_event(triggerEvent.value());
+    }
+    metric.mutable_gauge_fields_filter()->set_include_all(true);
+    return metric;
+}
+
 // START: get primary key functions
 void getUidProcessKey(int uid, HashableDimensionKey* key) {
     int pos1[] = {1, 0, 0};

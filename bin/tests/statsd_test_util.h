@@ -192,6 +192,9 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields);
 
+GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
+                              optional<int64_t> condition, optional<int64_t> triggerEvent);
+
 // START: get primary key functions
 // These functions take in atom field information and create FieldValues which are stored in the
 // given HashableDimensionKey.
