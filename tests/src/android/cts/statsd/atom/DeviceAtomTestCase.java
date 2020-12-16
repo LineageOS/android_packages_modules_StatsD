@@ -194,7 +194,7 @@ public class DeviceAtomTestCase extends AtomTestCase {
     }
 
     /**
-     * Required to successfully start a background service from adb in O.
+     * Required to successfully start a background service from adb in Android O.
      */
     protected void allowBackgroundServices() throws Exception {
         getDevice().executeShellCommand(String.format(
@@ -319,5 +319,10 @@ public class DeviceAtomTestCase extends AtomTestCase {
         final String output = getDevice().executeShellCommand(
                 "settings get global netstats_combine_subtype_enabled").trim();
         return output.equals("1");
+    }
+
+    void setNetworkStatsCombinedSubTypeEnabled(boolean enable) throws Exception {
+        getDevice().executeShellCommand("settings put global netstats_combine_subtype_enabled "
+                + (enable ? "1" : "0"));
     }
 }

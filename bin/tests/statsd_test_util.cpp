@@ -15,6 +15,8 @@
 #include "statsd_test_util.h"
 
 #include <aidl/android/util/StatsEventParcel.h>
+
+#include "matchers/SimpleAtomMatchingTracker.h"
 #include "stats_event.h"
 
 using aidl::android::util::StatsEventParcel;
@@ -441,6 +443,23 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
         dimensions.add_child()->set_field(field);
     }
     return dimensions;
+}
+
+GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
+                              optional<int64_t> condition, optional<int64_t> triggerEvent) {
+    GaugeMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what);
+    metric.set_bucket(TEN_MINUTES);
+    metric.set_sampling_type(samplingType);
+    if (condition) {
+        metric.set_condition(condition.value());
+    }
+    if (triggerEvent) {
+        metric.set_trigger_event(triggerEvent.value());
+    }
+    metric.mutable_gauge_fields_filter()->set_include_all(true);
+    return metric;
 }
 
 // START: get primary key functions
@@ -996,6 +1015,20 @@ int64_t StringToId(const string& str) {
     return static_cast<int64_t>(std::hash<std::string>()(str));
 }
 
+sp<EventMatcherWizard> createEventMatcherWizard(
+        int tagId, int matcherIndex, const vector<FieldValueMatcher>& fieldValueMatchers) {
+    sp<UidMap> uidMap = new UidMap();
+    SimpleAtomMatcher atomMatcher;
+    atomMatcher.set_atom_id(tagId);
+    for (const FieldValueMatcher& fvm : fieldValueMatchers) {
+        *atomMatcher.add_field_value_matcher() = fvm;
+    }
+    uint64_t matcherHash = 0x12345678;
+    int64_t matcherId = 678;
+    return new EventMatcherWizard({new SimpleAtomMatchingTracker(
+            matcherId, matcherIndex, matcherHash, atomMatcher, uidMap)});
+}
+
 void ValidateWakelockAttributionUidAndTagDimension(const DimensionsValue& value, const int atomId,
                                                    const int uid, const string& tag) {
     EXPECT_EQ(value.field(), atomId);
@@ -1075,6 +1108,21 @@ void ValidateAttributionUidAndTagDimension(
         .value_tuple().dimensions_value(1).value_str(), tag);
 }
 
+void ValidateStateValue(const google::protobuf::RepeatedPtrField<StateValue>& stateValues,
+                        int atomId, int64_t value) {
+    ASSERT_EQ(stateValues.size(), 1);
+    ASSERT_EQ(stateValues[0].atom_id(), atomId);
+    switch (stateValues[0].contents_case()) {
+        case StateValue::ContentsCase::kValue:
+            EXPECT_EQ(stateValues[0].value(), (int32_t)value);
+            break;
+        case StateValue::ContentsCase::kGroupId:
+            EXPECT_EQ(stateValues[0].group_id(), value);
+            break;
+        default:
+            FAIL() << "State value should have either a value or a group id";
+    }
+}
 bool EqualsTo(const DimensionsValue& s1, const DimensionsValue& s2) {
     if (s1.field() != s2.field()) {
         return false;

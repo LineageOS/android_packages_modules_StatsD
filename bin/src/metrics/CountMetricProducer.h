@@ -44,7 +44,7 @@ public:
     CountMetricProducer(
             const ConfigKey& key, const CountMetric& countMetric, const int conditionIndex,
             const vector<ConditionState>& initialConditionCache, const sp<ConditionWizard>& wizard,
-            const int64_t timeBaseNs, const int64_t startTimeNs,
+            const uint64_t protoHash, const int64_t timeBaseNs, const int64_t startTimeNs,
             const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap = {},
             const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                     eventDeactivationMap = {},
@@ -56,6 +56,10 @@ public:
     void onStateChanged(const int64_t eventTimeNs, const int32_t atomId,
                         const HashableDimensionKey& primaryKey, const FieldValue& oldState,
                         const FieldValue& newState) override;
+
+    MetricType getMetricType() const override {
+        return METRIC_TYPE_COUNT;
+    }
 
 protected:
     void onMatchedLogEventInternalLocked(
@@ -92,6 +96,22 @@ private:
 
     void flushCurrentBucketLocked(const int64_t& eventTimeNs,
                                   const int64_t& nextBucketStartTimeNs) override;
+
+    bool onConfigUpdatedLocked(
+            const StatsdConfig& config, const int configIndex, const int metricIndex,
+            const std::vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+            const std::unordered_map<int64_t, int>& oldAtomMatchingTrackerMap,
+            const std::unordered_map<int64_t, int>& newAtomMatchingTrackerMap,
+            const sp<EventMatcherWizard>& matcherWizard,
+            const std::vector<sp<ConditionTracker>>& allConditionTrackers,
+            const std::unordered_map<int64_t, int>& conditionTrackerMap,
+            const sp<ConditionWizard>& wizard,
+            const std::unordered_map<int64_t, int>& metricToActivationMap,
+            std::unordered_map<int, std::vector<int>>& trackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& conditionToMetricMap,
+            std::unordered_map<int, std::vector<int>>& activationAtomTrackerToMetricMap,
+            std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
+            std::vector<int>& metricsWithActivation) override;
 
     std::unordered_map<MetricDimensionKey, std::vector<CountBucket>> mPastBuckets;
 
