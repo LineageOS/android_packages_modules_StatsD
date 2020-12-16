@@ -31,6 +31,6 @@ android_test {
     ],
     test_suites: [
         "device-tests",
-        "mts",
+        "mts-statsd",
     ],
 }
