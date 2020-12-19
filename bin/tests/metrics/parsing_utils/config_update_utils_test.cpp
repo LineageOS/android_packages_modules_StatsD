@@ -129,21 +129,6 @@ EventMetric createEventMetric(string name, int64_t what, optional<int64_t> condi
     return metric;
 }
 
-CountMetric createCountMetric(string name, int64_t what, optional<int64_t> condition,
-                              vector<int64_t> states) {
-    CountMetric metric;
-    metric.set_id(StringToId(name));
-    metric.set_what(what);
-    metric.set_bucket(TEN_MINUTES);
-    if (condition) {
-        metric.set_condition(condition.value());
-    }
-    for (const int64_t state : states) {
-        metric.add_slice_by_state(state);
-    }
-    return metric;
-}
-
 DurationMetric createDurationMetric(string name, int64_t what, optional<int64_t> condition,
                                     vector<int64_t> states) {
     DurationMetric metric;
