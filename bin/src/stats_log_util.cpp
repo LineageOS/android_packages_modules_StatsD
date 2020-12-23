@@ -465,7 +465,7 @@ int64_t TimeUnitToBucketSizeInMillis(TimeUnit unit) {
     }
 }
 
-void writeNonZeroStatToStream(const uint64_t fieldId, const int value,
+void writeNonZeroStatToStream(const uint64_t fieldId, const int64_t value,
                               util::ProtoOutputStream* protoOutput) {
     if (value != 0) {
         protoOutput->write(fieldId, value);
