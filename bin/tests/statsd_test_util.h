@@ -192,6 +192,9 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields);
 
+CountMetric createCountMetric(string name, int64_t what, optional<int64_t> condition,
+                              vector<int64_t> states);
+
 GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
                               optional<int64_t> condition, optional<int64_t> triggerEvent);
 
@@ -352,6 +355,9 @@ void ValidateAttributionUidAndTagDimension(
     const DimensionsValue& value, int node_idx, int atomId, int uid, const std::string& tag);
 void ValidateStateValue(const google::protobuf::RepeatedPtrField<StateValue>& stateValues,
                         int atomId, int64_t value);
+
+void ValidateCountBucket(const CountBucketInfo& countBucket, int64_t startTimeNs, int64_t endTimeNs,
+                         int64_t count);
 
 struct DimensionsPair {
     DimensionsPair(DimensionsValue m1, google::protobuf::RepeatedPtrField<StateValue> m2)
