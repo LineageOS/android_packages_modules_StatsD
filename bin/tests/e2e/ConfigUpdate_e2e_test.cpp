@@ -14,6 +14,7 @@
 
 #include <android-base/properties.h>
 #include <android-base/stringprintf.h>
+#include <android/binder_interface_utils.h>
 #include <gtest/gtest.h>
 
 #include "flags/flags.h"
@@ -29,6 +30,7 @@ namespace statsd {
 
 using android::base::SetProperty;
 using android::base::StringPrintf;
+using ::ndk::SharedRefBase;
 using namespace std;
 
 // Tests that only run with the partial config update feature turned on.
@@ -53,6 +55,14 @@ public:
         SetProperty(rawFlagName, originalFlagValue);
     }
 };
+
+void ValidateSubsystemSleepDimension(const DimensionsValue& value, string name) {
+    EXPECT_EQ(value.field(), util::SUBSYSTEM_SLEEP_STATE);
+    ASSERT_EQ(value.value_tuple().dimensions_value_size(), 1);
+    EXPECT_EQ(value.value_tuple().dimensions_value(0).field(), 1 /* subsystem name field */);
+    EXPECT_EQ(value.value_tuple().dimensions_value(0).value_str(), name);
+}
+
 }  // Anonymous namespace.
 
 TEST_F(ConfigUpdateE2eTest, TestCountMetric) {
@@ -179,7 +189,7 @@ TEST_F(ConfigUpdateE2eTest, TestCountMetric) {
     *newConfig.add_count_metric() = countNew;
     *newConfig.add_count_metric() = countPersist;
 
-    uint64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
+    int64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
     processor->OnConfigUpdated(updateTimeNs, key, newConfig);
 
     // Send events after the update. Counts reset to 0 since this is a new bucket.
@@ -303,6 +313,399 @@ TEST_F(ConfigUpdateE2eTest, TestCountMetric) {
                        android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
     ASSERT_EQ(data.bucket_info_size(), 1);
     ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 2);
+}
+
+TEST_F(ConfigUpdateE2eTest, TestGaugeMetric) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+    config.add_default_pull_packages("AID_ROOT");  // Fake puller is registered with root.
+
+    AtomMatcher appStartMatcher = CreateSimpleAtomMatcher("AppStart", util::APP_START_OCCURRED);
+    *config.add_atom_matcher() = appStartMatcher;
+    AtomMatcher backgroundMatcher = CreateMoveToBackgroundAtomMatcher();
+    *config.add_atom_matcher() = backgroundMatcher;
+    AtomMatcher foregroundMatcher = CreateMoveToForegroundAtomMatcher();
+    *config.add_atom_matcher() = foregroundMatcher;
+    AtomMatcher screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    AtomMatcher screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOffMatcher;
+    AtomMatcher subsystemSleepMatcher =
+            CreateSimpleAtomMatcher("SubsystemSleep", util::SUBSYSTEM_SLEEP_STATE);
+    *config.add_atom_matcher() = subsystemSleepMatcher;
+
+    Predicate isInBackgroundPredicate = CreateIsInBackgroundPredicate();
+    *isInBackgroundPredicate.mutable_simple_predicate()->mutable_dimensions() =
+            CreateDimensions(util::ACTIVITY_FOREGROUND_STATE_CHANGED, {1 /*uid field*/});
+    *config.add_predicate() = isInBackgroundPredicate;
+
+    Predicate screenOnPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = screenOnPredicate;
+
+    GaugeMetric gaugePullPersist =
+            createGaugeMetric("SubsystemSleepWhileScreenOn", subsystemSleepMatcher.id(),
+                              GaugeMetric::RANDOM_ONE_SAMPLE, screenOnPredicate.id(), {});
+    *gaugePullPersist.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+
+    GaugeMetric gaugePushPersist =
+            createGaugeMetric("AppStartWhileInBg", appStartMatcher.id(),
+                              GaugeMetric::FIRST_N_SAMPLES, isInBackgroundPredicate.id(), nullopt);
+    *gaugePushPersist.mutable_dimensions_in_what() =
+            CreateDimensions(util::APP_START_OCCURRED, {1 /*uid field*/});
+    // Links between sync state atom and condition of uid is holding wakelock.
+    MetricConditionLink* links = gaugePushPersist.add_links();
+    links->set_condition(isInBackgroundPredicate.id());
+    *links->mutable_fields_in_what() =
+            CreateDimensions(util::APP_START_OCCURRED, {1 /*uid field*/});
+    *links->mutable_fields_in_condition() =
+            CreateDimensions(util::ACTIVITY_FOREGROUND_STATE_CHANGED, {1 /*uid field*/});
+
+    GaugeMetric gaugeChange = createGaugeMetric("GaugeScrOn", screenOnMatcher.id(),
+                                                GaugeMetric::RANDOM_ONE_SAMPLE, nullopt, nullopt);
+    GaugeMetric gaugeRemove =
+            createGaugeMetric("GaugeSubsysTriggerScr", subsystemSleepMatcher.id(),
+                              GaugeMetric::FIRST_N_SAMPLES, nullopt, screenOnMatcher.id());
+    *gaugeRemove.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+    *config.add_gauge_metric() = gaugeRemove;
+    *config.add_gauge_metric() = gaugePullPersist;
+    *config.add_gauge_metric() = gaugeChange;
+    *config.add_gauge_metric() = gaugePushPersist;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = getElapsedRealtimeNs();  // 0:10
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    sp<StatsLogProcessor> processor = CreateStatsLogProcessor(
+            bucketStartTimeNs, bucketStartTimeNs, config, key,
+            SharedRefBase::make<FakeSubsystemSleepCallback>(), util::SUBSYSTEM_SLEEP_STATE);
+
+    int app1Uid = 123, app2Uid = 456;
+
+    // Initialize log events before update.
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateMoveToBackgroundEvent(bucketStartTimeNs + 5 * NS_PER_SEC, app1Uid));
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 10 * NS_PER_SEC, app1Uid,
+                                                 "app1", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 101));  // Kept by gaugePushPersist.
+    events.push_back(
+            CreateAppStartOccurredEvent(bucketStartTimeNs + 15 * NS_PER_SEC, app2Uid, "app2",
+                                        AppStartOccurred::WARM, "", "", true,
+                                        /*start_msec*/ 201));  // Not kept by gaugePushPersist.
+    events.push_back(CreateScreenStateChangedEvent(
+            bucketStartTimeNs + 20 * NS_PER_SEC,
+            android::view::DISPLAY_STATE_ON));  // Pulls gaugePullPersist and gaugeRemove.
+    events.push_back(CreateMoveToBackgroundEvent(bucketStartTimeNs + 25 * NS_PER_SEC, app2Uid));
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 30 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 35 * NS_PER_SEC, app1Uid,
+                                                 "app1", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 102));  // Kept by gaugePushPersist.
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 40 * NS_PER_SEC, app2Uid,
+                                                 "app2", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 202));  // Kept by gaugePushPersist.
+    events.push_back(CreateScreenStateChangedEvent(
+            bucketStartTimeNs + 45 * NS_PER_SEC,
+            android::view::DisplayStateEnum::DISPLAY_STATE_ON));  // Pulls gaugeRemove only.
+    events.push_back(CreateMoveToForegroundEvent(bucketStartTimeNs + 50 * NS_PER_SEC, app1Uid));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->mPullerManager->ForceClearPullerCache();
+        processor->OnLogEvent(event.get());
+    }
+    processor->mPullerManager->ForceClearPullerCache();
+
+    // Do the update. Add matchers/conditions in different order to force indices to change.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+    newConfig.add_default_pull_packages("AID_ROOT");  // Fake puller is registered with root.
+
+    *newConfig.add_atom_matcher() = screenOffMatcher;
+    *newConfig.add_atom_matcher() = foregroundMatcher;
+    *newConfig.add_atom_matcher() = appStartMatcher;
+    *newConfig.add_atom_matcher() = subsystemSleepMatcher;
+    *newConfig.add_atom_matcher() = backgroundMatcher;
+    *newConfig.add_atom_matcher() = screenOnMatcher;
+
+    *newConfig.add_predicate() = isInBackgroundPredicate;
+    *newConfig.add_predicate() = screenOnPredicate;
+
+    gaugeChange.set_sampling_type(GaugeMetric::FIRST_N_SAMPLES);
+    *newConfig.add_gauge_metric() = gaugeChange;
+    GaugeMetric gaugeNew = createGaugeMetric("GaugeSubsys", subsystemSleepMatcher.id(),
+                                             GaugeMetric::RANDOM_ONE_SAMPLE, {}, {});
+    *gaugeNew.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+    *newConfig.add_gauge_metric() = gaugeNew;
+    *newConfig.add_gauge_metric() = gaugePushPersist;
+    *newConfig.add_gauge_metric() = gaugePullPersist;
+
+    int64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
+    // Update pulls gaugePullPersist and gaugeNew.
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // Verify puller manager is properly set.
+    sp<StatsPullerManager> pullerManager = processor->mPullerManager;
+    EXPECT_EQ(pullerManager->mNextPullTimeNs, bucketStartTimeNs + bucketSizeNs);
+    ASSERT_EQ(pullerManager->mReceivers.size(), 1);
+    ASSERT_EQ(pullerManager->mReceivers.begin()->second.size(), 2);
+
+    // Send events after the update. Counts reset to 0 since this is a new bucket.
+    events.clear();
+    events.push_back(
+            CreateAppStartOccurredEvent(bucketStartTimeNs + 65 * NS_PER_SEC, app1Uid, "app1",
+                                        AppStartOccurred::WARM, "", "", true,
+                                        /*start_msec*/ 103));  // Not kept by gaugePushPersist.
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 70 * NS_PER_SEC, app2Uid,
+                                                 "app2", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 203));  // Kept by gaugePushPersist.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 75 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 80 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(CreateMoveToBackgroundEvent(bucketStartTimeNs + 85 * NS_PER_SEC, app1Uid));
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 90 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 95 * NS_PER_SEC, app1Uid,
+                                                 "app1", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 104));  // Kept by gaugePushPersist.
+    events.push_back(CreateAppStartOccurredEvent(bucketStartTimeNs + 100 * NS_PER_SEC, app2Uid,
+                                                 "app2", AppStartOccurred::WARM, "", "", true,
+                                                 /*start_msec*/ 204));  // Kept by gaugePushPersist.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 105 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 110 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->mPullerManager->ForceClearPullerCache();
+        processor->OnLogEvent(event.get());
+    }
+    // Pulling alarm arrive, triggering a bucket split. Only gaugeNew keeps the data since the
+    // condition is false for gaugeNew.
+    processor->informPullAlarmFired(bucketStartTimeNs + bucketSizeNs);
+
+    uint64_t dumpTimeNs = bucketStartTimeNs + bucketSizeNs + 10 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 2);
+
+    int64_t roundedBucketStartNs = MillisToNano(NanoToMillis(bucketStartTimeNs));
+    int64_t roundedUpdateTimeNs = MillisToNano(NanoToMillis(updateTimeNs));
+    int64_t roundedBucketEndNs = MillisToNano(NanoToMillis(bucketStartTimeNs + bucketSizeNs));
+    int64_t roundedDumpTimeNs = MillisToNano(NanoToMillis(dumpTimeNs));
+
+    // Report from before update.
+    ConfigMetricsReport report = reports.reports(0);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Gauge subsystem sleep state trigger screen on. 2 pulls occurred.
+    StatsLogReport gaugeRemoveBefore = report.metrics(0);
+    EXPECT_EQ(gaugeRemoveBefore.metric_id(), gaugeRemove.id());
+    EXPECT_TRUE(gaugeRemoveBefore.has_gauge_metrics());
+    StatsLogReport::GaugeMetricDataWrapper gaugeMetrics;
+    sortMetricDataByDimensionsValue(gaugeRemoveBefore.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    auto data = gaugeMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 20 * NS_PER_SEC),
+                              (int64_t)(bucketStartTimeNs + 45 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 2);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 101);
+    EXPECT_EQ(data.bucket_info(0).atom(1).subsystem_sleep_state().time_millis(), 401);
+
+    data = gaugeMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 20 * NS_PER_SEC),
+                              (int64_t)(bucketStartTimeNs + 45 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 2);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 102);
+    EXPECT_EQ(data.bucket_info(0).atom(1).subsystem_sleep_state().time_millis(), 402);
+
+    // Gauge subsystem sleep state when screen is on. One pull when the screen turned on
+    StatsLogReport gaugePullPersistBefore = report.metrics(1);
+    EXPECT_EQ(gaugePullPersistBefore.metric_id(), gaugePullPersist.id());
+    EXPECT_TRUE(gaugePullPersistBefore.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugePullPersistBefore.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    data = gaugeMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 20 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 101);
+
+    data = gaugeMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 20 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 102);
+
+    // Gauge screen on events, one per bucket.
+    StatsLogReport gaugeChangeBefore = report.metrics(2);
+    EXPECT_EQ(gaugeChangeBefore.metric_id(), gaugeChange.id());
+    EXPECT_TRUE(gaugeChangeBefore.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugeChangeBefore.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 1);
+    data = gaugeMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 20 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).screen_state_changed().state(),
+              android::view::DISPLAY_STATE_ON);
+
+    // Gauge app start while app is in the background. App 1 started twice, app 2 started once.
+    StatsLogReport gaugePushPersistBefore = report.metrics(3);
+    EXPECT_EQ(gaugePushPersistBefore.metric_id(), gaugePushPersist.id());
+    EXPECT_TRUE(gaugePushPersistBefore.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugePushPersistBefore.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    data = gaugeMetrics.data(0);
+    ValidateUidDimension(data.dimensions_in_what(), util::APP_START_OCCURRED, app1Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 10 * NS_PER_SEC),
+                              (int64_t)(bucketStartTimeNs + 35 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 2);
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().pkg_name(), "app1");
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().activity_start_millis(), 101);
+    EXPECT_EQ(data.bucket_info(0).atom(1).app_start_occurred().pkg_name(), "app1");
+    EXPECT_EQ(data.bucket_info(0).atom(1).app_start_occurred().activity_start_millis(), 102);
+
+    data = gaugeMetrics.data(1);
+    ValidateUidDimension(data.dimensions_in_what(), util::APP_START_OCCURRED, app2Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs,
+                             {(int64_t)(bucketStartTimeNs + 40 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().pkg_name(), "app2");
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().activity_start_millis(), 202);
+
+    // Report from after update.
+    report = reports.reports(1);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Gauge screen on events FIRST_N_SAMPLES. There were 2.
+    StatsLogReport gaugeChangeAfter = report.metrics(0);
+    EXPECT_EQ(gaugeChangeAfter.metric_id(), gaugeChange.id());
+    EXPECT_TRUE(gaugeChangeAfter.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugeChangeAfter.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 1);
+    data = gaugeMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {(int64_t)(bucketStartTimeNs + 80 * NS_PER_SEC),
+                              (int64_t)(bucketStartTimeNs + 105 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 2);
+    EXPECT_EQ(data.bucket_info(0).atom(0).screen_state_changed().state(),
+              android::view::DISPLAY_STATE_ON);
+    EXPECT_EQ(data.bucket_info(0).atom(1).screen_state_changed().state(),
+              android::view::DISPLAY_STATE_ON);
+
+    // Gauge subsystem sleep state, random one sample, no condition.
+    // Pulled at update time and after the normal bucket end.
+    StatsLogReport gaugeNewAfter = report.metrics(1);
+    EXPECT_EQ(gaugeNewAfter.metric_id(), gaugeNew.id());
+    EXPECT_TRUE(gaugeNewAfter.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugeNewAfter.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    data = gaugeMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {updateTimeNs});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 901);
+    ValidateGaugeBucketTimes(data.bucket_info(1), roundedBucketEndNs, roundedDumpTimeNs,
+                             {(int64_t)(bucketStartTimeNs + bucketSizeNs)});
+    ASSERT_EQ(data.bucket_info(1).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(1).atom(0).subsystem_sleep_state().time_millis(), 1601);
+
+    data = gaugeMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {updateTimeNs});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 902);
+    ValidateGaugeBucketTimes(data.bucket_info(1), roundedBucketEndNs, roundedDumpTimeNs,
+                             {(int64_t)(bucketStartTimeNs + bucketSizeNs)});
+    ASSERT_EQ(data.bucket_info(1).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(1).atom(0).subsystem_sleep_state().time_millis(), 1602);
+
+    // Gauge app start while app is in the background. App 1 started once, app 2 started twice.
+    StatsLogReport gaugePushPersistAfter = report.metrics(2);
+    EXPECT_EQ(gaugePushPersistAfter.metric_id(), gaugePushPersist.id());
+    EXPECT_TRUE(gaugePushPersistAfter.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugePushPersistAfter.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    data = gaugeMetrics.data(0);
+    ValidateUidDimension(data.dimensions_in_what(), util::APP_START_OCCURRED, app1Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {(int64_t)(bucketStartTimeNs + 95 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().pkg_name(), "app1");
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().activity_start_millis(), 104);
+
+    data = gaugeMetrics.data(1);
+    ValidateUidDimension(data.dimensions_in_what(), util::APP_START_OCCURRED, app2Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {(int64_t)(bucketStartTimeNs + 70 * NS_PER_SEC),
+                              (int64_t)(bucketStartTimeNs + 100 * NS_PER_SEC)});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 2);
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().pkg_name(), "app2");
+    EXPECT_EQ(data.bucket_info(0).atom(0).app_start_occurred().activity_start_millis(), 203);
+    EXPECT_EQ(data.bucket_info(0).atom(1).app_start_occurred().pkg_name(), "app2");
+    EXPECT_EQ(data.bucket_info(0).atom(1).app_start_occurred().activity_start_millis(), 204);
+
+    // Gauge subsystem sleep state when screen is on. One pull at update since screen is on then.
+    StatsLogReport gaugePullPersistAfter = report.metrics(3);
+    EXPECT_EQ(gaugePullPersistAfter.metric_id(), gaugePullPersist.id());
+    EXPECT_TRUE(gaugePullPersistAfter.has_gauge_metrics());
+    gaugeMetrics.Clear();
+    sortMetricDataByDimensionsValue(gaugePullPersistAfter.gauge_metrics(), &gaugeMetrics);
+    ASSERT_EQ(gaugeMetrics.data_size(), 2);
+    data = gaugeMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {updateTimeNs});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 901);
+
+    data = gaugeMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateGaugeBucketTimes(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs,
+                             {updateTimeNs});
+    ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
+    EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 902);
 }
 
 TEST_F(ConfigUpdateE2eTest, TestNewDurationExistingWhat) {
