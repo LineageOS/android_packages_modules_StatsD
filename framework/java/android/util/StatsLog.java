@@ -22,6 +22,7 @@ import static android.Manifest.permission.PACKAGE_USAGE_STATS;
 import android.Manifest;
 import android.annotation.NonNull;
 import android.annotation.RequiresPermission;
+import android.annotation.SuppressLint;
 import android.annotation.SystemApi;
 import android.content.Context;
 import android.os.IStatsd;
@@ -43,6 +44,81 @@ public final class StatsLog {
     private static final String TAG = "StatsLog";
     private static final boolean DEBUG = false;
     private static final int EXPERIMENT_IDS_FIELD_ID = 1;
+
+    /**
+    * Annotation ID constant for logging UID field.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_IS_UID = 1;
+
+    /**
+    * Annotation ID constant to indicate logged atom event's timestamp should be truncated.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_TRUNCATE_TIMESTAMP = 2;
+
+    /**
+    * Annotation ID constant for a state atom's primary field.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_PRIMARY_FIELD = 3;
+
+    /**
+    * Annotation ID constant for state atom's state field.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_EXCLUSIVE_STATE = 4;
+
+    /**
+    * Annotation ID constant to indicate the first UID in the attribution chain
+    * is a primary field.
+    * Should only be used for attribution chain fields.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_PRIMARY_FIELD_FIRST_UID = 5;
+
+    /**
+    * Annotation ID constant to indicate which state is default for the state atom.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_DEFAULT_STATE = 6;
+
+    /**
+    * Annotation ID constant to signal all states should be reset to the default state.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_TRIGGER_STATE_RESET = 7;
+
+    /**
+    * Annotation ID constant to indicate state changes need to account for nesting.
+    * This should only be used with binary state atoms.
+    *
+    * @hide
+    */
+    @SuppressLint("NoByteOrShort")
+    @SystemApi
+    public static final byte ANNOTATION_ID_STATE_NESTED = 8;
 
     private StatsLog() {
     }
