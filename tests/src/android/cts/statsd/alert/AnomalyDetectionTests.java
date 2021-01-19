@@ -171,6 +171,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
         // Test that alarm does fire when it is supposed to (after 4s, plus up to 5s alarm delay).
         doAppBreadcrumbReportedStart(1);
         Thread.sleep(9_000);  // Recorded duration at end: 13s
+        doAppBreadcrumbReported(2);
         List<EventMetricData> data = getEventMetricDataList();
         assertWithMessage("Expected anomaly").that(data).hasSize(1);
         assertThat(data.get(0).getAtom().getAnomalyDetected().getAlertId()).isEqualTo(ALERT_ID);
@@ -189,6 +190,7 @@ public class AnomalyDetectionTests extends AtomTestCase {
         doAppBreadcrumbReportedStart(1);
         Thread.sleep(15_000);  // Recorded duration at end: 15s
         // We can do an incidentd test now that all the timing issues are done.
+        doAppBreadcrumbReported(2);
         data = getEventMetricDataList();
         assertWithMessage("Expected anomaly").that(data).hasSize(1);
         assertThat(data.get(0).getAtom().getAnomalyDetected().getAlertId()).isEqualTo(ALERT_ID);
