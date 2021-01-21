@@ -488,6 +488,7 @@ TEST_F(ConfigUpdateE2eTest, TestGaugeMetric) {
         processor->mPullerManager->ForceClearPullerCache();
         processor->OnLogEvent(event.get());
     }
+    processor->mPullerManager->ForceClearPullerCache();
     // Pulling alarm arrive, triggering a bucket split. Only gaugeNew keeps the data since the
     // condition is false for gaugeNew.
     processor->informPullAlarmFired(bucketStartTimeNs + bucketSizeNs);
@@ -706,6 +707,331 @@ TEST_F(ConfigUpdateE2eTest, TestGaugeMetric) {
                              {updateTimeNs});
     ASSERT_EQ(data.bucket_info(0).atom_size(), 1);
     EXPECT_EQ(data.bucket_info(0).atom(0).subsystem_sleep_state().time_millis(), 902);
+}
+
+TEST_F(ConfigUpdateE2eTest, TestValueMetric) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+    config.add_default_pull_packages("AID_ROOT");  // Fake puller is registered with root.
+
+    AtomMatcher brightnessMatcher = CreateScreenBrightnessChangedAtomMatcher();
+    *config.add_atom_matcher() = brightnessMatcher;
+    AtomMatcher screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    AtomMatcher screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOffMatcher;
+    AtomMatcher batteryPluggedUsbMatcher = CreateBatteryStateUsbMatcher();
+    *config.add_atom_matcher() = batteryPluggedUsbMatcher;
+    AtomMatcher unpluggedMatcher = CreateBatteryStateNoneMatcher();
+    *config.add_atom_matcher() = unpluggedMatcher;
+    AtomMatcher subsystemSleepMatcher =
+            CreateSimpleAtomMatcher("SubsystemSleep", util::SUBSYSTEM_SLEEP_STATE);
+    *config.add_atom_matcher() = subsystemSleepMatcher;
+
+    Predicate screenOnPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = screenOnPredicate;
+    Predicate unpluggedPredicate = CreateDeviceUnpluggedPredicate();
+    *config.add_predicate() = unpluggedPredicate;
+
+    State screenState = CreateScreenState();
+    *config.add_state() = screenState;
+
+    ValueMetric valuePullPersist =
+            createValueMetric("SubsystemSleepWhileUnpluggedSliceScreen", subsystemSleepMatcher, 4,
+                              unpluggedPredicate.id(), {screenState.id()});
+    *valuePullPersist.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+
+    ValueMetric valuePushPersist = createValueMetric(
+            "MinScreenBrightnessWhileScreenOn", brightnessMatcher, 1, screenOnPredicate.id(), {});
+    valuePushPersist.set_aggregation_type(ValueMetric::MIN);
+
+    ValueMetric valueChange =
+            createValueMetric("SubsystemSleep", subsystemSleepMatcher, 4, nullopt, {});
+    *valueChange.mutable_dimensions_in_what() =
+            CreateDimensions(util::SUBSYSTEM_SLEEP_STATE, {1 /* subsystem name */});
+
+    ValueMetric valueRemove =
+            createValueMetric("AvgScreenBrightness", brightnessMatcher, 1, nullopt, {});
+    valueRemove.set_aggregation_type(ValueMetric::AVG);
+
+    *config.add_value_metric() = valuePullPersist;
+    *config.add_value_metric() = valueRemove;
+    *config.add_value_metric() = valuePushPersist;
+    *config.add_value_metric() = valueChange;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = getElapsedRealtimeNs();
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    // Config creation triggers pull #1.
+    sp<StatsLogProcessor> processor = CreateStatsLogProcessor(
+            bucketStartTimeNs, bucketStartTimeNs, config, key,
+            SharedRefBase::make<FakeSubsystemSleepCallback>(), util::SUBSYSTEM_SLEEP_STATE);
+
+    // Initialize log events before update.
+    // ValuePushPersist and ValuePullPersist will skip the bucket due to condition unknown.
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 5 * NS_PER_SEC, 5));
+    events.push_back(CreateScreenStateChangedEvent(bucketStartTimeNs + 10 * NS_PER_SEC,
+                                                   android::view::DISPLAY_STATE_ON));
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 15 * NS_PER_SEC, 15));
+    events.push_back(CreateBatteryStateChangedEvent(
+            bucketStartTimeNs + 20 * NS_PER_SEC,
+            BatteryPluggedStateEnum::BATTERY_PLUGGED_NONE));  // Pull #2.
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 25 * NS_PER_SEC, 40));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->mPullerManager->ForceClearPullerCache();
+        processor->OnLogEvent(event.get());
+    }
+    processor->mPullerManager->ForceClearPullerCache();
+
+    // Do the update. Add matchers/conditions in different order to force indices to change.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+    newConfig.add_default_pull_packages("AID_ROOT");  // Fake puller is registered with root.
+
+    *newConfig.add_atom_matcher() = screenOffMatcher;
+    *newConfig.add_atom_matcher() = unpluggedMatcher;
+    *newConfig.add_atom_matcher() = batteryPluggedUsbMatcher;
+    *newConfig.add_atom_matcher() = subsystemSleepMatcher;
+    *newConfig.add_atom_matcher() = brightnessMatcher;
+    *newConfig.add_atom_matcher() = screenOnMatcher;
+
+    *newConfig.add_predicate() = unpluggedPredicate;
+    *newConfig.add_predicate() = screenOnPredicate;
+
+    *config.add_state() = screenState;
+
+    valueChange.set_condition(screenOnPredicate.id());
+    *newConfig.add_value_metric() = valueChange;
+    ValueMetric valueNew = createValueMetric("MaxScrBrightness", brightnessMatcher, 1, nullopt, {});
+    valueNew.set_aggregation_type(ValueMetric::MAX);
+    *newConfig.add_value_metric() = valueNew;
+    *newConfig.add_value_metric() = valuePushPersist;
+    *newConfig.add_value_metric() = valuePullPersist;
+
+    int64_t updateTimeNs = bucketStartTimeNs + 30 * NS_PER_SEC;
+    // Update pulls valuePullPersist and valueNew. Pull #3.
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // Verify puller manager is properly set.
+    sp<StatsPullerManager> pullerManager = processor->mPullerManager;
+    EXPECT_EQ(pullerManager->mNextPullTimeNs, bucketStartTimeNs + bucketSizeNs);
+    ASSERT_EQ(pullerManager->mReceivers.size(), 1);
+    ASSERT_EQ(pullerManager->mReceivers.begin()->second.size(), 2);
+
+    // Send events after the update. Values reset since this is a new bucket.
+    events.clear();
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 35 * NS_PER_SEC, 30));
+    events.push_back(CreateScreenStateChangedEvent(bucketStartTimeNs + 40 * NS_PER_SEC,
+                                                   android::view::DISPLAY_STATE_OFF));  // Pull #4.
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 45 * NS_PER_SEC, 20));
+    events.push_back(CreateBatteryStateChangedEvent(
+            bucketStartTimeNs + 50 * NS_PER_SEC,
+            BatteryPluggedStateEnum::BATTERY_PLUGGED_USB));  // Pull #5.
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 55 * NS_PER_SEC, 25));
+    events.push_back(CreateScreenStateChangedEvent(bucketStartTimeNs + 60 * NS_PER_SEC,
+                                                   android::view::DISPLAY_STATE_ON));  // Pull #6.
+    events.push_back(CreateBatteryStateChangedEvent(
+            bucketStartTimeNs + 65 * NS_PER_SEC,
+            BatteryPluggedStateEnum::BATTERY_PLUGGED_NONE));  // Pull #7.
+    events.push_back(CreateScreenBrightnessChangedEvent(bucketStartTimeNs + 70 * NS_PER_SEC, 40));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->mPullerManager->ForceClearPullerCache();
+        processor->OnLogEvent(event.get());
+    }
+    processor->mPullerManager->ForceClearPullerCache();
+
+    // Pulling alarm arrive, triggering a bucket split.
+    // Both valuePullPersist and valueChange use the value since both conditions are true. Pull #8.
+    processor->informPullAlarmFired(bucketStartTimeNs + bucketSizeNs);
+    processor->OnLogEvent(CreateScreenBrightnessChangedEvent(
+                                  bucketStartTimeNs + bucketSizeNs + 5 * NS_PER_SEC, 50)
+                                  .get());
+
+    uint64_t dumpTimeNs = bucketStartTimeNs + bucketSizeNs + 10 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 2);
+
+    int64_t roundedBucketStartNs = MillisToNano(NanoToMillis(bucketStartTimeNs));
+    int64_t roundedUpdateTimeNs = MillisToNano(NanoToMillis(updateTimeNs));
+    int64_t roundedBucketEndNs = MillisToNano(NanoToMillis(bucketStartTimeNs + bucketSizeNs));
+    int64_t roundedDumpTimeNs = MillisToNano(NanoToMillis(dumpTimeNs));
+
+    // Report from before update.
+    ConfigMetricsReport report = reports.reports(0);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Pull subsystem sleep while unplugged slice screen. Bucket skipped due to condition unknown.
+    StatsLogReport valuePullPersistBefore = report.metrics(0);
+    EXPECT_EQ(valuePullPersistBefore.metric_id(), valuePullPersist.id());
+    EXPECT_TRUE(valuePullPersistBefore.has_value_metrics());
+    ASSERT_EQ(valuePullPersistBefore.value_metrics().data_size(), 0);
+    ASSERT_EQ(valuePullPersistBefore.value_metrics().skipped_size(), 1);
+    StatsLogReport::SkippedBuckets skipBucket = valuePullPersistBefore.value_metrics().skipped(0);
+    EXPECT_EQ(skipBucket.start_bucket_elapsed_nanos(), roundedBucketStartNs);
+    EXPECT_EQ(skipBucket.end_bucket_elapsed_nanos(), roundedUpdateTimeNs);
+    ASSERT_EQ(skipBucket.drop_event_size(), 1);
+    EXPECT_EQ(skipBucket.drop_event(0).drop_reason(), BucketDropReason::CONDITION_UNKNOWN);
+
+    // Average screen brightness. Values were 5, 15, 40. Avg: 20.
+    StatsLogReport valueRemoveBefore = report.metrics(1);
+    EXPECT_EQ(valueRemoveBefore.metric_id(), valueRemove.id());
+    EXPECT_TRUE(valueRemoveBefore.has_value_metrics());
+    StatsLogReport::ValueMetricDataWrapper valueMetrics;
+    sortMetricDataByDimensionsValue(valueRemoveBefore.value_metrics(), &valueMetrics);
+    ASSERT_EQ(valueMetrics.data_size(), 1);
+    ValueMetricData data = valueMetrics.data(0);
+    EXPECT_FALSE(data.has_dimensions_in_what());
+    EXPECT_EQ(data.slice_by_state_size(), 0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs, 20, 0);
+
+    // Min screen brightness while screen on. Bucket skipped due to condition unknown.
+    StatsLogReport valuePushPersistBefore = report.metrics(2);
+    EXPECT_EQ(valuePushPersistBefore.metric_id(), valuePushPersist.id());
+    EXPECT_TRUE(valuePushPersistBefore.has_value_metrics());
+    ASSERT_EQ(valuePushPersistBefore.value_metrics().data_size(), 0);
+    ASSERT_EQ(valuePushPersistBefore.value_metrics().skipped_size(), 1);
+    skipBucket = valuePushPersistBefore.value_metrics().skipped(0);
+    EXPECT_EQ(skipBucket.start_bucket_elapsed_nanos(), roundedBucketStartNs);
+    EXPECT_EQ(skipBucket.end_bucket_elapsed_nanos(), roundedUpdateTimeNs);
+    ASSERT_EQ(skipBucket.drop_event_size(), 1);
+    EXPECT_EQ(skipBucket.drop_event(0).drop_reason(), BucketDropReason::CONDITION_UNKNOWN);
+
+    // Pull Subsystem sleep state. Value is Pull #3 (900) - Pull#1 (100).
+    StatsLogReport valueChangeBefore = report.metrics(3);
+    EXPECT_EQ(valueChangeBefore.metric_id(), valueChange.id());
+    EXPECT_TRUE(valueChangeBefore.has_value_metrics());
+    valueMetrics.Clear();
+    sortMetricDataByDimensionsValue(valueChangeBefore.value_metrics(), &valueMetrics);
+    ASSERT_EQ(valueMetrics.data_size(), 2);
+    data = valueMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs, 800, 0);
+    data = valueMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedBucketStartNs, roundedUpdateTimeNs, 800, 0);
+
+    // Report from after update.
+    report = reports.reports(1);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Pull subsystem sleep while screen on.
+    // Pull#4 (1600) - pull#3 (900) + pull#8 (6400) - pull#6 (3600)
+    StatsLogReport valueChangeAfter = report.metrics(0);
+    EXPECT_EQ(valueChangeAfter.metric_id(), valueChange.id());
+    EXPECT_TRUE(valueChangeAfter.has_value_metrics());
+    valueMetrics.Clear();
+    sortMetricDataByDimensionsValue(valueChangeAfter.value_metrics(), &valueMetrics);
+    int64_t conditionTrueNs = bucketSizeNs - 60 * NS_PER_SEC + 10 * NS_PER_SEC;
+    ASSERT_EQ(valueMetrics.data_size(), 2);
+    data = valueMetrics.data(0);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 3500,
+                        conditionTrueNs);
+    ASSERT_EQ(valueMetrics.data_size(), 2);
+    data = valueMetrics.data(1);
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 3500,
+                        conditionTrueNs);
+
+    ASSERT_EQ(valueChangeAfter.value_metrics().skipped_size(), 1);
+    skipBucket = valueChangeAfter.value_metrics().skipped(0);
+    EXPECT_EQ(skipBucket.start_bucket_elapsed_nanos(), roundedBucketEndNs);
+    EXPECT_EQ(skipBucket.end_bucket_elapsed_nanos(), roundedDumpTimeNs);
+    ASSERT_EQ(skipBucket.drop_event_size(), 1);
+    EXPECT_EQ(skipBucket.drop_event(0).drop_reason(), BucketDropReason::DUMP_REPORT_REQUESTED);
+
+    // Max screen brightness, no condition. Val is 40 in first bucket, 50 in second.
+    StatsLogReport valueNewAfter = report.metrics(1);
+    EXPECT_EQ(valueNewAfter.metric_id(), valueNew.id());
+    EXPECT_TRUE(valueNewAfter.has_value_metrics());
+    valueMetrics.Clear();
+    sortMetricDataByDimensionsValue(valueNewAfter.value_metrics(), &valueMetrics);
+    ASSERT_EQ(valueMetrics.data_size(), 1);
+    data = valueMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 40, 0);
+    ValidateValueBucket(data.bucket_info(1), roundedBucketEndNs, roundedDumpTimeNs, 50, 0);
+
+    // Min screen brightness when screen on. Val is 30 in first bucket, 50 in second.
+    StatsLogReport valuePushPersistAfter = report.metrics(2);
+    EXPECT_EQ(valuePushPersistAfter.metric_id(), valuePushPersist.id());
+    EXPECT_TRUE(valuePushPersistAfter.has_value_metrics());
+    valueMetrics.Clear();
+    sortMetricDataByDimensionsValue(valuePushPersistAfter.value_metrics(), &valueMetrics);
+    ASSERT_EQ(valueMetrics.data_size(), 1);
+    data = valueMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    conditionTrueNs = bucketSizeNs - 60 * NS_PER_SEC + 10 * NS_PER_SEC;
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 30,
+                        conditionTrueNs);
+    ValidateValueBucket(data.bucket_info(1), roundedBucketEndNs, roundedDumpTimeNs, 50,
+                        10 * NS_PER_SEC);
+
+    // Subsystem sleep state while unplugged slice screen.
+    StatsLogReport valuePullPersistAfter = report.metrics(3);
+    EXPECT_EQ(valuePullPersistAfter.metric_id(), valuePullPersist.id());
+    EXPECT_TRUE(valuePullPersistAfter.has_value_metrics());
+    valueMetrics.Clear();
+    sortMetricDataByDimensionsValue(valuePullPersistAfter.value_metrics(), &valueMetrics);
+    ASSERT_EQ(valueMetrics.data_size(), 4);
+    // Name 1, screen OFF. Pull#5 (2500) - pull#4 (1600).
+    data = valueMetrics.data(0);
+    conditionTrueNs = 10 * NS_PER_SEC;
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ValidateStateValue(data.slice_by_state(), util::SCREEN_STATE_CHANGED,
+                       android::view::DisplayStateEnum::DISPLAY_STATE_OFF);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 900,
+                        conditionTrueNs);
+    // Name 1, screen ON. Pull#4 (1600) - pull#3 (900) + pull#8 (6400) - pull#7 (4900).
+    data = valueMetrics.data(1);
+    conditionTrueNs = 10 * NS_PER_SEC + bucketSizeNs - 65 * NS_PER_SEC;
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_1");
+    ValidateStateValue(data.slice_by_state(), util::SCREEN_STATE_CHANGED,
+                       android::view::DisplayStateEnum::DISPLAY_STATE_ON);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 2200,
+                        conditionTrueNs);
+    // Name 2, screen OFF. Pull#5 (2500) - pull#4 (1600).
+    data = valueMetrics.data(2);
+    conditionTrueNs = 10 * NS_PER_SEC;
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ValidateStateValue(data.slice_by_state(), util::SCREEN_STATE_CHANGED,
+                       android::view::DisplayStateEnum::DISPLAY_STATE_OFF);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 900,
+                        conditionTrueNs);
+    // Name 2, screen ON. Pull#4 (1600) - pull#3 (900) + pull#8 (6400) - pull#7 (4900).
+    data = valueMetrics.data(3);
+    conditionTrueNs = 10 * NS_PER_SEC + bucketSizeNs - 65 * NS_PER_SEC;
+    ValidateSubsystemSleepDimension(data.dimensions_in_what(), "subsystem_name_2");
+    ValidateStateValue(data.slice_by_state(), util::SCREEN_STATE_CHANGED,
+                       android::view::DisplayStateEnum::DISPLAY_STATE_ON);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateValueBucket(data.bucket_info(0), roundedUpdateTimeNs, roundedBucketEndNs, 2200,
+                        conditionTrueNs);
+
+    ASSERT_EQ(valuePullPersistAfter.value_metrics().skipped_size(), 1);
+    skipBucket = valuePullPersistAfter.value_metrics().skipped(0);
+    EXPECT_EQ(skipBucket.start_bucket_elapsed_nanos(), roundedBucketEndNs);
+    EXPECT_EQ(skipBucket.end_bucket_elapsed_nanos(), roundedDumpTimeNs);
+    ASSERT_EQ(skipBucket.drop_event_size(), 1);
+    EXPECT_EQ(skipBucket.drop_event(0).drop_reason(), BucketDropReason::DUMP_REPORT_REQUESTED);
 }
 
 TEST_F(ConfigUpdateE2eTest, TestNewDurationExistingWhat) {

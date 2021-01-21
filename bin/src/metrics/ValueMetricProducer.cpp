@@ -423,7 +423,7 @@ void ValueMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
     }
     protoOutput->end(protoToken);
 
-    VLOG("metric %lld dump report now...", (long long)mMetricId);
+    VLOG("metric %lld done with dump report...", (long long)mMetricId);
     if (erase_data) {
         mPastBuckets.clear();
         mSkippedBuckets.clear();
