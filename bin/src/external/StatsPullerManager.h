@@ -184,6 +184,7 @@ private:
     FRIEND_TEST(StatsLogProcessorTest, TestPullUidProviderSetOnConfigUpdate);
 
     FRIEND_TEST(ConfigUpdateE2eTest, TestGaugeMetric);
+    FRIEND_TEST(ConfigUpdateE2eTest, TestValueMetric);
 };
 
 }  // namespace statsd
