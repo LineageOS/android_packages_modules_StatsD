@@ -144,23 +144,6 @@ DurationMetric createDurationMetric(string name, int64_t what, optional<int64_t>
     return metric;
 }
 
-ValueMetric createValueMetric(string name, const AtomMatcher& what, optional<int64_t> condition,
-                              vector<int64_t> states) {
-    ValueMetric metric;
-    metric.set_id(StringToId(name));
-    metric.set_what(what.id());
-    metric.set_bucket(TEN_MINUTES);
-    metric.mutable_value_field()->set_field(what.simple_atom_matcher().atom_id());
-    metric.mutable_value_field()->add_child()->set_field(2);
-    if (condition) {
-        metric.set_condition(condition.value());
-    }
-    for (const int64_t state : states) {
-        metric.add_slice_by_state(state);
-    }
-    return metric;
-}
-
 Alert createAlert(string name, int64_t metricId, int buckets, int64_t triggerSum) {
     Alert alert;
     alert.set_id(StringToId(name));
@@ -1619,7 +1602,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricPreserve) {
     *config.add_state() = sliceState;
 
     *config.add_value_metric() =
-            createValueMetric("VALUE1", whatMatcher, predicate.id(), {sliceState.id()});
+            createValueMetric("VALUE1", whatMatcher, 2, predicate.id(), {sliceState.id()});
     EXPECT_TRUE(initConfig(config));
 
     unordered_map<int64_t, int> metricToActivationMap;
@@ -1636,7 +1619,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricDefinitionChange) {
     AtomMatcher whatMatcher = CreateScreenBrightnessChangedAtomMatcher();
     *config.add_atom_matcher() = whatMatcher;
 
-    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, nullopt, {});
+    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, 2, nullopt, {});
     EXPECT_TRUE(initConfig(config));
 
     // Change skip zero diff output, which should change the proto, causing replacement.
@@ -1656,7 +1639,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricWhatChanged) {
     AtomMatcher whatMatcher = CreateTemperatureAtomMatcher();
     *config.add_atom_matcher() = whatMatcher;
 
-    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, nullopt, {});
+    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, 2, nullopt, {});
     EXPECT_TRUE(initConfig(config));
 
     unordered_map<int64_t, int> metricToActivationMap;
@@ -1680,7 +1663,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricConditionChanged) {
     Predicate predicate = CreateScreenIsOnPredicate();
     *config.add_predicate() = predicate;
 
-    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, predicate.id(), {});
+    *config.add_value_metric() = createValueMetric("VALUE1", whatMatcher, 2, predicate.id(), {});
     EXPECT_TRUE(initConfig(config));
 
     unordered_map<int64_t, int> metricToActivationMap;
@@ -1701,7 +1684,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricStateChanged) {
     *config.add_state() = sliceState;
 
     *config.add_value_metric() =
-            createValueMetric("VALUE1", whatMatcher, nullopt, {sliceState.id()});
+            createValueMetric("VALUE1", whatMatcher, 2, nullopt, {sliceState.id()});
     EXPECT_TRUE(initConfig(config));
 
     unordered_map<int64_t, int> metricToActivationMap;
@@ -2785,27 +2768,27 @@ TEST_F(ConfigUpdateTest, TestUpdateValueMetrics) {
     // Add a few value metrics.
     // Note that these will not work as "real" metrics since the value field is always 2.
     // Will be preserved.
-    ValueMetric value1 = createValueMetric("VALUE1", matcher4, predicate1Id, {state1Id});
+    ValueMetric value1 = createValueMetric("VALUE1", matcher4, 2, predicate1Id, {state1Id});
     int64_t value1Id = value1.id();
     *config.add_value_metric() = value1;
 
     // Will be replaced - definition change.
-    ValueMetric value2 = createValueMetric("VALUE2", matcher1, nullopt, {});
+    ValueMetric value2 = createValueMetric("VALUE2", matcher1, 2, nullopt, {});
     int64_t value2Id = value2.id();
     *config.add_value_metric() = value2;
 
     // Will be replaced - condition change.
-    ValueMetric value3 = createValueMetric("VALUE3", matcher5, predicate2Id, {});
+    ValueMetric value3 = createValueMetric("VALUE3", matcher5, 2, predicate2Id, {});
     int64_t value3Id = value3.id();
     *config.add_value_metric() = value3;
 
     // Will be replaced - state change.
-    ValueMetric value4 = createValueMetric("VALUE4", matcher3, nullopt, {state2Id});
+    ValueMetric value4 = createValueMetric("VALUE4", matcher3, 2, nullopt, {state2Id});
     int64_t value4Id = value4.id();
     *config.add_value_metric() = value4;
 
     // Will be deleted.
-    ValueMetric value5 = createValueMetric("VALUE5", matcher2, nullopt, {});
+    ValueMetric value5 = createValueMetric("VALUE5", matcher2, 2, nullopt, {});
     int64_t value5Id = value5.id();
     *config.add_value_metric() = value5;
 
@@ -2826,7 +2809,7 @@ TEST_F(ConfigUpdateTest, TestUpdateValueMetrics) {
     set<int64_t> replacedStates = {state2Id};
 
     // New value metric.
-    ValueMetric value6 = createValueMetric("VALUE6", matcher5, predicate1Id, {state1Id});
+    ValueMetric value6 = createValueMetric("VALUE6", matcher5, 2, predicate1Id, {state1Id});
     int64_t value6Id = value6.id();
 
     // Map the matchers and predicates in reverse order to force the indices to change.
@@ -3147,7 +3130,7 @@ TEST_F(ConfigUpdateTest, TestUpdateMetricsMultipleTypes) {
     *config.add_gauge_metric() = gaugeMetric;
 
     // Preserved.
-    ValueMetric valueMetric = createValueMetric("VALUE1", matcher3, predicate1Id, {});
+    ValueMetric valueMetric = createValueMetric("VALUE1", matcher3, 2, predicate1Id, {});
     int64_t valueMetricId = valueMetric.id();
     *config.add_value_metric() = valueMetric;
 

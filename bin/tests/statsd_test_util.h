@@ -192,11 +192,16 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields);
 
-CountMetric createCountMetric(string name, int64_t what, optional<int64_t> condition,
-                              vector<int64_t> states);
+CountMetric createCountMetric(const string& name, const int64_t what,
+                              const optional<int64_t>& condition, const vector<int64_t>& states);
 
-GaugeMetric createGaugeMetric(string name, int64_t what, GaugeMetric::SamplingType samplingType,
-                              optional<int64_t> condition, optional<int64_t> triggerEvent);
+GaugeMetric createGaugeMetric(const string& name, const int64_t what,
+                              const GaugeMetric::SamplingType samplingType,
+                              const optional<int64_t>& condition,
+                              const optional<int64_t>& triggerEvent);
+
+ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const int valueField,
+                              const optional<int64_t>& condition, const vector<int64_t>& states);
 
 // START: get primary key functions
 // These functions take in atom field information and create FieldValues which are stored in the
@@ -366,6 +371,8 @@ void ValidateCountBucket(const CountBucketInfo& countBucket, int64_t startTimeNs
                          int64_t count);
 void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startTimeNs,
                               int64_t endTimeNs, vector<int64_t> eventTimesNs);
+void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
+                         int64_t value, int64_t conditionTrueNs);
 
 struct DimensionsPair {
     DimensionsPair(DimensionsValue m1, google::protobuf::RepeatedPtrField<StateValue> m2)
