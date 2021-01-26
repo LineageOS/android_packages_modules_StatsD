@@ -556,7 +556,8 @@ const std::map<string, uint32_t> UidMap::sAidToUidMapping = {{"AID_ROOT", 0},
                                                              {"AID_CONTEXT_HUB", 1080},
                                                              {"AID_SHELL", 2000},
                                                              {"AID_CACHE", 2001},
-                                                             {"AID_DIAG", 2002}};
+                                                             {"AID_DIAG", 2002},
+                                                             {"AID_NOBODY", 9999}};
 
 }  // namespace statsd
 }  // namespace os
