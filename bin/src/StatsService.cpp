@@ -747,7 +747,7 @@ status_t StatsService::cmd_print_uid_map(int out, const Vector<String8>& args) {
 
 status_t StatsService::cmd_write_data_to_disk(int out) {
     dprintf(out, "Writing data to disk\n");
-    mProcessor->WriteDataToDisk(ADB_DUMP, NO_TIME_CONSTRAINTS);
+    mProcessor->WriteDataToDisk(ADB_DUMP, NO_TIME_CONSTRAINTS, getElapsedRealtimeNs());
     return NO_ERROR;
 }
 
@@ -1016,9 +1016,10 @@ Status StatsService::systemRunning() {
 Status StatsService::informDeviceShutdown() {
     ENFORCE_UID(AID_SYSTEM);
     VLOG("StatsService::informDeviceShutdown");
-    mProcessor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST);
-    mProcessor->SaveActiveConfigsToDisk(getElapsedRealtimeNs());
-    mProcessor->SaveMetadataToDisk(getWallClockNs(), getElapsedRealtimeNs());
+    int64_t elapsedRealtimeNs = getElapsedRealtimeNs();
+    mProcessor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, elapsedRealtimeNs);
+    mProcessor->SaveActiveConfigsToDisk(elapsedRealtimeNs);
+    mProcessor->SaveMetadataToDisk(getWallClockNs(), elapsedRealtimeNs);
     return Status::ok();
 }
 
@@ -1067,9 +1068,10 @@ void StatsService::Startup() {
 void StatsService::Terminate() {
     ALOGI("StatsService::Terminating");
     if (mProcessor != nullptr) {
-        mProcessor->WriteDataToDisk(TERMINATION_SIGNAL_RECEIVED, FAST);
-        mProcessor->SaveActiveConfigsToDisk(getElapsedRealtimeNs());
-        mProcessor->SaveMetadataToDisk(getWallClockNs(), getElapsedRealtimeNs());
+        int64_t elapsedRealtimeNs = getElapsedRealtimeNs();
+        mProcessor->WriteDataToDisk(TERMINATION_SIGNAL_RECEIVED, FAST, elapsedRealtimeNs);
+        mProcessor->SaveActiveConfigsToDisk(elapsedRealtimeNs);
+        mProcessor->SaveMetadataToDisk(getWallClockNs(), elapsedRealtimeNs);
     }
 }
 
@@ -1306,7 +1308,7 @@ void StatsService::statsCompanionServiceDiedImpl() {
         metadata::StatsMetadataList metadataList;
         mProcessor->WriteMetadataToProto(getWallClockNs(),
                 systemServerRestartNs, &metadataList);
-        mProcessor->WriteDataToDisk(STATSCOMPANION_DIED, FAST);
+        mProcessor->WriteDataToDisk(STATSCOMPANION_DIED, FAST, systemServerRestartNs);
         mProcessor->resetConfigs();
 
         std::string serializedActiveConfigs;
