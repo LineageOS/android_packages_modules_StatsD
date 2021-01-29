@@ -105,7 +105,7 @@ public:
     const static int kMaxAlertCountPerConfig = 100;
     const static int kMaxConditionCountPerConfig = 300;
     const static int kMaxMetricCountPerConfig = 1000;
-    const static int kMaxMatcherCountPerConfig = 800;
+    const static int kMaxMatcherCountPerConfig = 1200;
 
     // The max number of old config stats we keep.
     const static int kMaxIceBoxSize = 20;
