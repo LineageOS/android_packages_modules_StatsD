@@ -20,7 +20,7 @@ genrule {
     name: "statslog-statsd-java-gen",
     tools: ["stats-log-api-gen"],
     cmd: "$(location stats-log-api-gen) --java $(out) --module statsd" +
-         " --javaPackage com.android.internal.statsd --javaClass StatsdStatsLog",
+         " --javaPackage com.android.internal.statsd --javaClass StatsdStatsLog --minApiLevel 30",
     out: ["com/android/internal/statsd/StatsdStatsLog.java"],
 }
 
