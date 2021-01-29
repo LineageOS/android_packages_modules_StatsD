@@ -315,6 +315,357 @@ TEST_F(ConfigUpdateE2eTest, TestCountMetric) {
     ValidateCountBucket(data.bucket_info(0), updateTimeNs, bucketStartTimeNs + bucketSizeNs, 2);
 }
 
+TEST_F(ConfigUpdateE2eTest, TestDurationMetric) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+
+    AtomMatcher syncStartMatcher = CreateSyncStartAtomMatcher();
+    *config.add_atom_matcher() = syncStartMatcher;
+    AtomMatcher syncStopMatcher = CreateSyncEndAtomMatcher();
+    *config.add_atom_matcher() = syncStopMatcher;
+    AtomMatcher wakelockAcquireMatcher = CreateAcquireWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockAcquireMatcher;
+    AtomMatcher wakelockReleaseMatcher = CreateReleaseWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockReleaseMatcher;
+    AtomMatcher screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    AtomMatcher screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOffMatcher;
+
+    Predicate holdingWakelockPredicate = CreateHoldingWakelockPredicate();
+    // The predicate is dimensioning by first attribution node by uid.
+    *holdingWakelockPredicate.mutable_simple_predicate()->mutable_dimensions() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    *config.add_predicate() = holdingWakelockPredicate;
+
+    Predicate screenOnPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = screenOnPredicate;
+
+    Predicate syncPredicate = CreateIsSyncingPredicate();
+    // The predicate is dimensioning by first attribution node by uid.
+    *syncPredicate.mutable_simple_predicate()->mutable_dimensions() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *config.add_predicate() = syncPredicate;
+
+    State uidProcessState = CreateUidProcessState();
+    *config.add_state() = uidProcessState;
+
+    DurationMetric durationSumPersist =
+            createDurationMetric("DurSyncPerUidWhileHoldingWLSliceProcessState", syncPredicate.id(),
+                                 holdingWakelockPredicate.id(), {uidProcessState.id()});
+    *durationSumPersist.mutable_dimensions_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    // Links between sync state atom and condition of uid is holding wakelock.
+    MetricConditionLink* links = durationSumPersist.add_links();
+    links->set_condition(holdingWakelockPredicate.id());
+    *links->mutable_fields_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *links->mutable_fields_in_condition() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    MetricStateLink* stateLink = durationSumPersist.add_state_link();
+    stateLink->set_state_atom_id(util::UID_PROCESS_STATE_CHANGED);
+    *stateLink->mutable_fields_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *stateLink->mutable_fields_in_state() =
+            CreateDimensions(util::UID_PROCESS_STATE_CHANGED, {1 /*uid*/});
+
+    DurationMetric durationMaxPersist =
+            createDurationMetric("DurMaxSyncPerUidWhileHoldingWL", syncPredicate.id(),
+                                 holdingWakelockPredicate.id(), {});
+    durationMaxPersist.set_aggregation_type(DurationMetric::MAX_SPARSE);
+    *durationMaxPersist.mutable_dimensions_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    // Links between sync state atom and condition of uid is holding wakelock.
+    links = durationMaxPersist.add_links();
+    links->set_condition(holdingWakelockPredicate.id());
+    *links->mutable_fields_in_what() =
+            CreateAttributionUidDimensions(util::SYNC_STATE_CHANGED, {Position::FIRST});
+    *links->mutable_fields_in_condition() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+
+    DurationMetric durationChange = createDurationMetric("Dur*WhileScreenOn", syncPredicate.id(),
+                                                         screenOnPredicate.id(), {});
+    DurationMetric durationRemove =
+            createDurationMetric("DurScreenOn", screenOnPredicate.id(), nullopt, {});
+    *config.add_duration_metric() = durationMaxPersist;
+    *config.add_duration_metric() = durationRemove;
+    *config.add_duration_metric() = durationSumPersist;
+    *config.add_duration_metric() = durationChange;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, key);
+
+    int app1Uid = 123, app2Uid = 456, app3Uid = 789;
+    vector<int> attributionUids1 = {app1Uid};
+    vector<string> attributionTags1 = {"App1"};
+    vector<int> attributionUids2 = {app2Uid};
+    vector<string> attributionTags2 = {"App2"};
+    vector<int> attributionUids3 = {app3Uid};
+    vector<string> attributionTags3 = {"App3"};
+
+    // Initialize log events before update. Comments provided for durations of persisted metrics.
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 2 * NS_PER_SEC, app1Uid,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND));
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 3 * NS_PER_SEC, app2Uid,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+    events.push_back(CreateScreenStateChangedEvent(
+            bucketStartTimeNs + 5 * NS_PER_SEC, android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 6 * NS_PER_SEC, app3Uid,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 10 * NS_PER_SEC, attributionUids1,
+                                          attributionTags1, "sync_name"));  // uid1 paused.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 15 * NS_PER_SEC,
+                                                attributionUids2, attributionTags2,
+                                                "wl2"));  // uid2 cond true.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 20 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 25 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Uid 2 start t=25.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 27 * NS_PER_SEC,
+                                                attributionUids1, attributionTags1,
+                                                "wl1"));  // Uid 1 start t=27.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 35 * NS_PER_SEC, attributionUids3,
+                                          attributionTags3, "sync_name"));  // Uid 3 paused.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 40 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_ON));
+    events.push_back(CreateSyncEndEvent(bucketStartTimeNs + 45 * NS_PER_SEC, attributionUids2,
+                                        attributionTags2,
+                                        "sync_name"));  // Uid 2 stop. sum/max = 20.
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Do update. Add matchers/conditions in different order to force indices to change.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+
+    *newConfig.add_atom_matcher() = wakelockReleaseMatcher;
+    *newConfig.add_atom_matcher() = syncStopMatcher;
+    *newConfig.add_atom_matcher() = screenOnMatcher;
+    *newConfig.add_atom_matcher() = screenOffMatcher;
+    *newConfig.add_atom_matcher() = syncStartMatcher;
+    *newConfig.add_atom_matcher() = wakelockAcquireMatcher;
+    *newConfig.add_predicate() = syncPredicate;
+    *newConfig.add_predicate() = screenOnPredicate;
+    *newConfig.add_predicate() = holdingWakelockPredicate;
+    *newConfig.add_state() = uidProcessState;
+
+    durationChange.set_what(holdingWakelockPredicate.id());
+    *newConfig.add_duration_metric() = durationChange;
+    DurationMetric durationNew =
+            createDurationMetric("DurationSync", syncPredicate.id(), nullopt, {});
+    *newConfig.add_duration_metric() = durationNew;
+    *newConfig.add_duration_metric() = durationMaxPersist;
+    *newConfig.add_duration_metric() = durationSumPersist;
+
+    // At update, only uid 1 is syncing & holding a wakelock, duration=33. Max is paused for uid3.
+    // Before the update, only uid2 will report a duration for max, since others are started/paused.
+    int64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // Send events after the update.
+    events.clear();
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 65 * NS_PER_SEC,
+                                                attributionUids3, attributionTags3,
+                                                "wl3"));  // Uid3 start t=65.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 70 * NS_PER_SEC, attributionUids2,
+                                          attributionTags2, "sync_name"));  // Uid2 start t=70.
+    events.push_back(CreateReleaseWakelockEvent(bucketStartTimeNs + 75 * NS_PER_SEC,
+                                                attributionUids1, attributionTags1,
+                                                "wl1"));  // Uid1 Pause. Dur = 15.
+    events.push_back(
+            CreateScreenStateChangedEvent(bucketStartTimeNs + 81 * NS_PER_SEC,
+                                          android::view::DisplayStateEnum::DISPLAY_STATE_OFF));
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 85 * NS_PER_SEC, app3Uid,
+            android::app::ProcessStateEnum::
+                    PROCESS_STATE_IMPORTANT_FOREGROUND));  // Uid3 Sum in BG: 20. FG starts. Max is
+                                                           // unchanged.
+    events.push_back(CreateSyncEndEvent(bucketStartTimeNs + 90 * NS_PER_SEC, attributionUids3,
+                                        attributionTags3,
+                                        "sync_name"));  // Uid3 stop. Sum in FG: 5. MAX: 25.
+
+    // Flushes bucket. Sum: uid1=15, uid2=bucketSize - 70, uid3 = 20 in FG, 5 in BG. Max: uid3=25,
+    // others don't report.
+    events.push_back(CreateSyncEndEvent(bucketStartTimeNs + bucketSizeNs + NS_PER_SEC,
+                                        attributionUids1, attributionTags1,
+                                        "sync_name"));  // Uid1 stop. Max=15+33=48, Sum is 0.
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+    uint64_t bucketEndTimeNs = bucketStartTimeNs + bucketSizeNs;
+    uint64_t dumpTimeNs = bucketStartTimeNs + bucketSizeNs + 10 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    // In the partial bucket, Sum for uid2 = 10, Max for Uid1 = 48. Rest are unreported.
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 2);
+
+    // Report from before update.
+    ConfigMetricsReport report = reports.reports(0);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Max duration of syncs per uid while uid holding WL. Only uid2 should have data.
+    StatsLogReport durationMaxPersistBefore = report.metrics(0);
+    EXPECT_EQ(durationMaxPersistBefore.metric_id(), durationMaxPersist.id());
+    EXPECT_TRUE(durationMaxPersistBefore.has_duration_metrics());
+    StatsLogReport::DurationMetricDataWrapper durationMetrics;
+    sortMetricDataByDimensionsValue(durationMaxPersistBefore.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 1);
+    auto data = durationMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app2Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 20 * NS_PER_SEC);
+
+    // Screen on time. ON: 5, OFF: 20, ON: 40. Update: 60. Result: 35
+    StatsLogReport durationRemoveBefore = report.metrics(1);
+    EXPECT_EQ(durationRemoveBefore.metric_id(), durationRemove.id());
+    EXPECT_TRUE(durationRemoveBefore.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationRemoveBefore.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 1);
+    data = durationMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 35 * NS_PER_SEC);
+
+    // Duration of syncs per uid while uid holding WL, slice screen. Uid1=33, uid2=20.
+    StatsLogReport durationSumPersistBefore = report.metrics(2);
+    EXPECT_EQ(durationSumPersistBefore.metric_id(), durationSumPersist.id());
+    EXPECT_TRUE(durationSumPersistBefore.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationSumPersistBefore.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 2);
+    data = durationMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app1Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 33 * NS_PER_SEC);
+
+    data = durationMetrics.data(1);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app2Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 20 * NS_PER_SEC);
+
+    // Duration of syncs while screen on. Start: 10, pause: 20, start: 40 Update: 60. Total: 30.
+    StatsLogReport durationChangeBefore = report.metrics(3);
+    EXPECT_EQ(durationChangeBefore.metric_id(), durationChange.id());
+    EXPECT_TRUE(durationChangeBefore.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationChangeBefore.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 1);
+    data = durationMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 30 * NS_PER_SEC);
+
+    // Report from after update.
+    report = reports.reports(1);
+    ASSERT_EQ(report.metrics_size(), 4);
+    // Duration of WL while screen on. Update: 60, pause: 81. Total: 21.
+    StatsLogReport durationChangeAfter = report.metrics(0);
+    EXPECT_EQ(durationChangeAfter.metric_id(), durationChange.id());
+    EXPECT_TRUE(durationChangeAfter.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationChangeAfter.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 1);
+    data = durationMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs, 21 * NS_PER_SEC);
+
+    // Duration of syncs. Always true since at least 1 uid is always syncing.
+    StatsLogReport durationNewAfter = report.metrics(1);
+    EXPECT_EQ(durationNewAfter.metric_id(), durationNew.id());
+    EXPECT_TRUE(durationNewAfter.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationNewAfter.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 1);
+    data = durationMetrics.data(0);
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs,
+                           bucketEndTimeNs - updateTimeNs);
+    ValidateDurationBucket(data.bucket_info(1), bucketEndTimeNs, dumpTimeNs,
+                           dumpTimeNs - bucketEndTimeNs);
+
+    // Max duration of syncs per uid while uid holding WL.
+    StatsLogReport durationMaxPersistAfter = report.metrics(2);
+    EXPECT_EQ(durationMaxPersistAfter.metric_id(), durationMaxPersist.id());
+    EXPECT_TRUE(durationMaxPersistAfter.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationMaxPersistAfter.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 2);
+
+    // Uid 1. Duration = 48 in the later bucket.
+    data = durationMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app1Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), bucketEndTimeNs, dumpTimeNs, 48 * NS_PER_SEC);
+
+    // Uid 3. Duration = 25.
+    data = durationMetrics.data(1);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app3Uid);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs, 25 * NS_PER_SEC);
+
+    // Duration of syncs per uid while uid holding WL, slice screen.
+    StatsLogReport durationSumPersistAfter = report.metrics(3);
+    EXPECT_EQ(durationSumPersistAfter.metric_id(), durationSumPersist.id());
+    EXPECT_TRUE(durationSumPersistAfter.has_duration_metrics());
+    durationMetrics.Clear();
+    sortMetricDataByDimensionsValue(durationSumPersistAfter.duration_metrics(), &durationMetrics);
+    ASSERT_EQ(durationMetrics.data_size(), 4);
+
+    // Uid 1 in BG. Duration = 15.
+    data = durationMetrics.data(0);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app1Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs, 15 * NS_PER_SEC);
+
+    // Uid 2 in FG. Duration = bucketSize - 70 in first bucket, 10 in second bucket.
+    data = durationMetrics.data(1);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app2Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 2);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs,
+                           bucketSizeNs - 70 * NS_PER_SEC);
+    ValidateDurationBucket(data.bucket_info(1), bucketEndTimeNs, dumpTimeNs, 10 * NS_PER_SEC);
+
+    // Uid 3 in FG. Duration = 5.
+    data = durationMetrics.data(2);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app3Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs, 5 * NS_PER_SEC);
+
+    // Uid 3 in BG. Duration = 20.
+    data = durationMetrics.data(3);
+    ValidateAttributionUidDimension(data.dimensions_in_what(), util::SYNC_STATE_CHANGED, app3Uid);
+    ValidateStateValue(data.slice_by_state(), util::UID_PROCESS_STATE_CHANGED,
+                       android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_BACKGROUND);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateDurationBucket(data.bucket_info(0), updateTimeNs, bucketEndTimeNs, 20 * NS_PER_SEC);
+}
+
 TEST_F(ConfigUpdateE2eTest, TestGaugeMetric) {
     StatsdConfig config;
     config.add_allowed_log_source("AID_ROOT");
