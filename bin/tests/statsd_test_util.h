@@ -195,6 +195,10 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
 CountMetric createCountMetric(const string& name, const int64_t what,
                               const optional<int64_t>& condition, const vector<int64_t>& states);
 
+DurationMetric createDurationMetric(const string& name, const int64_t what,
+                                    const optional<int64_t>& condition,
+                                    const vector<int64_t>& states);
+
 GaugeMetric createGaugeMetric(const string& name, const int64_t what,
                               const GaugeMetric::SamplingType samplingType,
                               const optional<int64_t>& condition,
@@ -369,6 +373,8 @@ void ValidateStateValue(const google::protobuf::RepeatedPtrField<StateValue>& st
 
 void ValidateCountBucket(const CountBucketInfo& countBucket, int64_t startTimeNs, int64_t endTimeNs,
                          int64_t count);
+void ValidateDurationBucket(const DurationBucketInfo& bucket, int64_t startTimeNs,
+                            int64_t endTimeNs, int64_t durationNs);
 void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startTimeNs,
                               int64_t endTimeNs, vector<int64_t> eventTimesNs);
 void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
