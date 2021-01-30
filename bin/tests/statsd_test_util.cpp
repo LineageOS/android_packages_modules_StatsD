@@ -461,6 +461,22 @@ CountMetric createCountMetric(const string& name, const int64_t what,
     return metric;
 }
 
+DurationMetric createDurationMetric(const string& name, const int64_t what,
+                                    const optional<int64_t>& condition,
+                                    const vector<int64_t>& states) {
+    DurationMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what);
+    metric.set_bucket(TEN_MINUTES);
+    if (condition) {
+        metric.set_condition(condition.value());
+    }
+    for (const int64_t state : states) {
+        metric.add_slice_by_state(state);
+    }
+    return metric;
+}
+
 GaugeMetric createGaugeMetric(const string& name, const int64_t what,
                               const GaugeMetric::SamplingType samplingType,
                               const optional<int64_t>& condition,
@@ -1192,6 +1208,13 @@ void ValidateCountBucket(const CountBucketInfo& countBucket, int64_t startTimeNs
     EXPECT_EQ(countBucket.start_bucket_elapsed_nanos(), startTimeNs);
     EXPECT_EQ(countBucket.end_bucket_elapsed_nanos(), endTimeNs);
     EXPECT_EQ(countBucket.count(), count);
+}
+
+void ValidateDurationBucket(const DurationBucketInfo& bucket, int64_t startTimeNs,
+                            int64_t endTimeNs, int64_t durationNs) {
+    EXPECT_EQ(bucket.start_bucket_elapsed_nanos(), startTimeNs);
+    EXPECT_EQ(bucket.end_bucket_elapsed_nanos(), endTimeNs);
+    EXPECT_EQ(bucket.duration_nanos(), durationNs);
 }
 
 void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startTimeNs,
