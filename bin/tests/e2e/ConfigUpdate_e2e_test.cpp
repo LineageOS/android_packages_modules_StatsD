@@ -17,6 +17,8 @@
 #include <android/binder_interface_utils.h>
 #include <gtest/gtest.h>
 
+#include <thread>
+
 #include "flags/flags.h"
 #include "src/StatsLogProcessor.h"
 #include "src/storage/StorageManager.h"
@@ -1383,6 +1385,278 @@ TEST_F(ConfigUpdateE2eTest, TestValueMetric) {
     EXPECT_EQ(skipBucket.end_bucket_elapsed_nanos(), roundedDumpTimeNs);
     ASSERT_EQ(skipBucket.drop_event_size(), 1);
     EXPECT_EQ(skipBucket.drop_event(0).drop_reason(), BucketDropReason::DUMP_REPORT_REQUESTED);
+}
+
+TEST_F(ConfigUpdateE2eTest, TestMetricActivation) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+
+    string immediateTag = "immediate", bootTag = "boot", childTag = "child";
+
+    AtomMatcher syncStartMatcher = CreateSyncStartAtomMatcher();
+    *config.add_atom_matcher() = syncStartMatcher;
+
+    AtomMatcher immediateMatcher =
+            CreateSimpleAtomMatcher("immediateMatcher", util::WAKELOCK_STATE_CHANGED);
+    FieldValueMatcher* fvm =
+            immediateMatcher.mutable_simple_atom_matcher()->add_field_value_matcher();
+    fvm->set_field(3);  // Tag.
+    fvm->set_eq_string(immediateTag);
+    *config.add_atom_matcher() = immediateMatcher;
+
+    AtomMatcher bootMatcher = CreateSimpleAtomMatcher("bootMatcher", util::WAKELOCK_STATE_CHANGED);
+    fvm = bootMatcher.mutable_simple_atom_matcher()->add_field_value_matcher();
+    fvm->set_field(3);  // Tag.
+    fvm->set_eq_string(bootTag);
+    *config.add_atom_matcher() = bootMatcher;
+
+    AtomMatcher childMatcher =
+            CreateSimpleAtomMatcher("childMatcher", util::WAKELOCK_STATE_CHANGED);
+    fvm = childMatcher.mutable_simple_atom_matcher()->add_field_value_matcher();
+    fvm->set_field(3);  // Tag.
+    fvm->set_eq_string(childTag);
+    *config.add_atom_matcher() = childMatcher;
+
+    AtomMatcher acquireMatcher = CreateAcquireWakelockAtomMatcher();
+    *config.add_atom_matcher() = acquireMatcher;
+
+    AtomMatcher combinationMatcher;
+    combinationMatcher.set_id(StringToId("combination"));
+    AtomMatcher_Combination* combination = combinationMatcher.mutable_combination();
+    combination->set_operation(LogicalOperation::OR);
+    combination->add_matcher(acquireMatcher.id());
+    combination->add_matcher(childMatcher.id());
+    *config.add_atom_matcher() = combinationMatcher;
+
+    CountMetric immediateMetric =
+            createCountMetric("ImmediateMetric", syncStartMatcher.id(), nullopt, {});
+    CountMetric bootMetric = createCountMetric("BootMetric", syncStartMatcher.id(), nullopt, {});
+    CountMetric combinationMetric =
+            createCountMetric("CombinationMetric", syncStartMatcher.id(), nullopt, {});
+    *config.add_count_metric() = immediateMetric;
+    *config.add_count_metric() = bootMetric;
+    *config.add_count_metric() = combinationMetric;
+
+    MetricActivation immediateMetricActivation;
+    immediateMetricActivation.set_metric_id(immediateMetric.id());
+    auto eventActivation = immediateMetricActivation.add_event_activation();
+    eventActivation->set_activation_type(ActivationType::ACTIVATE_IMMEDIATELY);
+    eventActivation->set_atom_matcher_id(immediateMatcher.id());
+    eventActivation->set_ttl_seconds(60);  // One minute.
+    *config.add_metric_activation() = immediateMetricActivation;
+
+    MetricActivation bootMetricActivation;
+    bootMetricActivation.set_metric_id(bootMetric.id());
+    eventActivation = bootMetricActivation.add_event_activation();
+    eventActivation->set_activation_type(ActivationType::ACTIVATE_ON_BOOT);
+    eventActivation->set_atom_matcher_id(bootMatcher.id());
+    eventActivation->set_ttl_seconds(60);  // One minute.
+    *config.add_metric_activation() = bootMetricActivation;
+
+    MetricActivation combinationMetricActivation;
+    combinationMetricActivation.set_metric_id(combinationMetric.id());
+    eventActivation = combinationMetricActivation.add_event_activation();
+    eventActivation->set_activation_type(ActivationType::ACTIVATE_IMMEDIATELY);
+    eventActivation->set_atom_matcher_id(combinationMatcher.id());
+    eventActivation->set_ttl_seconds(60);  // One minute.
+    *config.add_metric_activation() = combinationMetricActivation;
+
+    ConfigKey key(123, 987);
+    uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, key);
+    int uid1 = 55555;
+
+    // Initialize log events before update.
+    // Counts provided in order of immediate, boot, and combination metric.
+    std::vector<std::unique_ptr<LogEvent>> events;
+
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 5 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 0, 0, 0.
+    events.push_back(CreateReleaseWakelockEvent(bucketStartTimeNs + 10 * NS_PER_SEC, {uid1}, {""},
+                                                immediateTag));  // Activate immediate metric.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 15 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 1, 0, 0.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 20 * NS_PER_SEC, {uid1}, {""},
+                                                "foo"));  // Activate combination metric.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 25 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 2, 0, 1.
+    events.push_back(CreateReleaseWakelockEvent(bucketStartTimeNs + 30 * NS_PER_SEC, {uid1}, {""},
+                                                bootTag));  // Boot metric pending activation.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 35 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 3, 0, 2.
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Do update. Add matchers/conditions in different order to force indices to change.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+    newConfig.set_hash_strings_in_metric_report(false);  // Modify metadata for fun.
+
+    // Change combination matcher, will mean combination metric isn't active after update.
+    combinationMatcher.mutable_combination()->set_operation(LogicalOperation::AND);
+    *newConfig.add_atom_matcher() = acquireMatcher;
+    *newConfig.add_atom_matcher() = bootMatcher;
+    *newConfig.add_atom_matcher() = combinationMatcher;
+    *newConfig.add_atom_matcher() = childMatcher;
+    *newConfig.add_atom_matcher() = syncStartMatcher;
+    *newConfig.add_atom_matcher() = immediateMatcher;
+
+    *newConfig.add_count_metric() = bootMetric;
+    *newConfig.add_count_metric() = combinationMetric;
+    *newConfig.add_count_metric() = immediateMetric;
+
+    *newConfig.add_metric_activation() = bootMetricActivation;
+    *newConfig.add_metric_activation() = combinationMetricActivation;
+    *newConfig.add_metric_activation() = immediateMetricActivation;
+
+    int64_t updateTimeNs = bucketStartTimeNs + 40 * NS_PER_SEC;
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // The reboot will write to disk again, so sleep for 1 second to avoid this.
+    // TODO(b/178887128): clean this up.
+    std::this_thread::sleep_for(1000ms);
+    // Send event after the update. Counts reset to 0 since this is a new bucket.
+    processor->OnLogEvent(
+            CreateSyncStartEvent(bucketStartTimeNs + 45 * NS_PER_SEC, {uid1}, {""}, "")
+                    .get());  // Count: 1, 0, 0.
+
+    // Fake a reboot. Code is from StatsService::informDeviceShutdown.
+    int64_t shutDownTimeNs = bucketStartTimeNs + 50 * NS_PER_SEC;
+    processor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, shutDownTimeNs);
+    processor->SaveActiveConfigsToDisk(shutDownTimeNs);
+    processor->SaveMetadataToDisk(getWallClockNs(), shutDownTimeNs);
+
+    // On boot, use StartUp. However, skip config manager for simplicity.
+    int64_t bootTimeNs = bucketStartTimeNs + 55 * NS_PER_SEC;
+    processor = CreateStatsLogProcessor(bootTimeNs, bootTimeNs, newConfig, key);
+    processor->LoadActiveConfigsFromDisk();
+    processor->LoadMetadataFromDisk(getWallClockNs(), bootTimeNs);
+
+    // Send events after boot. Counts reset to 0 since this is a new bucket. Boot metric now active.
+    events.clear();
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 60 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 1, 1, 0.
+    int64_t deactivationTimeNs = bucketStartTimeNs + 76 * NS_PER_SEC;
+    events.push_back(CreateScreenStateChangedEvent(
+            deactivationTimeNs,
+            android::view::DisplayStateEnum::DISPLAY_STATE_OFF));  // TTLs immediate metric.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 80 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 1, 2, 0.
+    events.push_back(CreateAcquireWakelockEvent(bucketStartTimeNs + 85 * NS_PER_SEC, {uid1}, {""},
+                                                childTag));  // Activate combination metric.
+    events.push_back(CreateSyncStartEvent(bucketStartTimeNs + 90 * NS_PER_SEC, {uid1}, {""},
+                                          ""));  // Count: 1, 3, 1.
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+    uint64_t dumpTimeNs = bucketStartTimeNs + 90 * NS_PER_SEC;
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(reports.reports_size(), 3);
+
+    // Report from before update.
+    ConfigMetricsReport report = reports.reports(0);
+    EXPECT_EQ(report.last_report_elapsed_nanos(), bucketStartTimeNs);
+    EXPECT_EQ(report.current_report_elapsed_nanos(), updateTimeNs);
+    ASSERT_EQ(report.metrics_size(), 3);
+    // Immediate metric. Count = 3.
+    StatsLogReport metricReport = report.metrics(0);
+    EXPECT_EQ(metricReport.metric_id(), immediateMetric.id());
+    EXPECT_TRUE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    auto data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 3);
+
+    // Boot metric. Count = 0.
+    metricReport = report.metrics(1);
+    EXPECT_EQ(metricReport.metric_id(), bootMetric.id());
+    EXPECT_FALSE(metricReport.is_active());
+    EXPECT_FALSE(metricReport.has_count_metrics());
+
+    // Combination metric. Count = 2.
+    metricReport = report.metrics(2);
+    EXPECT_EQ(metricReport.metric_id(), combinationMetric.id());
+    EXPECT_TRUE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, updateTimeNs, 2);
+
+    // Report from after update, before boot.
+    report = reports.reports(1);
+    EXPECT_EQ(report.last_report_elapsed_nanos(), updateTimeNs);
+    EXPECT_EQ(report.current_report_elapsed_nanos(), shutDownTimeNs);
+    ASSERT_EQ(report.metrics_size(), 3);
+    // Boot metric. Count = 0.
+    metricReport = report.metrics(0);
+    EXPECT_EQ(metricReport.metric_id(), bootMetric.id());
+    EXPECT_FALSE(metricReport.is_active());
+    EXPECT_FALSE(metricReport.has_count_metrics());
+
+    // Combination metric. Count = 0.
+    metricReport = report.metrics(1);
+    EXPECT_EQ(metricReport.metric_id(), combinationMetric.id());
+    EXPECT_FALSE(metricReport.is_active());
+    EXPECT_FALSE(metricReport.has_count_metrics());
+
+    // Immediate metric. Count = 1.
+    metricReport = report.metrics(2);
+    EXPECT_EQ(metricReport.metric_id(), immediateMetric.id());
+    EXPECT_TRUE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), updateTimeNs, shutDownTimeNs, 1);
+
+    // Report from after reboot.
+    report = reports.reports(2);
+    EXPECT_EQ(report.last_report_elapsed_nanos(), bootTimeNs);
+    EXPECT_EQ(report.current_report_elapsed_nanos(), dumpTimeNs);
+    ASSERT_EQ(report.metrics_size(), 3);
+    // Boot metric. Count = 3.
+    metricReport = report.metrics(0);
+    EXPECT_EQ(metricReport.metric_id(), bootMetric.id());
+    EXPECT_TRUE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bootTimeNs, dumpTimeNs, 3);
+
+    // Combination metric. Count = 1.
+    metricReport = report.metrics(1);
+    EXPECT_EQ(metricReport.metric_id(), combinationMetric.id());
+    EXPECT_TRUE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bootTimeNs, dumpTimeNs, 1);
+
+    // Immediate metric. Count = 1.
+    metricReport = report.metrics(2);
+    EXPECT_EQ(metricReport.metric_id(), immediateMetric.id());
+    EXPECT_FALSE(metricReport.is_active());
+    EXPECT_TRUE(metricReport.has_count_metrics());
+    ASSERT_EQ(metricReport.count_metrics().data_size(), 1);
+    data = metricReport.count_metrics().data(0);
+    ASSERT_EQ(data.bucket_info_size(), 1);
+    ValidateCountBucket(data.bucket_info(0), bootTimeNs, deactivationTimeNs, 1);
 }
 
 TEST_F(ConfigUpdateE2eTest, TestNewDurationExistingWhat) {
