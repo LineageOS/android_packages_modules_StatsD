@@ -733,16 +733,16 @@ void StatsLogProcessor::resetConfigsLocked(const int64_t timestampNs,
     }
 }
 
-void StatsLogProcessor::resetIfConfigTtlExpiredLocked(const int64_t timestampNs) {
+void StatsLogProcessor::resetIfConfigTtlExpiredLocked(const int64_t eventTimeNs) {
     std::vector<ConfigKey> configKeysTtlExpired;
     for (auto it = mMetricsManagers.begin(); it != mMetricsManagers.end(); it++) {
-        if (it->second != nullptr && !it->second->isInTtl(timestampNs)) {
+        if (it->second != nullptr && !it->second->isInTtl(eventTimeNs)) {
             configKeysTtlExpired.push_back(it->first);
         }
     }
     if (configKeysTtlExpired.size() > 0) {
-        WriteDataToDiskLocked(CONFIG_RESET, NO_TIME_CONSTRAINTS);
-        resetConfigsLocked(timestampNs, configKeysTtlExpired);
+        WriteDataToDiskLocked(CONFIG_RESET, NO_TIME_CONSTRAINTS, getElapsedRealtimeNs());
+        resetConfigsLocked(eventTimeNs, configKeysTtlExpired);
     }
 }
 
@@ -1041,27 +1041,28 @@ void StatsLogProcessor::SetConfigsActiveStateLocked(const ActiveConfigList& acti
 }
 
 void StatsLogProcessor::WriteDataToDiskLocked(const DumpReportReason dumpReportReason,
-                                              const DumpLatency dumpLatency) {
-    const int64_t timeNs = getElapsedRealtimeNs();
+                                              const DumpLatency dumpLatency,
+                                              const int64_t elapsedRealtimeNs) {
     // Do not write to disk if we already have in the last few seconds.
     // This is to avoid overwriting files that would have the same name if we
     //   write twice in the same second.
-    if (static_cast<unsigned long long> (timeNs) <
-            mLastWriteTimeNs + WRITE_DATA_COOL_DOWN_SEC * NS_PER_SEC) {
+    if (static_cast<unsigned long long>(elapsedRealtimeNs) <
+        mLastWriteTimeNs + WRITE_DATA_COOL_DOWN_SEC * NS_PER_SEC) {
         ALOGI("Statsd skipping writing data to disk. Already wrote data in last %d seconds",
                 WRITE_DATA_COOL_DOWN_SEC);
         return;
     }
-    mLastWriteTimeNs = timeNs;
+    mLastWriteTimeNs = elapsedRealtimeNs;
     for (auto& pair : mMetricsManagers) {
-        WriteDataToDiskLocked(pair.first, timeNs, dumpReportReason, dumpLatency);
+        WriteDataToDiskLocked(pair.first, elapsedRealtimeNs, dumpReportReason, dumpLatency);
     }
 }
 
 void StatsLogProcessor::WriteDataToDisk(const DumpReportReason dumpReportReason,
-                                        const DumpLatency dumpLatency) {
+                                        const DumpLatency dumpLatency,
+                                        const int64_t elapsedRealtimeNs) {
     std::lock_guard<std::mutex> lock(mMetricsMutex);
-    WriteDataToDiskLocked(dumpReportReason, dumpLatency);
+    WriteDataToDiskLocked(dumpReportReason, dumpLatency, elapsedRealtimeNs);
 }
 
 void StatsLogProcessor::informPullAlarmFired(const int64_t timestampNs) {

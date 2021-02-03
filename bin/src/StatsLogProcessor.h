@@ -72,8 +72,8 @@ public:
             unordered_set<sp<const InternalAlarm>, SpHash<InternalAlarm>> alarmSet);
 
     /* Flushes data to disk. Data on memory will be gone after written to disk. */
-    void WriteDataToDisk(const DumpReportReason dumpReportReason,
-                         const DumpLatency dumpLatency);
+    void WriteDataToDisk(const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
+                         const int64_t elapsedRealtimeNs);
 
     /* Persist configs containing metrics with active activations to disk. */
     void SaveActiveConfigsToDisk(int64_t currentTimeNs);
@@ -185,7 +185,7 @@ private:
 
     void OnLogEvent(LogEvent* event, int64_t elapsedRealtimeNs);
 
-    void resetIfConfigTtlExpiredLocked(const int64_t timestampNs);
+    void resetIfConfigTtlExpiredLocked(const int64_t eventTimeNs);
 
     void OnConfigUpdatedLocked(const int64_t currentTimestampNs, const ConfigKey& key,
                                const StatsdConfig& config, bool modularUpdate);
@@ -207,7 +207,7 @@ private:
                                     metadata::StatsMetadataList* metadataList);
 
     void WriteDataToDiskLocked(const DumpReportReason dumpReportReason,
-                               const DumpLatency dumpLatency);
+                               const DumpLatency dumpLatency, const int64_t elapsedRealtimeNs);
 
     void WriteDataToDiskLocked(const ConfigKey& key, const int64_t timestampNs,
                                const DumpReportReason dumpReportReason,
