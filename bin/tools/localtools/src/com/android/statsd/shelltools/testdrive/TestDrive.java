@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -82,6 +83,7 @@ public class TestDrive {
     String mDeviceSerial = null;
     @VisibleForTesting
     Dumper mDumper = new BasicDumper();
+    boolean mPressToContinue = false;
 
     public static void main(String[] args) {
         final Configuration configuration = new Configuration();
@@ -126,6 +128,8 @@ public class TestDrive {
                 configuration.mAdditionalAllowedPackage = args[++first_arg];
             } else if (remaining_args >= 3 && arg.equals("-s")) {
                 mDeviceSerial = args[++first_arg];
+            } else if (remaining_args >= 2 && arg.equals("-e")) {
+                mPressToContinue = true;
             } else {
                 break;  // Found the atom list
             }
@@ -165,9 +169,15 @@ public class TestDrive {
                 LOGGER.info("Now please play with the device to trigger the event.");
             }
             if (!hasPulledAtoms) {
-                LOGGER.info(
-                        "All events should be dumped after 1 min ...");
-                Thread.sleep(60_000);
+                if (mPressToContinue) {
+                    LOGGER.info("Press enter after you finish playing with the device...");
+                    Scanner scanner = new Scanner(System.in);
+                    scanner.nextLine();
+                } else {
+                    LOGGER.info(
+                            "All events should be dumped after 1 min ...");
+                    Thread.sleep(60_000);
+                }
             } else {
                 LOGGER.info("All events should be dumped after 1.5 minutes ...");
                 Thread.sleep(15_000);
