@@ -13,7 +13,8 @@
 // limitations under the License.
 
 package {
-    default_visibility: [ ":__pkg__" ]
+    default_visibility: [ ":__pkg__" ],
+    default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
 genrule {
@@ -108,4 +109,3 @@ cc_library_shared {
         "//packages/modules/StatsD/apex:__subpackages__",
     ],
 }
-
