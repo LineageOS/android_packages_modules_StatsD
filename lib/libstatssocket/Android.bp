@@ -17,6 +17,10 @@
 // =========================================================================
 // Native library to write stats log to statsd socket on Android R and later
 // =========================================================================
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 cc_defaults {
     name: "libstatssocket_defaults",
     srcs: [
