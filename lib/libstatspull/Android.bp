@@ -17,6 +17,10 @@
 // ==========================================================
 // Native library to register a pull atom callback with statsd
 // ==========================================================
+package {
+    default_applicable_licenses: ["Android-Apache-2.0"],
+}
+
 cc_defaults {
     name: "libstatspull_defaults",
     srcs: [
