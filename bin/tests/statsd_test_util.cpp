@@ -1236,7 +1236,9 @@ void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int
     } else {
         EXPECT_EQ(bucket.values(0).value_long(), value);
     }
-    EXPECT_EQ(bucket.condition_true_nanos(), conditionTrueNs);
+    if (conditionTrueNs > 0) {
+        EXPECT_EQ(bucket.condition_true_nanos(), conditionTrueNs);
+    }
 }
 
 bool EqualsTo(const DimensionsValue& s1, const DimensionsValue& s2) {
