@@ -521,10 +521,9 @@ void StatsLogProcessor::GetActiveConfigsLocked(const int uid, vector<int64_t>& o
 }
 
 void StatsLogProcessor::OnConfigUpdated(const int64_t timestampNs, const ConfigKey& key,
-                                        const StatsdConfig& config) {
+                                        const StatsdConfig& config, bool modularUpdate) {
     std::lock_guard<std::mutex> lock(mMetricsMutex);
     WriteDataToDiskLocked(key, timestampNs, CONFIG_UPDATED, NO_TIME_CONSTRAINTS);
-    bool modularUpdate = getFlagBool(PARTIAL_CONFIG_UPDATE_FLAG, "false");
     OnConfigUpdatedLocked(timestampNs, key, config, modularUpdate);
 }
 
