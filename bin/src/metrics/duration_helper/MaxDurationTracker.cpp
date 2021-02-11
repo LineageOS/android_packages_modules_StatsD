@@ -162,7 +162,7 @@ void MaxDurationTracker::noteStopAll(const int64_t eventTime) {
 }
 
 bool MaxDurationTracker::flushCurrentBucket(
-        const int64_t& eventTimeNs,
+        const int64_t& eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
         std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) {
     VLOG("MaxDurationTracker flushing.....");
 
@@ -192,13 +192,15 @@ bool MaxDurationTracker::flushCurrentBucket(
     }
 
     // mDuration is updated in noteStop to the maximum duration that ended in the current bucket.
-    if (mDuration != 0) {
+    if (durationPassesThreshold(uploadThreshold, mDuration)) {
         DurationBucket info;
         info.mBucketStartNs = mCurrentBucketStartTimeNs;
         info.mBucketEndNs = currentBucketEndTimeNs;
         info.mDuration = mDuration;
         (*output)[mEventKey].push_back(info);
         VLOG("  final duration for last bucket: %lld", (long long)mDuration);
+    } else {
+        VLOG("  duration: %lld does not pass set threshold", (long long)mDuration);
     }
 
     if (numBucketsForward > 0) {
@@ -214,11 +216,12 @@ bool MaxDurationTracker::flushCurrentBucket(
 }
 
 bool MaxDurationTracker::flushIfNeeded(
-        int64_t eventTimeNs, unordered_map<MetricDimensionKey, vector<DurationBucket>>* output) {
+        int64_t eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
+        unordered_map<MetricDimensionKey, vector<DurationBucket>>* output) {
     if (eventTimeNs < getCurrentBucketEndTimeNs()) {
         return false;
     }
-    return flushCurrentBucket(eventTimeNs, output);
+    return flushCurrentBucket(eventTimeNs, uploadThreshold, output);
 }
 
 void MaxDurationTracker::onSlicedConditionMayChange(bool overallCondition,

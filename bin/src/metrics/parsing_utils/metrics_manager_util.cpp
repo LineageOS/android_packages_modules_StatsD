@@ -538,6 +538,20 @@ optional<sp<MetricProducer>> createDurationMetricProducerAndUpdateMetadata(
         return nullopt;
     }
 
+    if (metric.has_threshold()) {
+        switch (metric.threshold().value_comparison_case()) {
+            case UploadThreshold::kLtInt:
+            case UploadThreshold::kGtInt:
+            case UploadThreshold::kLteInt:
+            case UploadThreshold::kGteInt:
+                break;
+            default:
+                ALOGE("Duration metric incorrect upload threshold type or no type used");
+                return nullopt;
+                break;
+        }
+    }
+
     sp<MetricProducer> producer = new DurationMetricProducer(
             key, metric, conditionIndex, initialConditionCache, whatIndex, startIndex, stopIndex,
             stopAllIndex, nesting, wizard, metricHash, internalDimensions, timeBaseNs,

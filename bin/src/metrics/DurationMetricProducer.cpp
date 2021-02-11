@@ -91,6 +91,10 @@ DurationMetricProducer::DurationMetricProducer(
         mBucketSizeNs = LLONG_MAX;
     }
 
+    if (metric.has_threshold()) {
+        mUploadThreshold = metric.threshold();
+    }
+
     if (metric.has_dimensions_in_what()) {
         translateFieldMatcher(metric.dimensions_in_what(), &mDimensionsInWhat);
         mContainANYPositionInDimensionsInWhat = HasPositionANY(metric.dimensions_in_what());
@@ -605,7 +609,7 @@ void DurationMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs
                                                       const int64_t& nextBucketStartTimeNs) {
     for (auto whatIt = mCurrentSlicedDurationTrackerMap.begin();
             whatIt != mCurrentSlicedDurationTrackerMap.end();) {
-        if (whatIt->second->flushCurrentBucket(eventTimeNs, &mPastBuckets)) {
+        if (whatIt->second->flushCurrentBucket(eventTimeNs, mUploadThreshold, &mPastBuckets)) {
             VLOG("erase bucket for key %s", whatIt->first.toString().c_str());
             whatIt = mCurrentSlicedDurationTrackerMap.erase(whatIt);
         } else {

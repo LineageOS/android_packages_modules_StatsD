@@ -39,7 +39,8 @@ namespace statsd {
 const ConfigKey kConfigKey(0, 12345);
 const int TagId = 1;
 const int64_t metricId = 123;
-const HashableDimensionKey eventKey = getMockedDimensionKey(TagId, 0, "event");
+const optional<UploadThreshold> emptyThreshold;
+const MetricDimensionKey eventKey = getMockedMetricDimensionKey(TagId, 0, "event");
 
 const HashableDimensionKey kConditionKey1 = getMockedDimensionKey(TagId, 1, "maps");
 const HashableDimensionKey kEventKey1 = getMockedDimensionKey(TagId, 2, "maps");
@@ -71,7 +72,7 @@ TEST(OringDurationTrackerTest, TestDurationOverlap) {
     EXPECT_EQ((long long)eventStartTimeNs, tracker.mLastStartTime);
 
     tracker.noteStop(kEventKey1, eventStartTimeNs + durationTimeNs, false);
-    tracker.flushIfNeeded(eventStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(eventStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
 
     ASSERT_EQ(1u, buckets[eventKey].size());
@@ -101,7 +102,7 @@ TEST(OringDurationTrackerTest, TestDurationNested) {
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2000, false);
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2003, false);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(2003LL, buckets[eventKey][0].mDuration);
@@ -131,7 +132,7 @@ TEST(OringDurationTrackerTest, TestStopAll) {
 
     tracker.noteStopAll(eventStartTimeNs + 2003);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(2003LL, buckets[eventKey][0].mDuration);
@@ -157,7 +158,7 @@ TEST(OringDurationTrackerTest, TestCrossBucketBoundary) {
 
     tracker.noteStart(kEventKey1, true, eventStartTimeNs, ConditionKey());
     EXPECT_EQ((long long)eventStartTimeNs, tracker.mLastStartTime);
-    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs, &buckets);
+    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs, emptyThreshold, &buckets);
     tracker.noteStart(kEventKey1, true, eventStartTimeNs + 2 * bucketSizeNs, ConditionKey());
     EXPECT_EQ((long long)(bucketStartTimeNs + 2 * bucketSizeNs), tracker.mLastStartTime);
 
@@ -167,7 +168,7 @@ TEST(OringDurationTrackerTest, TestCrossBucketBoundary) {
 
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2 * bucketSizeNs + 10, false);
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2 * bucketSizeNs + 12, false);
-    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs + 12, &buckets);
+    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs + 12, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(2u, buckets[eventKey].size());
     EXPECT_EQ(bucketSizeNs - 1, buckets[eventKey][0].mDuration);
@@ -205,7 +206,7 @@ TEST(OringDurationTrackerTest, TestDurationConditionChange) {
 
     tracker.noteStop(kEventKey1, eventStartTimeNs + durationTimeNs, false);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(5LL, buckets[eventKey][0].mDuration);
@@ -246,7 +247,7 @@ TEST(OringDurationTrackerTest, TestDurationConditionChange2) {
     // 2nd duration: 1000ns
     tracker.noteStop(kEventKey1, eventStartTimeNs + durationTimeNs, false);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(1005LL, buckets[eventKey][0].mDuration);
@@ -284,7 +285,7 @@ TEST(OringDurationTrackerTest, TestDurationConditionChangeNested) {
 
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2003, false);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(15LL, buckets[eventKey][0].mDuration);
@@ -331,7 +332,7 @@ TEST(OringDurationTrackerTest, TestPredictAnomalyTimestamp) {
               tracker.predictAnomalyTimestampNs(*anomalyTracker, event1StartTimeNs));
 
     int64_t event1StopTimeNs = eventStartTimeNs + bucketSizeNs + 10;
-    tracker.flushIfNeeded(event1StopTimeNs, &buckets);
+    tracker.flushIfNeeded(event1StopTimeNs, emptyThreshold, &buckets);
     tracker.noteStop(kEventKey1, event1StopTimeNs, false);
 
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
@@ -495,7 +496,7 @@ TEST(OringDurationTrackerTest, TestAnomalyDetectionExpiredAlarm) {
     // The alarm is set to fire at 52s, and when it does, an anomaly would be declared. However,
     // because this is a unit test, the alarm won't actually fire at all. Since the alarm fails
     // to fire in time, the anomaly is instead caught when noteStop is called, at around 71s.
-    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs + 25, &buckets);
+    tracker.flushIfNeeded(eventStartTimeNs + 2 * bucketSizeNs + 25, emptyThreshold, &buckets);
     tracker.noteStop(kEventKey1, eventStartTimeNs + 2 * bucketSizeNs + 25, false);
     EXPECT_EQ(anomalyTracker->getSumOverPastBuckets(eventKey), (long long)(bucketSizeNs));
     EXPECT_EQ(anomalyTracker->getRefractoryPeriodEndsSec(eventKey),
@@ -566,6 +567,40 @@ TEST(OringDurationTrackerTest, TestAnomalyDetectionFiredAlarm) {
     tracker.noteStop(kEventKey2, 69 * NS_PER_SEC, false); // stop key2
     ASSERT_EQ(0u, anomalyTracker->mAlarms.size());
     EXPECT_EQ(anomalyTracker->getRefractoryPeriodEndsSec(eventKey), 62U + refPeriodSec);
+}
+
+TEST(OringDurationTrackerTest, TestUploadThreshold) {
+    sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
+
+    unordered_map<MetricDimensionKey, vector<DurationBucket>> buckets;
+
+    int64_t bucketSizeNs = 30 * 1000 * 1000 * 1000LL;
+    int64_t bucketStartTimeNs = 10000000000;
+    int64_t bucketNum = 0;
+    int64_t eventStartTimeNs = bucketStartTimeNs + 1;
+    int64_t event2StartTimeNs = bucketStartTimeNs + bucketSizeNs + 1;
+    int64_t thresholdDurationNs = 2000;
+
+    UploadThreshold threshold;
+    threshold.set_gt_int(thresholdDurationNs);
+
+    OringDurationTracker tracker(kConfigKey, metricId, eventKey, wizard, 1, false,
+                                 bucketStartTimeNs, bucketNum, bucketStartTimeNs, bucketSizeNs,
+                                 false, false, {});
+
+    // Duration below the gt_int threshold should not be added to past buckets.
+    tracker.noteStart(kEventKey1, true, eventStartTimeNs, ConditionKey());
+    tracker.noteStop(kEventKey1, eventStartTimeNs + thresholdDurationNs, false);
+    tracker.flushIfNeeded(eventStartTimeNs + bucketSizeNs + 1, threshold, &buckets);
+    EXPECT_TRUE(buckets.find(eventKey) == buckets.end());
+
+    // Duration above the gt_int threshold should be added to past buckets.
+    tracker.noteStart(kEventKey1, true, event2StartTimeNs, ConditionKey());
+    tracker.noteStop(kEventKey1, event2StartTimeNs + thresholdDurationNs + 1, false);
+    tracker.flushIfNeeded(event2StartTimeNs + bucketSizeNs + 1, threshold, &buckets);
+    EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
+    ASSERT_EQ(1u, buckets[eventKey].size());
+    EXPECT_EQ(thresholdDurationNs + 1, buckets[eventKey][0].mDuration);
 }
 
 }  // namespace statsd

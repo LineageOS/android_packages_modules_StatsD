@@ -43,10 +43,10 @@ public:
     void noteStopAll(const int64_t eventTime) override;
 
     bool flushIfNeeded(
-            int64_t timestampNs,
+            int64_t timestampNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) override;
     bool flushCurrentBucket(
-            const int64_t& eventTimeNs,
+            const int64_t& eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>*) override;
 
     void onSlicedConditionMayChange(bool overallCondition, const int64_t timestamp) override;
@@ -83,6 +83,7 @@ private:
     FRIEND_TEST(MaxDurationTrackerTest, TestStopAll);
     FRIEND_TEST(MaxDurationTrackerTest, TestAnomalyDetection);
     FRIEND_TEST(MaxDurationTrackerTest, TestAnomalyPredictedTimestamp);
+    FRIEND_TEST(MaxDurationTrackerTest, TestUploadThreshold);
 };
 
 }  // namespace statsd

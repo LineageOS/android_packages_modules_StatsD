@@ -531,6 +531,8 @@ protected:
     // atom to fields in the "what" atom.
     std::vector<Metric2State> mMetric2StateLinks;
 
+    optional<UploadThreshold> mUploadThreshold;
+
     SkippedBucket mCurrentSkippedBucket;
     // Buckets that were invalidated and had their data dropped.
     std::vector<SkippedBucket> mSkippedBuckets;
@@ -552,6 +554,7 @@ protected:
     FRIEND_TEST(DurationMetricE2eTest, TestWithSlicedStateMapped);
     FRIEND_TEST(DurationMetricE2eTest, TestSlicedStatePrimaryFieldsNotSubsetDimInWhat);
     FRIEND_TEST(DurationMetricE2eTest, TestWithSlicedStatePrimaryFieldsSubset);
+    FRIEND_TEST(DurationMetricE2eTest, TestUploadThreshold);
 
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetric);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithOneDeactivation);

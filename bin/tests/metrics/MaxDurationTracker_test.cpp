@@ -40,8 +40,10 @@ namespace statsd {
 const ConfigKey kConfigKey(0, 12345);
 
 const int TagId = 1;
+const int64_t metricId = 123;
+const optional<UploadThreshold> emptyThreshold;
 
-const HashableDimensionKey eventKey = getMockedDimensionKey(TagId, 0, "1");
+const MetricDimensionKey eventKey = getMockedMetricDimensionKey(TagId, 0, "1");
 const HashableDimensionKey conditionKey = getMockedDimensionKey(TagId, 4, "1");
 const HashableDimensionKey key1 = getMockedDimensionKey(TagId, 1, "1");
 const HashableDimensionKey key2 = getMockedDimensionKey(TagId, 1, "2");
@@ -75,7 +77,7 @@ TEST(MaxDurationTrackerTest, TestSimpleMaxDuration) {
     tracker.noteStart(key2, true, bucketStartTimeNs + 20, ConditionKey());
     tracker.noteStop(key2, bucketStartTimeNs + 40, false /*stop all*/);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(20LL, buckets[eventKey][0].mDuration);
@@ -103,12 +105,12 @@ TEST(MaxDurationTrackerTest, TestStopAll) {
 
     // Another event starts in this bucket.
     tracker.noteStart(key2, true, bucketStartTimeNs + 20, ConditionKey());
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 40, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 40, emptyThreshold, &buckets);
     tracker.noteStopAll(bucketStartTimeNs + bucketSizeNs + 40);
     EXPECT_TRUE(tracker.mInfos.empty());
     EXPECT_TRUE(buckets.find(eventKey) == buckets.end());
 
-    tracker.flushIfNeeded(bucketStartTimeNs + 3 * bucketSizeNs + 40, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + 3 * bucketSizeNs + 40, emptyThreshold, &buckets);
     EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(bucketSizeNs + 40 - 1, buckets[eventKey][0].mDuration);
@@ -143,12 +145,12 @@ TEST(MaxDurationTrackerTest, TestCrossBucketBoundary) {
     // The event stops at early 4th bucket.
     // Notestop is called from DurationMetricProducer's onMatchedLogEvent, which calls
     // flushIfneeded.
-    tracker.flushIfNeeded(bucketStartTimeNs + (3 * bucketSizeNs) + 20, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + (3 * bucketSizeNs) + 20, emptyThreshold, &buckets);
     tracker.noteStop(DEFAULT_DIMENSION_KEY, bucketStartTimeNs + (3 * bucketSizeNs) + 20,
                      false /*stop all*/);
     EXPECT_TRUE(buckets.find(eventKey) == buckets.end());
 
-    tracker.flushIfNeeded(bucketStartTimeNs + 4 * bucketSizeNs, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + 4 * bucketSizeNs, emptyThreshold, &buckets);
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ((3 * bucketSizeNs) + 20 - 1, buckets[eventKey][0].mDuration);
     EXPECT_EQ(bucketStartTimeNs + 3 * bucketSizeNs, buckets[eventKey][0].mBucketStartNs);
@@ -178,14 +180,14 @@ TEST(MaxDurationTrackerTest, TestCrossBucketBoundary_nested) {
     // one stop
     tracker.noteStop(DEFAULT_DIMENSION_KEY, bucketStartTimeNs + 20, false /*stop all*/);
 
-    tracker.flushIfNeeded(bucketStartTimeNs + (2 * bucketSizeNs) + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + (2 * bucketSizeNs) + 1, emptyThreshold, &buckets);
     // Because of nesting, still not stopped.
     EXPECT_TRUE(buckets.find(eventKey) == buckets.end());
 
     // real stop now.
     tracker.noteStop(DEFAULT_DIMENSION_KEY,
                      bucketStartTimeNs + (2 * bucketSizeNs) + 5, false);
-    tracker.flushIfNeeded(bucketStartTimeNs + (3 * bucketSizeNs) + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + (3 * bucketSizeNs) + 1, emptyThreshold, &buckets);
 
     ASSERT_EQ(1u, buckets[eventKey].size());
     EXPECT_EQ(2 * bucketSizeNs + 5 - 1, buckets[eventKey][0].mDuration);
@@ -222,13 +224,13 @@ TEST(MaxDurationTrackerTest, TestMaxDurationWithCondition) {
     tracker.noteConditionChanged(key1, true, conditionStarts1);
     tracker.noteConditionChanged(key1, false, conditionStops1);
     unordered_map<MetricDimensionKey, vector<DurationBucket>> buckets;
-    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + bucketSizeNs + 1, emptyThreshold, &buckets);
     ASSERT_EQ(0U, buckets.size());
 
     tracker.noteConditionChanged(key1, true, conditionStarts2);
     tracker.noteConditionChanged(key1, false, conditionStops2);
     tracker.noteStop(key1, eventStopTimeNs, false);
-    tracker.flushIfNeeded(bucketStartTimeNs + 2 * bucketSizeNs + 1, &buckets);
+    tracker.flushIfNeeded(bucketStartTimeNs + 2 * bucketSizeNs + 1, emptyThreshold, &buckets);
     ASSERT_EQ(1U, buckets.size());
     vector<DurationBucket> item = buckets.begin()->second;
     ASSERT_EQ(1UL, item.size());
@@ -414,6 +416,39 @@ TEST(MaxDurationTrackerTest, TestAnomalyPredictedTimestamp_UpdatedOnStop) {
     auto alarm = anomalyTracker->mAlarms.begin()->second;
     EXPECT_EQ(eventStopTimeNs1 + 35 * NS_PER_SEC,
               (unsigned long long)(alarm->timestampSec * NS_PER_SEC));
+}
+
+TEST(MaxDurationTrackerTest, TestUploadThreshold) {
+    sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
+
+    unordered_map<MetricDimensionKey, vector<DurationBucket>> buckets;
+
+    int64_t bucketSizeNs = 30 * 1000 * 1000 * 1000LL;
+    int64_t bucketStartTimeNs = 10000000000;
+    int64_t bucketNum = 0;
+    int64_t eventStartTimeNs = bucketStartTimeNs + 1;
+    int64_t event2StartTimeNs = bucketStartTimeNs + bucketSizeNs + 1;
+    int64_t thresholdDurationNs = 2000;
+
+    UploadThreshold threshold;
+    threshold.set_gt_int(thresholdDurationNs);
+
+    MaxDurationTracker tracker(kConfigKey, metricId, eventKey, wizard, 1, false, bucketStartTimeNs,
+                               bucketNum, bucketStartTimeNs, bucketSizeNs, false, false, {});
+
+    // Duration below the gt_int threshold should not be added to past buckets.
+    tracker.noteStart(key1, true, eventStartTimeNs, ConditionKey());
+    tracker.noteStop(key1, eventStartTimeNs + thresholdDurationNs, false);
+    tracker.flushIfNeeded(eventStartTimeNs + bucketSizeNs + 1, threshold, &buckets);
+    EXPECT_TRUE(buckets.find(eventKey) == buckets.end());
+
+    // Duration above the gt_int threshold should be added to past buckets.
+    tracker.noteStart(key1, true, event2StartTimeNs, ConditionKey());
+    tracker.noteStop(key1, event2StartTimeNs + thresholdDurationNs + 1, false);
+    tracker.flushIfNeeded(event2StartTimeNs + bucketSizeNs + 1, threshold, &buckets);
+    EXPECT_TRUE(buckets.find(eventKey) != buckets.end());
+    ASSERT_EQ(1u, buckets[eventKey].size());
+    EXPECT_EQ(thresholdDurationNs + 1, buckets[eventKey][0].mDuration);
 }
 
 }  // namespace statsd

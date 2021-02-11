@@ -361,6 +361,7 @@ private:
     FRIEND_TEST(DurationMetricE2eTest, TestWithSlicedStateMapped);
     FRIEND_TEST(DurationMetricE2eTest, TestSlicedStatePrimaryFieldsNotSubsetDimInWhat);
     FRIEND_TEST(DurationMetricE2eTest, TestWithSlicedStatePrimaryFieldsSubset);
+    FRIEND_TEST(DurationMetricE2eTest, TestUploadThreshold);
 
     FRIEND_TEST(ValueMetricE2eTest, TestInitialConditionChanges);
     FRIEND_TEST(ValueMetricE2eTest, TestPulledEvents);
