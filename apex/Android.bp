@@ -76,3 +76,10 @@ module_exports {
         "stats-log-api-gen",
     ],
 }
+
+sdk {
+    name: "statsd-module-sdk",
+    native_shared_libs: [
+        "libstatssocket",
+    ],
+}
