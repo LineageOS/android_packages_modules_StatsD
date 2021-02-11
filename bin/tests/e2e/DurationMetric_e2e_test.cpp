@@ -1467,6 +1467,101 @@ TEST(DurationMetricE2eTest, TestWithSlicedStatePrimaryFieldsSubset) {
     EXPECT_EQ(310 * NS_PER_SEC, data.bucket_info(0).end_bucket_elapsed_nanos());
 }
 
+TEST(DurationMetricE2eTest, TestUploadThreshold) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    auto screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    auto screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    *config.add_atom_matcher() = screenOffMatcher;
+
+    auto durationPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = durationPredicate;
+
+    int64_t thresholdDurationNs = 30 * 1000 * 1000 * 1000LL;  // 30 seconds
+    UploadThreshold threshold;
+    threshold.set_gt_int(thresholdDurationNs);
+
+    int64_t metricId = 123456;
+    auto durationMetric = config.add_duration_metric();
+    durationMetric->set_id(metricId);
+    durationMetric->set_what(durationPredicate.id());
+    durationMetric->set_bucket(FIVE_MINUTES);
+    durationMetric->set_aggregation_type(DurationMetric_AggregationType_SUM);
+    *durationMetric->mutable_threshold() = threshold;
+
+    const int64_t baseTimeNs = 0;                                   // 0:00
+    const int64_t configAddedTimeNs = baseTimeNs + 1 * NS_PER_SEC;  // 0:01
+    const int64_t bucketSizeNs =
+            TimeUnitToBucketSizeInMillis(config.duration_metric(0).bucket()) * 1000LL * 1000LL;
+
+    int uid = 12345;
+    int64_t cfgId = 98765;
+    ConfigKey cfgKey(uid, cfgId);
+
+    auto processor = CreateStatsLogProcessor(baseTimeNs, configAddedTimeNs, config, cfgKey);
+
+    ASSERT_EQ(processor->mMetricsManagers.size(), 1u);
+    sp<MetricsManager> metricsManager = processor->mMetricsManagers.begin()->second;
+    EXPECT_TRUE(metricsManager->isConfigValid());
+    ASSERT_EQ(metricsManager->mAllMetricProducers.size(), 1);
+    sp<MetricProducer> metricProducer = metricsManager->mAllMetricProducers[0];
+    EXPECT_TRUE(metricsManager->isActive());
+    EXPECT_TRUE(metricProducer->mIsActive);
+
+    std::unique_ptr<LogEvent> event;
+
+    // Screen is off at start of first bucket.
+    event = CreateScreenStateChangedEvent(configAddedTimeNs,
+                                          android::view::DISPLAY_STATE_OFF);  // 0:01
+    processor->OnLogEvent(event.get());
+
+    // Turn screen on.
+    const int64_t durationStartNs = configAddedTimeNs + 10 * NS_PER_SEC;  // 0:11
+    event = CreateScreenStateChangedEvent(durationStartNs, android::view::DISPLAY_STATE_ON);
+    processor->OnLogEvent(event.get());
+
+    // Turn off screen 30 seconds after turning on.
+    const int64_t durationEndNs = durationStartNs + 30 * NS_PER_SEC;  // 0:41
+    event = CreateScreenStateChangedEvent(durationEndNs, android::view::DISPLAY_STATE_OFF);
+    processor->OnLogEvent(event.get());
+
+    // Turn screen on in second bucket.
+    const int64_t duration2StartNs = configAddedTimeNs + bucketSizeNs + 10 * NS_PER_SEC;  // 5:11
+    event = CreateScreenStateChangedEvent(duration2StartNs, android::view::DISPLAY_STATE_ON);
+    processor->OnLogEvent(event.get());
+
+    // Turn off screen 31 seconds after turning on.
+    const int64_t duration2EndNs = duration2StartNs + 31 * NS_PER_SEC;  // 5:42
+    event = CreateScreenStateChangedEvent(duration2EndNs, android::view::DISPLAY_STATE_OFF);
+    processor->OnLogEvent(event.get());
+
+    ConfigMetricsReportList reports;
+    vector<uint8_t> buffer;
+    processor->onDumpReport(cfgKey, configAddedTimeNs + bucketSizeNs * 2 + 1 * NS_PER_SEC, false,
+                            true, ADB_DUMP, FAST, &buffer);  // 10:01
+    EXPECT_TRUE(buffer.size() > 0);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStartEndTimestamp(&reports);
+    ASSERT_EQ(1, reports.reports_size());
+    ASSERT_EQ(1, reports.reports(0).metrics_size());
+    EXPECT_EQ(metricId, reports.reports(0).metrics(0).metric_id());
+    EXPECT_TRUE(reports.reports(0).metrics(0).has_duration_metrics());
+
+    StatsLogReport::DurationMetricDataWrapper durationMetrics;
+    sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).duration_metrics(),
+                                    &durationMetrics);
+    ASSERT_EQ(1, durationMetrics.data_size());
+
+    DurationMetricData data = durationMetrics.data(0);
+    ASSERT_EQ(1, data.bucket_info_size());
+    EXPECT_EQ(duration2EndNs - duration2StartNs, data.bucket_info(0).duration_nanos());
+    EXPECT_EQ(baseTimeNs + bucketSizeNs, data.bucket_info(0).start_bucket_elapsed_nanos());
+    EXPECT_EQ(baseTimeNs + bucketSizeNs * 2, data.bucket_info(0).end_bucket_elapsed_nanos());
+}
+
 #else
 GTEST_LOG_(INFO) << "This test does nothing.\n";
 #endif
