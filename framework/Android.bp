@@ -83,6 +83,7 @@ java_sdk_library {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
 }
 
 // JNI library for StatsLog.write
@@ -105,6 +106,7 @@ cc_library_shared {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
     visibility: [
         "//packages/modules/StatsD/apex:__subpackages__",
     ],
