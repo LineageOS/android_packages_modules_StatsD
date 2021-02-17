@@ -79,6 +79,9 @@ module_exports {
 
 sdk {
     name: "statsd-module-sdk",
+    java_sdk_libs: [
+        "framework-statsd",
+    ],
     native_shared_libs: [
         "libstatssocket",
     ],
