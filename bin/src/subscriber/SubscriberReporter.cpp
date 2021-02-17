@@ -27,44 +27,28 @@ namespace statsd {
 
 using std::vector;
 
-struct BroadcastSubscriberDeathCookie {
-    BroadcastSubscriberDeathCookie(const ConfigKey& configKey, int64_t subscriberId,
-                                   const shared_ptr<IPendingIntentRef>& pir):
-        mConfigKey(configKey),
-        mSubscriberId(subscriberId),
-        mPir(pir) {}
-
-    ConfigKey mConfigKey;
-    int64_t mSubscriberId;
-    shared_ptr<IPendingIntentRef> mPir;
-};
-
-void SubscriberReporter::broadcastSubscriberDied(void* cookie) {
-    auto cookie_ = static_cast<BroadcastSubscriberDeathCookie*>(cookie);
-    ConfigKey& configKey = cookie_->mConfigKey;
-    int64_t subscriberId = cookie_->mSubscriberId;
-    shared_ptr<IPendingIntentRef>& pir = cookie_->mPir;
-
+void SubscriberReporter::broadcastSubscriberDied(void* rawPir) {
     SubscriberReporter& thiz = getInstance();
 
     // Erase the mapping from a (config_key, subscriberId) to a pir if the
-    // mapping exists.
+    // mapping exists. This requires iterating over the map, but this operation
+    // should be rare and the map is expected to be small.
     lock_guard<mutex> lock(thiz.mLock);
-    auto subscriberMapIt = thiz.mIntentMap.find(configKey);
-    if (subscriberMapIt != thiz.mIntentMap.end()) {
-        auto subscriberMap = subscriberMapIt->second;
-        auto pirIt = subscriberMap.find(subscriberId);
-        if (pirIt != subscriberMap.end() && pirIt->second == pir) {
-            subscriberMap.erase(subscriberId);
-            if (subscriberMap.empty()) {
-                thiz.mIntentMap.erase(configKey);
+    for (auto subscriberMapIt = thiz.mIntentMap.begin(); subscriberMapIt != thiz.mIntentMap.end();
+         subscriberMapIt++) {
+        unordered_map<int64_t, shared_ptr<IPendingIntentRef>>& subscriberMap =
+                subscriberMapIt->second;
+        for (auto pirIt = subscriberMap.begin(); pirIt != subscriberMap.end(); pirIt++) {
+            if (pirIt->second.get() == rawPir) {
+                subscriberMap.erase(pirIt);
+                if (subscriberMap.empty()) {
+                    thiz.mIntentMap.erase(subscriberMapIt);
+                }
+                // pirIt and subscriberMapIt are now invalid.
+                return;
             }
         }
     }
-
-    // The death recipient corresponding to this specific pir can never be
-    // triggered again, so free up resources.
-    delete cookie_;
 }
 
 SubscriberReporter::SubscriberReporter() :
@@ -74,13 +58,21 @@ SubscriberReporter::SubscriberReporter() :
 void SubscriberReporter::setBroadcastSubscriber(const ConfigKey& configKey,
                                                 int64_t subscriberId,
                                                 const shared_ptr<IPendingIntentRef>& pir) {
-    VLOG("SubscriberReporter::setBroadcastSubscriber called.");
+    VLOG("SubscriberReporter::setBroadcastSubscriber called with configKey %s and subscriberId "
+         "%lld.",
+         configKey.ToString().c_str(), (long long)subscriberId);
     {
         lock_guard<mutex> lock(mLock);
         mIntentMap[configKey][subscriberId] = pir;
     }
+    // Pass the raw binder pointer address to be the cookie of the death recipient. While the death
+    // notification is fired, the cookie is used for identifying which binder was died. Because
+    // the NDK binder doesn't pass dead binder pointer to binder death handler, the binder death
+    // handler can't know who died.
+    // If a dedicated cookie is used to store metadata (config key, subscriber id) for direct
+    // lookup, a data structure is needed manage the cookies.
     AIBinder_linkToDeath(pir->asBinder().get(), mBroadcastSubscriberDeathRecipient.get(),
-                         new BroadcastSubscriberDeathCookie(configKey, subscriberId, pir));
+                         pir.get());
 }
 
 void SubscriberReporter::unsetBroadcastSubscriber(const ConfigKey& configKey,
@@ -150,20 +142,6 @@ void SubscriberReporter::sendBroadcastLocked(const shared_ptr<IPendingIntentRef>
             subscription.rule_id(),
             cookies,
             dimKey.getDimensionKeyInWhat().toStatsDimensionsValueParcel());
-}
-
-shared_ptr<IPendingIntentRef> SubscriberReporter::getBroadcastSubscriber(const ConfigKey& configKey,
-                                                                         int64_t subscriberId) {
-    lock_guard<mutex> lock(mLock);
-    auto subscriberMapIt = mIntentMap.find(configKey);
-    if (subscriberMapIt == mIntentMap.end()) {
-        return nullptr;
-    }
-    auto pirMapIt = subscriberMapIt->second.find(subscriberId);
-    if (pirMapIt == subscriberMapIt->second.end()) {
-        return nullptr;
-    }
-    return pirMapIt->second;
 }
 
 }  // namespace statsd

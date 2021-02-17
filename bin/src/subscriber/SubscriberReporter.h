@@ -74,9 +74,6 @@ public:
                                   const Subscription& subscription,
                                   const MetricDimensionKey& dimKey) const;
 
-    shared_ptr<IPendingIntentRef> getBroadcastSubscriber(const ConfigKey& configKey,
-                                                         int64_t subscriberId);
-
 private:
     SubscriberReporter();
 
@@ -99,7 +96,8 @@ private:
 
     /**
      * Death recipient callback that is called when a broadcast subscriber dies.
-     * The cookie is a pointer to a BroadcastSubscriberDeathCookie.
+     * The cookie is a raw pointer to a PendingIntentReference. It is only used for identifying
+     * which binder has died and must not be dereferenced.
      */
     static void broadcastSubscriberDied(void* cookie);
 };
