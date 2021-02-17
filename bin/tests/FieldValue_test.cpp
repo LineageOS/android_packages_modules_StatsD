@@ -33,12 +33,6 @@ namespace android {
 namespace os {
 namespace statsd {
 
-// These constants must be kept in sync with those in StatsDimensionsValue.java.
-const static int STATS_DIMENSIONS_VALUE_STRING_TYPE = 2;
-const static int STATS_DIMENSIONS_VALUE_INT_TYPE = 3;
-const static int STATS_DIMENSIONS_VALUE_FLOAT_TYPE = 6;
-const static int STATS_DIMENSIONS_VALUE_TUPLE_TYPE = 7;
-
 namespace {
 void makeLogEvent(LogEvent* logEvent, const int32_t atomId, const int64_t timestamp,
                   const vector<int>& attributionUids, const vector<string>& attributionTags,

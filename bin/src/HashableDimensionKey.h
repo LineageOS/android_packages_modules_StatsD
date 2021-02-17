@@ -29,6 +29,15 @@ namespace statsd {
 
 using ::aidl::android::os::StatsDimensionsValueParcel;
 
+// These constants must be kept in sync with those in StatsDimensionsValue.java
+inline constexpr int STATS_DIMENSIONS_VALUE_STRING_TYPE = 2;
+inline constexpr int STATS_DIMENSIONS_VALUE_INT_TYPE = 3;
+inline constexpr int STATS_DIMENSIONS_VALUE_LONG_TYPE = 4;
+// inline constexpr int STATS_DIMENSIONS_VALUE_BOOL_TYPE = 5; (commented out because
+// unused -- statsd does not correctly support bool types)
+inline constexpr int STATS_DIMENSIONS_VALUE_FLOAT_TYPE = 6;
+inline constexpr int STATS_DIMENSIONS_VALUE_TUPLE_TYPE = 7;
+
 struct Metric2Condition {
     int64_t conditionId;
     std::vector<Matcher> metricFields;

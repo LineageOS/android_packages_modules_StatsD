@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <aidl/android/os/BnPendingIntentRef.h>
 #include <aidl/android/os/BnPullAtomCallback.h>
 #include <aidl/android/os/IPullAtomCallback.h>
 #include <aidl/android/os/IPullAtomResultReceiver.h>
@@ -52,6 +53,16 @@ class MockUidMap : public UidMap {
 public:
     MOCK_METHOD(int, getHostUidOrSelf, (int uid), (const));
     MOCK_METHOD(std::set<int32_t>, getAppUid, (const string& package), (const));
+};
+
+class MockPendingIntentRef : public aidl::android::os::BnPendingIntentRef {
+public:
+    MOCK_METHOD1(sendDataBroadcast, Status(int64_t lastReportTimeNs));
+    MOCK_METHOD1(sendActiveConfigsChangedBroadcast, Status(const vector<int64_t>& configIds));
+    MOCK_METHOD6(sendSubscriberBroadcast,
+                 Status(int64_t configUid, int64_t configId, int64_t subscriptionId,
+                        int64_t subscriptionRuleId, const vector<string>& cookies,
+                        const StatsDimensionsValueParcel& dimensionsValueParcel));
 };
 
 // Converts a ProtoOutputStream to a StatsLogReport proto.
@@ -207,6 +218,12 @@ GaugeMetric createGaugeMetric(const string& name, const int64_t what,
 ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const int valueField,
                               const optional<int64_t>& condition, const vector<int64_t>& states);
 
+Alert createAlert(const string& name, const int64_t metricId, const int buckets,
+                  const int64_t triggerSum);
+
+Subscription createSubscription(const string& name, const Subscription_RuleType type,
+                                const int64_t ruleId);
+
 // START: get primary key functions
 // These functions take in atom field information and create FieldValues which are stored in the
 // given HashableDimensionKey.
@@ -358,6 +375,9 @@ int64_t StringToId(const string& str);
 
 sp<EventMatcherWizard> createEventMatcherWizard(
         int tagId, int matcherIndex, const std::vector<FieldValueMatcher>& fieldValueMatchers = {});
+
+StatsDimensionsValueParcel CreateAttributionUidDimensionsValueParcel(const int atomId,
+                                                                     const int uid);
 
 void ValidateUidDimension(const DimensionsValue& value, int atomId, int uid);
 void ValidateWakelockAttributionUidAndTagDimension(const DimensionsValue& value, const int atomId,

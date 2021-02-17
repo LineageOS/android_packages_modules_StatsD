@@ -129,23 +129,7 @@ EventMetric createEventMetric(string name, int64_t what, optional<int64_t> condi
     return metric;
 }
 
-Alert createAlert(string name, int64_t metricId, int buckets, int64_t triggerSum) {
-    Alert alert;
-    alert.set_id(StringToId(name));
-    alert.set_metric_id(metricId);
-    alert.set_num_buckets(buckets);
-    alert.set_trigger_if_sum_gt(triggerSum);
-    return alert;
-}
 
-Subscription createSubscription(string name, Subscription_RuleType type, int64_t ruleId) {
-    Subscription subscription;
-    subscription.set_id(StringToId(name));
-    subscription.set_rule_type(type);
-    subscription.set_rule_id(ruleId);
-    subscription.mutable_broadcast_subscriber_details();
-    return subscription;
-}
 
 Alarm createAlarm(string name, int64_t offsetMillis, int64_t periodMillis) {
     Alarm alarm;

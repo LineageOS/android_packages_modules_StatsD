@@ -27,15 +27,6 @@ using std::string;
 using std::vector;
 using android::base::StringPrintf;
 
-// These constants must be kept in sync with those in StatsDimensionsValue.java
-const static int STATS_DIMENSIONS_VALUE_STRING_TYPE = 2;
-const static int STATS_DIMENSIONS_VALUE_INT_TYPE = 3;
-const static int STATS_DIMENSIONS_VALUE_LONG_TYPE = 4;
-// const static int STATS_DIMENSIONS_VALUE_BOOL_TYPE = 5; (commented out because
-// unused -- statsd does not correctly support bool types)
-const static int STATS_DIMENSIONS_VALUE_FLOAT_TYPE = 6;
-const static int STATS_DIMENSIONS_VALUE_TUPLE_TYPE = 7;
-
 /**
  * Recursive helper function that populates a parent StatsDimensionsValueParcel
  * with children StatsDimensionsValueParcels.
