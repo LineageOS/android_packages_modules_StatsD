@@ -78,6 +78,7 @@ cc_library {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
 
     stl: "libc++_static",
 
