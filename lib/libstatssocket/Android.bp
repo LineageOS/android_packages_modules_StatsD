@@ -72,6 +72,7 @@ cc_library {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
 }
 
 //TODO (b/149842105): Figure out if there is a better solution for this.
