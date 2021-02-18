@@ -51,6 +51,7 @@ aidl_interface {
                 "com.android.os.statsd",
                 "test_com.android.os.statsd",
             ],
+            min_sdk_version: "30",
         },
     }
 }

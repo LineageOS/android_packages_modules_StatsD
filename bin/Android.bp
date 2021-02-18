@@ -163,6 +163,7 @@ cc_library_static {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
     shared_libs: [
         "libstatssocket",
         "libstatspull",
@@ -216,6 +217,7 @@ cc_binary {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
 }
 
 // ==============
