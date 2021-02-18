@@ -15,14 +15,10 @@
  */
 #include "statsd_writer.h"
 
-#include <cutils/fs.h>
-#include <cutils/sockets.h>
-#include <cutils/threads.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
 #include <poll.h>
-#include <private/android_filesystem_config.h>
 #include <private/android_logger.h>
 #include <stdarg.h>
 #include <stdatomic.h>
@@ -35,6 +31,25 @@
 #include <sys/un.h>
 #include <time.h>
 #include <unistd.h>
+
+
+// Compatibility shims for glibc-2.17 in the Android tree.
+#ifndef __BIONIC__
+
+// gettid() is not present in unistd.h for glibc-2.17.
+extern pid_t gettid();
+
+// TEMP_FAILURE_RETRY is not present in unistd.h for glibc-2.17.
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(exp) ({       \
+  __typeof__(exp) _rc;                   \
+  do {                                   \
+  _rc = (exp);                           \
+  } while (_rc == -1 && errno == EINTR); \
+  _rc; })
+#endif  // TEMP_FAILURE_RETRY
+
+#endif  // __BIONIC__
 
 static pthread_mutex_t log_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static atomic_int dropped = 0;
