@@ -30,9 +30,6 @@ cc_defaults {
         "statsd_writer.c",
     ],
     export_include_dirs: ["include"],
-    static_libs: [
-        "libcutils", // does not expose a stable C API
-    ],
     header_libs: ["liblog_headers"],
     cflags: [
         "-Wall",
@@ -72,6 +69,7 @@ cc_library {
         "com.android.os.statsd",
         "test_com.android.os.statsd",
     ],
+    min_sdk_version: "30",
 }
 
 //TODO (b/149842105): Figure out if there is a better solution for this.
@@ -111,7 +109,6 @@ cc_test {
         "libstatssocket_private",
     ],
     shared_libs: [
-        "libcutils",
         "libutils",
     ],
     test_suites: ["device-tests", "mts-statsd"],

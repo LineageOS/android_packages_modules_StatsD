@@ -15,9 +15,6 @@
  */
 
 #include "include/stats_buffer_writer.h"
-#ifdef __ANDROID__
-#include <cutils/properties.h>
-#endif
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/uio.h>
