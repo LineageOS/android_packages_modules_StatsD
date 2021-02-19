@@ -111,13 +111,13 @@ public:
     // Flush stale buckets if needed, and return true if the tracker has no on-going duration
     // events, so that the owner can safely remove the tracker.
     virtual bool flushIfNeeded(
-            int64_t timestampNs,
+            int64_t timestampNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) = 0;
 
     // Should only be called during an app upgrade or from this tracker's flushIfNeeded. If from
     // an app upgrade, we assume that we're trying to form a partial bucket.
     virtual bool flushCurrentBucket(
-            const int64_t& eventTimeNs,
+            const int64_t& eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) = 0;
 
     // Predict the anomaly timestamp given the current status.
@@ -191,6 +191,31 @@ protected:
 
     void setEventKey(const MetricDimensionKey& eventKey) {
         mEventKey = eventKey;
+    }
+
+    bool durationPassesThreshold(const optional<UploadThreshold>& uploadThreshold,
+                                 int64_t duration) {
+        if (duration <= 0) {
+            return false;
+        }
+
+        if (uploadThreshold == nullopt) {
+            return true;
+        }
+
+        switch (uploadThreshold->value_comparison_case()) {
+            case UploadThreshold::kLtInt:
+                return duration < uploadThreshold->lt_int();
+            case UploadThreshold::kGtInt:
+                return duration > uploadThreshold->gt_int();
+            case UploadThreshold::kLteInt:
+                return duration <= uploadThreshold->lte_int();
+            case UploadThreshold::kGteInt:
+                return duration >= uploadThreshold->gte_int();
+            default:
+                ALOGE("Duration metric incorrect upload threshold type used");
+                return false;
+        }
     }
 
     // A reference to the DurationMetricProducer's config key.

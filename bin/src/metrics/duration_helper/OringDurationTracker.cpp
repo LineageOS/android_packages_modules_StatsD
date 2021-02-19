@@ -132,7 +132,7 @@ void OringDurationTracker::noteStopAll(const int64_t timestamp) {
 }
 
 bool OringDurationTracker::flushCurrentBucket(
-        const int64_t& eventTimeNs,
+        const int64_t& eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
         std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) {
     VLOG("OringDurationTracker Flushing.............");
 
@@ -163,7 +163,7 @@ bool OringDurationTracker::flushCurrentBucket(
     // store durations for each stateKey, so we need to flush the bucket by creating a
     // DurationBucket for each stateKey.
     for (auto& durationIt : mStateKeyDurationMap) {
-        if (durationIt.second.mDuration > 0) {
+        if (durationPassesThreshold(uploadThreshold, durationIt.second.mDuration)) {
             DurationBucket current_info;
             current_info.mBucketStartNs = mCurrentBucketStartTimeNs;
             current_info.mBucketEndNs = currentBucketEndTimeNs;
@@ -173,6 +173,8 @@ bool OringDurationTracker::flushCurrentBucket(
 
             durationIt.second.mDurationFullBucket += durationIt.second.mDuration;
             VLOG("  duration: %lld", (long long)current_info.mDuration);
+        } else {
+            VLOG("  duration: %lld does not pass set threshold", (long long)mDuration);
         }
 
         if (eventTimeNs > fullBucketEnd) {
@@ -217,11 +219,12 @@ bool OringDurationTracker::flushCurrentBucket(
 }
 
 bool OringDurationTracker::flushIfNeeded(
-        int64_t eventTimeNs, unordered_map<MetricDimensionKey, vector<DurationBucket>>* output) {
+        int64_t eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
+        unordered_map<MetricDimensionKey, vector<DurationBucket>>* output) {
     if (eventTimeNs < getCurrentBucketEndTimeNs()) {
         return false;
     }
-    return flushCurrentBucket(eventTimeNs, output);
+    return flushCurrentBucket(eventTimeNs, uploadThreshold, output);
 }
 
 void OringDurationTracker::onSlicedConditionMayChange(bool overallCondition,

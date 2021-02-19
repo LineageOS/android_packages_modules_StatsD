@@ -48,10 +48,10 @@ public:
                         const FieldValue& newState) override;
 
     bool flushCurrentBucket(
-            const int64_t& eventTimeNs,
+            const int64_t& eventTimeNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) override;
     bool flushIfNeeded(
-            int64_t timestampNs,
+            int64_t timestampNs, const optional<UploadThreshold>& uploadThreshold,
             std::unordered_map<MetricDimensionKey, std::vector<DurationBucket>>* output) override;
 
     int64_t predictAnomalyTimestampNs(const AnomalyTracker& anomalyTracker,
@@ -84,6 +84,7 @@ private:
     FRIEND_TEST(OringDurationTrackerTest, TestPredictAnomalyTimestamp);
     FRIEND_TEST(OringDurationTrackerTest, TestAnomalyDetectionExpiredAlarm);
     FRIEND_TEST(OringDurationTrackerTest, TestAnomalyDetectionFiredAlarm);
+    FRIEND_TEST(OringDurationTrackerTest, TestUploadThreshold);
 };
 
 }  // namespace statsd
