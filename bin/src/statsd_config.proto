@@ -190,6 +190,17 @@ message FieldFilter {
   optional FieldMatcher fields = 2;
 }
 
+message UploadThreshold {
+    oneof value_comparison {
+        int64 lt_int = 1;
+        int64 gt_int = 2;
+        float lt_float = 3;
+        float gt_float = 4;
+        int64 lte_int = 5;
+        int64 gte_int = 6;
+    }
+}
+
 message EventMetric {
   optional int64 id = 1;
 
@@ -249,6 +260,8 @@ message DurationMetric {
   optional FieldMatcher dimensions_in_what = 6;
 
   optional TimeUnit bucket = 7;
+
+  optional UploadThreshold threshold = 11;
 
   optional FieldMatcher dimensions_in_condition = 8 [deprecated = true];
 
