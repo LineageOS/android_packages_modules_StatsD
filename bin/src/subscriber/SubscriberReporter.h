@@ -15,18 +15,18 @@
  */
 
 #pragma once
-
 #include <aidl/android/os/IPendingIntentRef.h>
+#include <gtest/gtest_prod.h>
 #include <utils/RefBase.h>
 #include <utils/String16.h>
-
-#include "config/ConfigKey.h"
-#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // subscription
-#include "HashableDimensionKey.h"
 
 #include <mutex>
 #include <unordered_map>
 #include <vector>
+
+#include "HashableDimensionKey.h"
+#include "config/ConfigKey.h"
+#include "packages/modules/StatsD/bin/src/statsd_config.pb.h"  // subscription
 
 using aidl::android::os::IPendingIntentRef;
 using std::mutex;
@@ -100,6 +100,11 @@ private:
      * which binder has died and must not be dereferenced.
      */
     static void broadcastSubscriberDied(void* cookie);
+
+    friend class SubscriberReporterTest;
+    FRIEND_TEST(SubscriberReporterTest, TestBroadcastSubscriberDeathRemovesPir);
+    FRIEND_TEST(SubscriberReporterTest, TestBroadcastSubscriberDeathRemovesPirAndConfigKey);
+    FRIEND_TEST(SubscriberReporterTest, TestBroadcastSubscriberDeathKeepsReplacedPir);
 };
 
 }  // namespace statsd
