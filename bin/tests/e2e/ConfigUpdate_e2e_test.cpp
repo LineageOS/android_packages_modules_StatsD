@@ -22,6 +22,7 @@
 
 #include "flags/flags.h"
 #include "src/StatsLogProcessor.h"
+#include "src/StatsService.h"
 #include "src/storage/StorageManager.h"
 #include "src/subscriber/SubscriberReporter.h"
 #include "tests/statsd_test_util.h"
@@ -1859,6 +1860,287 @@ TEST_F(ConfigUpdateE2eTest, TestAnomalyCountMetric) {
     EXPECT_EQ(alertPreserveCount, 2);
     EXPECT_EQ(alertNewCount, 1);
     EXPECT_EQ(alertRemoveCount, 3);
+
+    // Clear data so it doesn't stay on disk.
+    vector<uint8_t> buffer;
+    processor->onDumpReport(key, bucket2StartTimeNs + 100 * NS_PER_SEC, true, true, ADB_DUMP, FAST,
+                            &buffer);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, preserveSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, replaceSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, removeSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, newSubId);
+}
+
+TEST_F(ConfigUpdateE2eTest, TestAnomalyDurationMetric) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+
+    AtomMatcher wakelockAcquireMatcher = CreateAcquireWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockAcquireMatcher;
+    AtomMatcher wakelockReleaseMatcher = CreateReleaseWakelockAtomMatcher();
+    *config.add_atom_matcher() = wakelockReleaseMatcher;
+    AtomMatcher screenOnMatcher = CreateScreenTurnedOnAtomMatcher();
+    *config.add_atom_matcher() = screenOnMatcher;
+    AtomMatcher screenOffMatcher = CreateScreenTurnedOffAtomMatcher();
+    *config.add_atom_matcher() = screenOffMatcher;
+
+    Predicate holdingWakelockPredicate = CreateHoldingWakelockPredicate();
+    *holdingWakelockPredicate.mutable_simple_predicate()->mutable_dimensions() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    *config.add_predicate() = holdingWakelockPredicate;
+    Predicate screenOnPredicate = CreateScreenIsOnPredicate();
+    *config.add_predicate() = screenOnPredicate;
+
+    DurationMetric durationWakelock =
+            createDurationMetric("DurWakelock", holdingWakelockPredicate.id(), nullopt, {});
+    *durationWakelock.mutable_dimensions_in_what() =
+            CreateAttributionUidDimensions(util::WAKELOCK_STATE_CHANGED, {Position::FIRST});
+    DurationMetric durationScreen =
+            createDurationMetric("DurScreen", screenOnPredicate.id(), nullopt, {});
+    *config.add_duration_metric() = durationScreen;
+    *config.add_duration_metric() = durationWakelock;
+
+    Alert alertPreserve = createAlert("AlertPreserve", durationWakelock.id(), /*buckets=*/2,
+                                      /*triggerSumGt=*/30 * NS_PER_SEC);
+    alertPreserve.set_refractory_period_secs(300);
+    Alert alertReplace = createAlert("AlertReplace", durationScreen.id(), 2, 30 * NS_PER_SEC);
+    alertReplace.set_refractory_period_secs(1);
+    Alert alertRemove = createAlert("AlertRemove", durationWakelock.id(), 5, 10 * NS_PER_SEC);
+    alertRemove.set_refractory_period_secs(1);
+    *config.add_alert() = alertReplace;
+    *config.add_alert() = alertPreserve;
+    *config.add_alert() = alertRemove;
+
+    int preserveSubId = 1, replaceSubId = 2, removeSubId = 3;
+    Subscription preserveSub = createSubscription("S1", Subscription::ALERT, alertPreserve.id());
+    preserveSub.mutable_broadcast_subscriber_details()->set_subscriber_id(preserveSubId);
+    Subscription replaceSub = createSubscription("S2", Subscription::ALERT, alertReplace.id());
+    replaceSub.mutable_broadcast_subscriber_details()->set_subscriber_id(replaceSubId);
+    Subscription removeSub = createSubscription("S3", Subscription::ALERT, alertRemove.id());
+    removeSub.mutable_broadcast_subscriber_details()->set_subscriber_id(removeSubId);
+    *config.add_subscription() = preserveSub;
+    *config.add_subscription() = removeSub;
+    *config.add_subscription() = replaceSub;
+
+    int app1Uid = 123, app2Uid = 456;
+    vector<int> attributionUids1 = {app1Uid};
+    vector<string> attributionTags1 = {"App1"};
+    vector<int> attributionUids2 = {app2Uid};
+    vector<string> attributionTags2 = {"App2"};
+    int64_t configUid = 123, configId = 987;
+    ConfigKey key(configUid, configId);
+
+    int alertPreserveCount = 0, alertRemoveCount = 0;
+    StatsDimensionsValueParcel alertPreserveDims;
+    StatsDimensionsValueParcel alertRemoveDims;
+
+    // The binder calls here will happen synchronously because they are in-process.
+    shared_ptr<MockPendingIntentRef> preserveBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*preserveBroadcast, sendSubscriberBroadcast(configUid, configId, preserveSub.id(),
+                                                            alertPreserve.id(), _, _))
+            .Times(2)
+            .WillRepeatedly(
+                    Invoke([&alertPreserveCount, &alertPreserveDims](
+                                   int64_t, int64_t, int64_t, int64_t, const vector<string>&,
+                                   const StatsDimensionsValueParcel& dimensionsValueParcel) {
+                        alertPreserveCount++;
+                        alertPreserveDims = dimensionsValueParcel;
+                        return Status::ok();
+                    }));
+
+    shared_ptr<MockPendingIntentRef> replaceBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*replaceBroadcast, sendSubscriberBroadcast(configUid, configId, replaceSub.id(),
+                                                           alertReplace.id(), _, _))
+            .Times(0);
+
+    shared_ptr<MockPendingIntentRef> removeBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*removeBroadcast, sendSubscriberBroadcast(configUid, configId, removeSub.id(),
+                                                          alertRemove.id(), _, _))
+            .Times(2)
+            .WillRepeatedly(
+                    Invoke([&alertRemoveCount, &alertRemoveDims](
+                                   int64_t, int64_t, int64_t, int64_t, const vector<string>&,
+                                   const StatsDimensionsValueParcel& dimensionsValueParcel) {
+                        alertRemoveCount++;
+                        alertRemoveDims = dimensionsValueParcel;
+                        return Status::ok();
+                    }));
+
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, preserveSubId, preserveBroadcast);
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, replaceSubId, replaceBroadcast);
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, removeSubId, removeBroadcast);
+
+    shared_ptr<StatsService> service = SharedRefBase::make<StatsService>(nullptr, nullptr);
+    sp<StatsLogProcessor> processor = service->mProcessor;
+    uint64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(TEN_MINUTES) * 1000000LL;
+    int64_t bucketStartTimeNs = processor->mTimeBaseNs;
+    int64_t roundedBucketStartTimeNs = bucketStartTimeNs / NS_PER_SEC * NS_PER_SEC;
+    uint64_t bucket2StartTimeNs = bucketStartTimeNs + bucketSizeNs;
+    processor->OnConfigUpdated(bucketStartTimeNs, key, config);
+
+    StatsDimensionsValueParcel wlUid1 =
+            CreateAttributionUidDimensionsValueParcel(util::WAKELOCK_STATE_CHANGED, app1Uid);
+    StatsDimensionsValueParcel wlUid2 =
+            CreateAttributionUidDimensionsValueParcel(util::WAKELOCK_STATE_CHANGED, app2Uid);
+
+    int64_t eventTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateAcquireWakelockEvent(eventTimeNs, attributionUids1, attributionTags1, "wl1")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 0);
+    EXPECT_EQ(alertRemoveCount, 0);
+
+    eventTimeNs = bucketStartTimeNs + 20 * NS_PER_SEC;
+    processor->OnLogEvent(CreateScreenStateChangedEvent(
+                                  eventTimeNs, android::view::DisplayStateEnum::DISPLAY_STATE_ON)
+                                  .get(),
+                          eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 0);
+    EXPECT_EQ(alertRemoveCount, 0);
+
+    eventTimeNs = bucketStartTimeNs + 30 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateReleaseWakelockEvent(eventTimeNs, attributionUids1, attributionTags1, "wl1")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 0);
+    EXPECT_EQ(alertRemoveCount, 1);
+    EXPECT_EQ(alertRemoveDims, wlUid1);
+
+    eventTimeNs = bucketStartTimeNs + 40 * NS_PER_SEC;
+    processor->OnLogEvent(CreateScreenStateChangedEvent(
+                                  eventTimeNs, android::view::DisplayStateEnum::DISPLAY_STATE_OFF)
+                                  .get(),
+                          eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 0);
+    EXPECT_EQ(alertRemoveCount, 1);
+
+    eventTimeNs = bucket2StartTimeNs + 5 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateAcquireWakelockEvent(eventTimeNs, attributionUids2, attributionTags2, "wl2")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 0);
+    EXPECT_EQ(alertRemoveCount, 1);
+
+    // Acts as the alarm for uid 2 wakelock, also starts the timer for screen on.
+    // Preserve enters 5 min refractory for uid 2.
+    eventTimeNs = bucket2StartTimeNs + 36 * NS_PER_SEC;
+    processor->OnLogEvent(CreateScreenStateChangedEvent(
+                                  eventTimeNs, android::view::DisplayStateEnum::DISPLAY_STATE_ON)
+                                  .get(),
+                          eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 1);
+    EXPECT_EQ(alertPreserveDims, wlUid2);
+    EXPECT_EQ(alertRemoveCount, 2);
+    EXPECT_EQ(alertRemoveDims, wlUid2);
+
+    eventTimeNs = bucket2StartTimeNs + 37 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateReleaseWakelockEvent(eventTimeNs, attributionUids2, attributionTags2, "wl2")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 1);
+    EXPECT_EQ(alertRemoveCount, 2);
+
+    // Do config update.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+    *newConfig.add_atom_matcher() = wakelockAcquireMatcher;
+    *newConfig.add_atom_matcher() = screenOffMatcher;
+    *newConfig.add_atom_matcher() = wakelockReleaseMatcher;
+    *newConfig.add_atom_matcher() = screenOnMatcher;
+    *newConfig.add_predicate() = screenOnPredicate;
+    *newConfig.add_predicate() = holdingWakelockPredicate;
+    *newConfig.add_duration_metric() = durationWakelock;
+    *newConfig.add_duration_metric() = durationScreen;
+
+    alertReplace.set_refractory_period_secs(2);  // Causes replacement.
+    // New alert on existing metric. Should get current full bucket, but not history of 1st bucket.
+    Alert alertNew = createAlert("AlertNew", durationWakelock.id(), /*buckets=*/2,
+                                 /*triggerSumGt=*/40 * NS_PER_SEC);
+    *newConfig.add_alert() = alertPreserve;
+    *newConfig.add_alert() = alertNew;
+    *newConfig.add_alert() = alertReplace;
+
+    int newSubId = 4;
+    Subscription newSub = createSubscription("S4", Subscription::ALERT, alertNew.id());
+    newSub.mutable_broadcast_subscriber_details()->set_subscriber_id(newSubId);
+    *newConfig.add_subscription() = newSub;
+    *newConfig.add_subscription() = replaceSub;
+    *newConfig.add_subscription() = preserveSub;
+
+    int alertNewCount = 0;
+    StatsDimensionsValueParcel alertNewDims;
+    shared_ptr<MockPendingIntentRef> newBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*newBroadcast,
+                sendSubscriberBroadcast(configUid, configId, newSub.id(), alertNew.id(), _, _))
+            .Times(1)
+            .WillRepeatedly(
+                    Invoke([&alertNewCount, &alertNewDims](
+                                   int64_t, int64_t, int64_t, int64_t, const vector<string>&,
+                                   const StatsDimensionsValueParcel& dimensionsValueParcel) {
+                        alertNewCount++;
+                        alertNewDims = dimensionsValueParcel;
+                        return Status::ok();
+                    }));
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, newSubId, newBroadcast);
+
+    int64_t updateTimeNs = bucket2StartTimeNs + 40 * NS_PER_SEC;
+    processor->OnConfigUpdated(updateTimeNs, key, newConfig);
+
+    // Alert preserve will set alarm after the refractory period, but alert new will set it for
+    // 40s after this event. Note that it should be 8 seconds since 32 accumulated in the partial
+    // bucket before the update, but that is lost due to b/180992558.
+    eventTimeNs = bucket2StartTimeNs + 45 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateAcquireWakelockEvent(eventTimeNs, attributionUids2, attributionTags2, "wl2")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 1);
+    EXPECT_EQ(alertNewCount, 0);
+
+    eventTimeNs = bucket2StartTimeNs + 50 * NS_PER_SEC;
+    // Alert replace doesn't fire because it has lost history.
+    processor->OnLogEvent(CreateScreenStateChangedEvent(
+                                  eventTimeNs, android::view::DisplayStateEnum::DISPLAY_STATE_OFF)
+                                  .get(),
+                          eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 1);
+    EXPECT_EQ(alertNewCount, 0);
+
+    // Alert preserve has 15 seconds from 1st bucket, so alert should fire at bucket2Start + 70.
+    eventTimeNs = bucket2StartTimeNs + 55 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateAcquireWakelockEvent(eventTimeNs, attributionUids1, attributionTags1, "wl1")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 1);
+    EXPECT_EQ(alertNewCount, 0);
+
+    eventTimeNs = bucket2StartTimeNs + 71 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateReleaseWakelockEvent(eventTimeNs, attributionUids1, attributionTags1, "wl1")
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 2);
+    EXPECT_EQ(alertPreserveDims, wlUid1);
+    EXPECT_EQ(alertNewCount, 0);
+
+    // Random event to fire alert new for uid1.
+    eventTimeNs = bucket2StartTimeNs + 86 * NS_PER_SEC;
+    processor->OnLogEvent(
+            CreateScreenBrightnessChangedEvent(eventTimeNs, 50)
+                    .get(),
+            eventTimeNs);
+    EXPECT_EQ(alertPreserveCount, 2);
+    EXPECT_EQ(alertNewCount, 1);
+    EXPECT_EQ(alertNewDims, wlUid2);
 
     // Clear data so it doesn't stay on disk.
     vector<uint8_t> buffer;
