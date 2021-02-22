@@ -86,3 +86,14 @@ sdk {
         "libstatssocket",
     ],
 }
+
+
+// TODO(b/180769414): ART should be able to use the statsd-module-sdk entry,
+// but unfortunately that conflicts with internal builds. Make a special copy
+// for ART for the time being.
+sdk {
+    name: "statsd-module-sdk-for-art",
+    native_shared_libs: [
+        "libstatssocket",
+    ],
+}
