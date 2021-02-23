@@ -513,6 +513,26 @@ ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const
     return metric;
 }
 
+Alert createAlert(const string& name, const int64_t metricId, const int buckets,
+                  const int64_t triggerSum) {
+    Alert alert;
+    alert.set_id(StringToId(name));
+    alert.set_metric_id(metricId);
+    alert.set_num_buckets(buckets);
+    alert.set_trigger_if_sum_gt(triggerSum);
+    return alert;
+}
+
+Subscription createSubscription(const string& name, const Subscription_RuleType type,
+                                const int64_t ruleId) {
+    Subscription subscription;
+    subscription.set_id(StringToId(name));
+    subscription.set_rule_type(type);
+    subscription.set_rule_id(ruleId);
+    subscription.mutable_broadcast_subscriber_details();
+    return subscription;
+}
+
 // START: get primary key functions
 void getUidProcessKey(int uid, HashableDimensionKey* key) {
     int pos1[] = {1, 0, 0};
@@ -1099,6 +1119,27 @@ sp<EventMatcherWizard> createEventMatcherWizard(
     int64_t matcherId = 678;
     return new EventMatcherWizard({new SimpleAtomMatchingTracker(
             matcherId, matcherIndex, matcherHash, atomMatcher, uidMap)});
+}
+
+StatsDimensionsValueParcel CreateAttributionUidDimensionsValueParcel(const int atomId,
+                                                                     const int uid) {
+    StatsDimensionsValueParcel root;
+    root.field = atomId;
+    root.valueType = STATS_DIMENSIONS_VALUE_TUPLE_TYPE;
+    StatsDimensionsValueParcel attrNode;
+    attrNode.field = 1;
+    attrNode.valueType = STATS_DIMENSIONS_VALUE_TUPLE_TYPE;
+    StatsDimensionsValueParcel posInAttrChain;
+    posInAttrChain.field = 1;
+    posInAttrChain.valueType = STATS_DIMENSIONS_VALUE_TUPLE_TYPE;
+    StatsDimensionsValueParcel uidNode;
+    uidNode.field = 1;
+    uidNode.valueType = STATS_DIMENSIONS_VALUE_INT_TYPE;
+    uidNode.intValue = uid;
+    posInAttrChain.tupleValue.push_back(uidNode);
+    attrNode.tupleValue.push_back(posInAttrChain);
+    root.tupleValue.push_back(attrNode);
+    return root;
 }
 
 void ValidateUidDimension(const DimensionsValue& value, int atomId, int uid) {
