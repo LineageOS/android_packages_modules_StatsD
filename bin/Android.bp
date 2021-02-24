@@ -306,6 +306,7 @@ cc_test {
         "tests/metrics/ValueMetricProducer_test.cpp",
         "tests/metrics/parsing_utils/config_update_utils_test.cpp",
         "tests/metrics/parsing_utils/metrics_manager_util_test.cpp",
+        "tests/subscriber/SubscriberReporter_test.cpp",
         "tests/MetricsManager_test.cpp",
         "tests/shell/ShellSubscriber_test.cpp",
         "tests/state/StateTracker_test.cpp",
