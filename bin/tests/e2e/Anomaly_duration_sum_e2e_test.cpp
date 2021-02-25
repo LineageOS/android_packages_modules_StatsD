@@ -412,6 +412,94 @@ TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_multiple_buckets) {
               anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
 }
 
+TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_partial_bucket) {
+    const int num_buckets = 1;
+    const uint64_t threshold_ns = NS_PER_SEC;
+    auto config = CreateStatsdConfig(num_buckets, threshold_ns, DurationMetric::SUM, true);
+    const uint64_t alert_id = config.alert(0).id();
+    const uint32_t refractory_period_sec = config.alert(0).refractory_period_secs();
+
+    shared_ptr<StatsService> service = SharedRefBase::make<StatsService>(nullptr, nullptr);
+    sendConfig(service, config);
+
+    auto processor = service->mProcessor;
+    ASSERT_EQ(processor->mMetricsManagers.size(), 1u);
+    EXPECT_TRUE(processor->mMetricsManagers.begin()->second->isConfigValid());
+    ASSERT_EQ(1u, processor->mMetricsManagers.begin()->second->mAllAnomalyTrackers.size());
+
+    int64_t bucketStartTimeNs = processor->mTimeBaseNs;
+    int64_t roundedBucketStartTimeNs = bucketStartTimeNs / NS_PER_SEC * NS_PER_SEC;
+    int64_t bucketSizeNs = TimeUnitToBucketSizeInMillis(config.duration_metric(0).bucket()) * 1e6;
+
+    service->mUidMap->updateMap(bucketStartTimeNs, {1}, {1}, {String16("v1")},
+                                {String16("randomApp")}, {String16("")});
+
+    sp<AnomalyTracker> anomalyTracker =
+            processor->mMetricsManagers.begin()->second->mAllAnomalyTrackers[0];
+
+    auto screen_off_event = CreateScreenStateChangedEvent(
+            bucketStartTimeNs + 10, android::view::DisplayStateEnum::DISPLAY_STATE_OFF);
+    processor->OnLogEvent(screen_off_event.get());
+
+    // Acquire wakelock wl1.
+    auto acquire_event = CreateAcquireWakelockEvent(bucketStartTimeNs + 11, attributionUids1,
+                                                    attributionTags1, "wl1");
+    processor->OnLogEvent(acquire_event.get());
+    EXPECT_EQ((bucketStartTimeNs + 11 + threshold_ns) / NS_PER_SEC + 1,
+              anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+
+    // Release wakelock wl1. No anomaly detected. Alarm cancelled at the "release" event.
+    // 90 ns accumulated.
+    auto release_event = CreateReleaseWakelockEvent(bucketStartTimeNs + 101, attributionUids1,
+                                                    attributionTags1, "wl1");
+    processor->OnLogEvent(release_event.get());
+    EXPECT_EQ(0u, anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+
+    // Acquire wakelock wl2.
+    acquire_event = CreateAcquireWakelockEvent(bucketStartTimeNs + 110, attributionUids3,
+                                               attributionTags3, "wl2");
+    processor->OnLogEvent(acquire_event.get());
+    int64_t wl2AlarmTimeNs = bucketStartTimeNs + 110 + threshold_ns;
+    EXPECT_EQ(wl2AlarmTimeNs / NS_PER_SEC + 1, anomalyTracker->getAlarmTimestampSec(dimensionKey2));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey2));
+
+    // Partial bucket split.
+    int64_t appUpgradeTimeNs = bucketStartTimeNs + 500;
+    service->mUidMap->updateApp(appUpgradeTimeNs, String16("randomApp"), 1, 2, String16("v2"),
+                                String16(""));
+    EXPECT_EQ(0u, anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+    EXPECT_EQ((bucketStartTimeNs + 110 + threshold_ns) / NS_PER_SEC + 1,
+              anomalyTracker->getAlarmTimestampSec(dimensionKey2));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey2));
+
+    // Acquire wakelock wl1. Subtract 100 ns since that accumulated before the bucket split.
+    acquire_event = CreateAcquireWakelockEvent(bucketStartTimeNs + 510, attributionUids1,
+                                               attributionTags1, "wl1");
+    processor->OnLogEvent(acquire_event.get());
+    int64_t wl1AlarmTimeNs = bucketStartTimeNs + 510 + threshold_ns - 90;
+    EXPECT_EQ(wl1AlarmTimeNs / NS_PER_SEC + 1, anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(0u, anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+
+    // Release wakelock wl1. One anomaly detected.
+    release_event = CreateReleaseWakelockEvent(wl1AlarmTimeNs + 1, attributionUids2,
+                                               attributionTags2, "wl1");
+    processor->OnLogEvent(release_event.get());
+    EXPECT_EQ(0u, anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(refractory_period_sec + (wl1AlarmTimeNs + 1) / NS_PER_SEC + 1,
+              anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+
+    // Anomaly alarm fired.
+    auto alarmTriggerEvent = CreateBatterySaverOnEvent(wl2AlarmTimeNs);
+    processor->OnLogEvent(alarmTriggerEvent.get(), wl2AlarmTimeNs);
+
+    EXPECT_EQ(0u, anomalyTracker->getAlarmTimestampSec(dimensionKey1));
+    EXPECT_EQ(refractory_period_sec + wl2AlarmTimeNs / NS_PER_SEC + 1,
+              anomalyTracker->getRefractoryPeriodEndsSec(dimensionKey1));
+}
+
 TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_long_refractory_period) {
     const int num_buckets = 2;
     const uint64_t threshold_ns = 3 * NS_PER_SEC;
