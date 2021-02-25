@@ -2095,8 +2095,7 @@ TEST_F(ConfigUpdateE2eTest, TestAnomalyDurationMetric) {
     processor->OnConfigUpdated(updateTimeNs, key, newConfig);
 
     // Alert preserve will set alarm after the refractory period, but alert new will set it for
-    // 40s after this event. Note that it should be 8 seconds since 32 accumulated in the partial
-    // bucket before the update, but that is lost due to b/180992558.
+    // 8 seconds after this event.
     eventTimeNs = bucket2StartTimeNs + 45 * NS_PER_SEC;
     processor->OnLogEvent(
             CreateAcquireWakelockEvent(eventTimeNs, attributionUids2, attributionTags2, "wl2")
@@ -2115,13 +2114,15 @@ TEST_F(ConfigUpdateE2eTest, TestAnomalyDurationMetric) {
     EXPECT_EQ(alertNewCount, 0);
 
     // Alert preserve has 15 seconds from 1st bucket, so alert should fire at bucket2Start + 70.
+    // Serves as alarm for alert new for uid2.
     eventTimeNs = bucket2StartTimeNs + 55 * NS_PER_SEC;
     processor->OnLogEvent(
             CreateAcquireWakelockEvent(eventTimeNs, attributionUids1, attributionTags1, "wl1")
                     .get(),
             eventTimeNs);
     EXPECT_EQ(alertPreserveCount, 1);
-    EXPECT_EQ(alertNewCount, 0);
+    EXPECT_EQ(alertNewCount, 1);
+    EXPECT_EQ(alertNewDims, wlUid2);
 
     eventTimeNs = bucket2StartTimeNs + 71 * NS_PER_SEC;
     processor->OnLogEvent(
@@ -2130,17 +2131,7 @@ TEST_F(ConfigUpdateE2eTest, TestAnomalyDurationMetric) {
             eventTimeNs);
     EXPECT_EQ(alertPreserveCount, 2);
     EXPECT_EQ(alertPreserveDims, wlUid1);
-    EXPECT_EQ(alertNewCount, 0);
-
-    // Random event to fire alert new for uid1.
-    eventTimeNs = bucket2StartTimeNs + 86 * NS_PER_SEC;
-    processor->OnLogEvent(
-            CreateScreenBrightnessChangedEvent(eventTimeNs, 50)
-                    .get(),
-            eventTimeNs);
-    EXPECT_EQ(alertPreserveCount, 2);
     EXPECT_EQ(alertNewCount, 1);
-    EXPECT_EQ(alertNewDims, wlUid2);
 
     // Clear data so it doesn't stay on disk.
     vector<uint8_t> buffer;
