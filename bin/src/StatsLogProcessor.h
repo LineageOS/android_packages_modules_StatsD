@@ -327,6 +327,7 @@ private:
     FRIEND_TEST(AnomalyDetectionE2eTest, TestCountMetric_save_refractory_to_disk);
     FRIEND_TEST(AnomalyDetectionE2eTest, TestCountMetric_load_refractory_from_disk);
     FRIEND_TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_single_bucket);
+    FRIEND_TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_partial_bucket);
     FRIEND_TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_multiple_buckets);
     FRIEND_TEST(AnomalyDetectionE2eTest, TestDurationMetric_SUM_long_refractory_period);
 
@@ -340,6 +341,7 @@ private:
 
     FRIEND_TEST(ConfigUpdateE2eTest, TestGaugeMetric);
     FRIEND_TEST(ConfigUpdateE2eTest, TestValueMetric);
+    FRIEND_TEST(ConfigUpdateE2eTest, TestAnomalyDurationMetric);
     FRIEND_TEST(ConfigUpdateE2eAbTest, TestHashStrings);
     FRIEND_TEST(ConfigUpdateE2eAbTest, TestUidMapVersionStringInstaller);
     FRIEND_TEST(ConfigUpdateE2eAbTest, TestConfigTtl);
