@@ -166,21 +166,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         final int MIN_DURATION = 350;
         final int MAX_DURATION = 700;
 
-        BatteryStatsProto batterystatsProto = getBatteryStatsProto();
         HashMap<Integer, HashMap<Long, Long>> statsdWakelockData = getStatsdWakelockData();
-
-        // Get the batterystats wakelock time and make sure it's reasonable.
-        android.os.TimerProto bsWakelock =
-                getBatteryStatsPartialWakelock(batterystatsProto, EXPECTED_UID, EXPECTED_TAG);
-        assertWithMessage(
-                "No partial wakelocks with uid %s and tag %s in BatteryStats",
-                EXPECTED_UID, EXPECTED_TAG
-        ).that(bsWakelock).isNotNull();
-        long bsDurationMs = bsWakelock.getTotalDurationMs();
-        assertWithMessage(
-                "Wakelock in batterystats with uid %s and tag %s was too short or too long",
-                EXPECTED_UID, EXPECTED_TAG
-        ).that(bsDurationMs).isIn(Range.closed((long) MIN_DURATION, (long) MAX_DURATION));
 
         // Get the statsd wakelock time and make sure it's reasonable.
         assertWithMessage("No wakelocks with uid %s in statsd", EXPECTED_UID)
@@ -193,13 +179,6 @@ public class ValidationTests extends DeviceAtomTestCase {
                 "Wakelock in statsd with uid %s and tag %s was too short or too long", 
                 EXPECTED_UID, EXPECTED_TAG
         ).that(statsdDurationMs).isIn(Range.closed((long) MIN_DURATION, (long) MAX_DURATION));
-
-        // Compare batterystats with statsd.
-        long difference = Math.abs(statsdDurationMs - bsDurationMs);
-        assertWithMessage(
-                "For uid=%s tag=%s had BatteryStats=%s ms but statsd=%s ms",
-                EXPECTED_UID, EXPECTED_TAG, bsDurationMs, statsdDurationMs
-        ).that(difference).isAtMost(Math.max(bsDurationMs / 10, 10L));
 
         setAodState(aodState); // restores AOD to initial state.
     }
