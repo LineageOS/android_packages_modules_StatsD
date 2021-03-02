@@ -65,10 +65,11 @@ public:
 
     void updateCurrentStateKey(const int32_t atomId, const FieldValue& newState);
 
-private:
+protected:
     // Returns true if at least one of the mInfos is started.
-    bool anyStarted();
+    bool hasAccumulatingDuration() override;
 
+private:
     std::unordered_map<HashableDimensionKey, DurationInfo> mInfos;
 
     void noteConditionChanged(const HashableDimensionKey& key, bool conditionMet,

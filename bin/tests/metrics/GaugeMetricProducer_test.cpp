@@ -221,7 +221,8 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPushedEvents) {
                                       bucketStartTimeNs, pullerManager);
     gaugeProducer.prepareFirstBucket();
 
-    sp<AnomalyTracker> anomalyTracker = gaugeProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            gaugeProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
     EXPECT_TRUE(anomalyTracker != nullptr);
 
     LogEvent event1(/*uid=*/0, /*pid=*/0);
@@ -571,7 +572,8 @@ TEST(GaugeMetricProducerTest, TestPulledEventsAnomalyDetection) {
     alert.set_num_buckets(2);
     const int32_t refPeriodSec = 60;
     alert.set_refractory_period_secs(refPeriodSec);
-    sp<AnomalyTracker> anomalyTracker = gaugeProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            gaugeProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
 
     int tagId = 1;
     vector<shared_ptr<LogEvent>> allData;

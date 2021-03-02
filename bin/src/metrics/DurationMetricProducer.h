@@ -16,10 +16,10 @@
 
 #pragma once
 
+#include <android/util/ProtoOutputStream.h>
 
 #include <unordered_map>
 
-#include <android/util/ProtoOutputStream.h>
 #include "../anomaly/DurationAnomalyTracker.h"
 #include "../condition/ConditionTracker.h"
 #include "../matchers/matcher_util.h"
@@ -52,10 +52,12 @@ public:
 
     virtual ~DurationMetricProducer();
 
-    sp<AnomalyTracker> addAnomalyTracker(const Alert &alert,
-                                         const sp<AlarmMonitor>& anomalyAlarmMonitor) override;
+    sp<AnomalyTracker> addAnomalyTracker(const Alert& alert,
+                                         const sp<AlarmMonitor>& anomalyAlarmMonitor,
+                                         const UpdateStatus& updateStatus,
+                                         const int64_t updateTimeNs) override;
 
-    void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) override;
+    void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker, const int64_t updateTimeNs) override;
 
     void onStateChanged(const int64_t eventTimeNs, const int32_t atomId,
                         const HashableDimensionKey& primaryKey, const FieldValue& oldState,
@@ -137,7 +139,8 @@ private:
             std::unordered_map<int, std::vector<int>>& deactivationAtomTrackerToMetricMap,
             std::vector<int>& metricsWithActivation) override;
 
-    void addAnomalyTrackerLocked(sp<AnomalyTracker>& anomalyTracker);
+    void addAnomalyTrackerLocked(sp<AnomalyTracker>& anomalyTracker,
+                                 const UpdateStatus& updateStatus, const int64_t updateTimeNs);
 
     const DurationMetric_AggregationType mAggregationType;
 

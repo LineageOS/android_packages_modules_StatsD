@@ -268,7 +268,8 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInCurrentBucket) {
     CountMetricProducer countProducer(kConfigKey, metric, -1 /* no condition */, {}, wizard,
                                       protoHash, bucketStartTimeNs, bucketStartTimeNs);
 
-    sp<AnomalyTracker> anomalyTracker = countProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            countProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
     EXPECT_TRUE(anomalyTracker != nullptr);
 
     // Bucket is not flushed yet.
@@ -400,7 +401,8 @@ TEST(CountMetricProducerTest, TestAnomalyDetectionUnSliced) {
     CountMetricProducer countProducer(kConfigKey, metric, -1 /*-1 meaning no condition*/, {},
                                       wizard, protoHash, bucketStartTimeNs, bucketStartTimeNs);
 
-    sp<AnomalyTracker> anomalyTracker = countProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            countProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
 
     int tagId = 1;
     LogEvent event1(/*uid=*/0, /*pid=*/0);

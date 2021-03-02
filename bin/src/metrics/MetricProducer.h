@@ -341,8 +341,10 @@ public:
     }
 
     /* Adds an AnomalyTracker and returns it. */
-    virtual sp<AnomalyTracker> addAnomalyTracker(const Alert &alert,
-                                                 const sp<AlarmMonitor>& anomalyAlarmMonitor) {
+    virtual sp<AnomalyTracker> addAnomalyTracker(const Alert& alert,
+                                                 const sp<AlarmMonitor>& anomalyAlarmMonitor,
+                                                 const UpdateStatus& updateStatus,
+                                                 const int64_t updateTimeNs) {
         std::lock_guard<std::mutex> lock(mMutex);
         sp<AnomalyTracker> anomalyTracker = new AnomalyTracker(alert, mConfigKey);
         mAnomalyTrackers.push_back(anomalyTracker);
@@ -350,7 +352,7 @@ public:
     }
 
     /* Adds an AnomalyTracker that has already been created */
-    virtual void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) {
+    virtual void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker, const int64_t updateTimeNs) {
         std::lock_guard<std::mutex> lock(mMutex);
         mAnomalyTrackers.push_back(anomalyTracker);
     }

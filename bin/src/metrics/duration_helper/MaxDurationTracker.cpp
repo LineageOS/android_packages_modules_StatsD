@@ -113,7 +113,7 @@ void MaxDurationTracker::noteStop(const HashableDimensionKey& key, const int64_t
                      (long long)duration.lastStartTime, (long long)eventTime,
                      (long long)durationTime);
                 duration.lastDuration += durationTime;
-                if (anyStarted()) {
+                if (hasAccumulatingDuration()) {
                     // In case any other dimensions are still started, we need to keep the alarm
                     // set.
                     startAnomalyAlarm(eventTime);
@@ -142,7 +142,7 @@ void MaxDurationTracker::noteStop(const HashableDimensionKey& key, const int64_t
     }
 }
 
-bool MaxDurationTracker::anyStarted() {
+bool MaxDurationTracker::hasAccumulatingDuration() {
     for (auto& pair : mInfos) {
         if (pair.second.state == kStarted) {
             return true;
@@ -267,7 +267,7 @@ void MaxDurationTracker::noteConditionChanged(const HashableDimensionKey& key, b
                 stopAnomalyAlarm(timestamp);
                 it->second.state = DurationState::kPaused;
                 it->second.lastDuration += (timestamp - it->second.lastStartTime);
-                if (anyStarted()) {
+                if (hasAccumulatingDuration()) {
                     // In case any other dimensions are still started, we need to set the alarm.
                     startAnomalyAlarm(timestamp);
                 }

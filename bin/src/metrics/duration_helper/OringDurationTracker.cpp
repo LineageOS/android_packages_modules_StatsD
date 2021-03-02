@@ -352,6 +352,9 @@ void OringDurationTracker::onStateChanged(const int64_t timestamp, const int32_t
     updateCurrentStateKey(atomId, newState);
 }
 
+bool OringDurationTracker::hasAccumulatingDuration() {
+    return !mStarted.empty();
+}
 int64_t OringDurationTracker::predictAnomalyTimestampNs(const AnomalyTracker& anomalyTracker,
                                                         const int64_t eventTimestampNs) const {
     // The anomaly threshold.

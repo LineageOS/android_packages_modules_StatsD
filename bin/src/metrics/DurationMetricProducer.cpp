@@ -262,7 +262,8 @@ void DurationMetricProducer::initTrueDimensions(const int whatIndex, const int64
 }
 
 sp<AnomalyTracker> DurationMetricProducer::addAnomalyTracker(
-        const Alert &alert, const sp<AlarmMonitor>& anomalyAlarmMonitor) {
+        const Alert& alert, const sp<AlarmMonitor>& anomalyAlarmMonitor,
+        const UpdateStatus& updateStatus, const int64_t updateTimeNs) {
     std::lock_guard<std::mutex> lock(mMutex);
     if (mAggregationType == DurationMetric_AggregationType_SUM) {
         if (alert.trigger_if_sum_gt() > alert.num_buckets() * mBucketSizeNs) {
@@ -273,22 +274,26 @@ sp<AnomalyTracker> DurationMetricProducer::addAnomalyTracker(
     }
     sp<AnomalyTracker> anomalyTracker =
             new DurationAnomalyTracker(alert, mConfigKey, anomalyAlarmMonitor);
-    addAnomalyTrackerLocked(anomalyTracker);
+    // The update status is either new or replaced.
+    addAnomalyTrackerLocked(anomalyTracker, updateStatus, updateTimeNs);
     return anomalyTracker;
 }
 
 // Adds an AnomalyTracker that has already been created.
 // Note: this gets called on config updates, and will only get called if the metric and the
 // associated alert are preserved, which means the AnomalyTracker must be a DurationAnomalyTracker.
-void DurationMetricProducer::addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) {
+void DurationMetricProducer::addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker,
+                                               const int64_t updateTimeNs) {
     std::lock_guard<std::mutex> lock(mMutex);
-    addAnomalyTrackerLocked(anomalyTracker);
+    addAnomalyTrackerLocked(anomalyTracker, UpdateStatus::UPDATE_PRESERVE, updateTimeNs);
 }
 
-void DurationMetricProducer::addAnomalyTrackerLocked(sp<AnomalyTracker>& anomalyTracker) {
+void DurationMetricProducer::addAnomalyTrackerLocked(sp<AnomalyTracker>& anomalyTracker,
+                                                     const UpdateStatus& updateStatus,
+                                                     const int64_t updateTimeNs) {
     mAnomalyTrackers.push_back(anomalyTracker);
     for (const auto& [_, durationTracker] : mCurrentSlicedDurationTrackerMap) {
-        durationTracker->addAnomalyTracker(anomalyTracker);
+        durationTracker->addAnomalyTracker(anomalyTracker, updateStatus, updateTimeNs);
     }
 }
 void DurationMetricProducer::onStateChanged(const int64_t eventTimeNs, const int32_t atomId,

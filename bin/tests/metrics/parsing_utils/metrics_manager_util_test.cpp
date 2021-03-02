@@ -804,7 +804,9 @@ TEST(MetricsManagerTest, TestCreateAnomalyTrackerInvalidMetric) {
     sp<AlarmMonitor> anomalyAlarmMonitor;
     vector<sp<MetricProducer>> metricProducers;
     // Pass in empty metric producers, causing an error.
-    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, {}, metricProducers), nullopt);
+    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, UPDATE_NEW, /*updateTime=*/123, {},
+                                   metricProducers),
+              nullopt);
 }
 
 TEST(MetricsManagerTest, TestCreateAnomalyTrackerNoThreshold) {
@@ -821,7 +823,9 @@ TEST(MetricsManagerTest, TestCreateAnomalyTrackerNoThreshold) {
     vector<sp<MetricProducer>> metricProducers({new CountMetricProducer(
             kConfigKey, metric, 0, {ConditionState::kUnknown}, wizard, 0x0123456789, 0, 0)});
     sp<AlarmMonitor> anomalyAlarmMonitor;
-    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, {{1, 0}}, metricProducers), nullopt);
+    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, UPDATE_NEW, /*updateTime=*/123,
+                                   {{1, 0}}, metricProducers),
+              nullopt);
 }
 
 TEST(MetricsManagerTest, TestCreateAnomalyTrackerMissingBuckets) {
@@ -838,7 +842,9 @@ TEST(MetricsManagerTest, TestCreateAnomalyTrackerMissingBuckets) {
     vector<sp<MetricProducer>> metricProducers({new CountMetricProducer(
             kConfigKey, metric, 0, {ConditionState::kUnknown}, wizard, 0x0123456789, 0, 0)});
     sp<AlarmMonitor> anomalyAlarmMonitor;
-    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, {{1, 0}}, metricProducers), nullopt);
+    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, UPDATE_NEW, /*updateTime=*/123,
+                                   {{1, 0}}, metricProducers),
+              nullopt);
 }
 
 TEST(MetricsManagerTest, TestCreateAnomalyTrackerGood) {
@@ -856,7 +862,9 @@ TEST(MetricsManagerTest, TestCreateAnomalyTrackerGood) {
     vector<sp<MetricProducer>> metricProducers({new CountMetricProducer(
             kConfigKey, metric, 0, {ConditionState::kUnknown}, wizard, 0x0123456789, 0, 0)});
     sp<AlarmMonitor> anomalyAlarmMonitor;
-    EXPECT_NE(createAnomalyTracker(alert, anomalyAlarmMonitor, {{1, 0}}, metricProducers), nullopt);
+    EXPECT_NE(createAnomalyTracker(alert, anomalyAlarmMonitor, UPDATE_NEW, /*updateTime=*/123,
+                                   {{1, 0}}, metricProducers),
+              nullopt);
 }
 
 TEST(MetricsManagerTest, TestCreateAnomalyTrackerDurationTooLong) {
@@ -879,7 +887,9 @@ TEST(MetricsManagerTest, TestCreateAnomalyTrackerDurationTooLong) {
             1 /* start index */, 2 /* stop index */, 3 /* stop_all index */, false /*nesting*/,
             wizard, 0x0123456789, dimensions, 0, 0)});
     sp<AlarmMonitor> anomalyAlarmMonitor;
-    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, {{1, 0}}, metricProducers), nullopt);
+    EXPECT_EQ(createAnomalyTracker(alert, anomalyAlarmMonitor, UPDATE_NEW, /*updateTime=*/123,
+                                   {{1, 0}}, metricProducers),
+              nullopt);
 }
 
 TEST(MetricsManagerTest, TestCreateDurationProducerDimensionsInWhatInvalid) {

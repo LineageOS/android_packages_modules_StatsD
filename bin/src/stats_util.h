@@ -24,6 +24,16 @@ namespace android {
 namespace os {
 namespace statsd {
 
+// Possible update states for a component. PRESERVE means we should keep the existing one.
+// REPLACE means we should create a new one because the existing one changed
+// NEW means we should create a new one because one does not currently exist.
+enum UpdateStatus {
+    UPDATE_UNKNOWN = 0,
+    UPDATE_PRESERVE = 1,
+    UPDATE_REPLACE = 2,
+    UPDATE_NEW = 3,
+};
+
 const HashableDimensionKey DEFAULT_DIMENSION_KEY = HashableDimensionKey();
 const MetricDimensionKey DEFAULT_METRIC_DIMENSION_KEY = MetricDimensionKey();
 

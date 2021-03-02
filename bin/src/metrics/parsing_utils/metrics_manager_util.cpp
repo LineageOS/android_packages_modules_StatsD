@@ -838,6 +838,7 @@ optional<sp<MetricProducer>> createGaugeMetricProducerAndUpdateMetadata(
 
 optional<sp<AnomalyTracker>> createAnomalyTracker(
         const Alert& alert, const sp<AlarmMonitor>& anomalyAlarmMonitor,
+        const UpdateStatus& updateStatus, const int64_t currentTimeNs,
         const unordered_map<int64_t, int>& metricProducerMap,
         vector<sp<MetricProducer>>& allMetricProducers) {
     const auto& itr = metricProducerMap.find(alert.metric_id());
@@ -857,7 +858,8 @@ optional<sp<AnomalyTracker>> createAnomalyTracker(
     }
     const int metricIndex = itr->second;
     sp<MetricProducer> metric = allMetricProducers[metricIndex];
-    sp<AnomalyTracker> anomalyTracker = metric->addAnomalyTracker(alert, anomalyAlarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            metric->addAnomalyTracker(alert, anomalyAlarmMonitor, updateStatus, currentTimeNs);
     if (anomalyTracker == nullptr) {
         // The ALOGW for this invalid alert was already displayed in addAnomalyTracker().
         return nullopt;
@@ -1123,7 +1125,8 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
     return true;
 }
 
-bool initAlerts(const StatsdConfig& config, const unordered_map<int64_t, int>& metricProducerMap,
+bool initAlerts(const StatsdConfig& config, const int64_t currentTimeNs,
+                const unordered_map<int64_t, int>& metricProducerMap,
                 unordered_map<int64_t, int>& alertTrackerMap,
                 const sp<AlarmMonitor>& anomalyAlarmMonitor,
                 vector<sp<MetricProducer>>& allMetricProducers,
@@ -1131,8 +1134,9 @@ bool initAlerts(const StatsdConfig& config, const unordered_map<int64_t, int>& m
     for (int i = 0; i < config.alert_size(); i++) {
         const Alert& alert = config.alert(i);
         alertTrackerMap.insert(std::make_pair(alert.id(), allAnomalyTrackers.size()));
-        optional<sp<AnomalyTracker>> anomalyTracker = createAnomalyTracker(
-                alert, anomalyAlarmMonitor, metricProducerMap, allMetricProducers);
+        optional<sp<AnomalyTracker>> anomalyTracker =
+                createAnomalyTracker(alert, anomalyAlarmMonitor, UpdateStatus::UPDATE_NEW,
+                                     currentTimeNs, metricProducerMap, allMetricProducers);
         if (!anomalyTracker) {
             return false;
         }
@@ -1223,7 +1227,7 @@ bool initStatsdConfig(const ConfigKey& key, const StatsdConfig& config, const sp
         ALOGE("initMetricProducers failed");
         return false;
     }
-    if (!initAlerts(config, metricProducerMap, alertTrackerMap, anomalyAlarmMonitor,
+    if (!initAlerts(config, currentTimeNs, metricProducerMap, alertTrackerMap, anomalyAlarmMonitor,
                     allMetricProducers, allAnomalyTrackers)) {
         ALOGE("initAlerts failed");
         return false;

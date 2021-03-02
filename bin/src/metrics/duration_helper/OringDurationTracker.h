@@ -64,6 +64,10 @@ public:
 
     void updateCurrentStateKey(const int32_t atomId, const FieldValue& newState);
 
+protected:
+    // Returns true if at least one of the mInfos is started.
+    bool hasAccumulatingDuration() override;
+
 private:
     // We don't need to keep track of individual durations. The information that's needed is:
     // 1) which keys are started. We record the first start time.

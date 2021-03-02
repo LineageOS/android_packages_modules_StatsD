@@ -373,7 +373,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationAnomaly) {
             1 /* start index */, 2 /* stop index */, 3 /* stop_all index */, false /*nesting*/,
             wizard, protoHash, dimensions, bucketStartTimeNs, bucketStartTimeNs);
 
-    sp<AnomalyTracker> anomalyTracker = durationProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            durationProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
     EXPECT_TRUE(anomalyTracker != nullptr);
 
     int64_t startTimeNs = bucketStartTimeNs + 1;

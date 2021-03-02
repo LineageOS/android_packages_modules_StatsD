@@ -192,6 +192,7 @@ optional<sp<MetricProducer>> createGaugeMetricProducerAndUpdateMetadata(
 // Returns an sp to the AnomalyTracker, or nullopt if there was an error.
 optional<sp<AnomalyTracker>> createAnomalyTracker(
         const Alert& alert, const sp<AlarmMonitor>& anomalyAlarmMonitor,
+        const UpdateStatus& updateStatus, const int64_t currentTimeNs,
         const std::unordered_map<int64_t, int>& metricProducerMap,
         std::vector<sp<MetricProducer>>& allMetricProducers);
 
