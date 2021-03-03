@@ -71,6 +71,7 @@ public class TestDrive {
             "AID_MEDIA",
             "AID_NETWORK_STACK",
             "com.google.android.providers.media.module",
+            "com.google.android.cellbroadcastreceiver",
     };
     private static final String[] DEFAULT_PULL_SOURCES = {
             "AID_SYSTEM",
