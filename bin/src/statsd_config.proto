@@ -231,6 +231,8 @@ message CountMetric {
 
   repeated MetricStateLink state_link = 9;
 
+  optional UploadThreshold threshold = 10;
+
   optional FieldMatcher dimensions_in_condition = 7 [deprecated = true];
 
   reserved 100;

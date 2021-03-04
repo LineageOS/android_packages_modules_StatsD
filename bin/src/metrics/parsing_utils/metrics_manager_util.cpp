@@ -418,6 +418,13 @@ optional<sp<MetricProducer>> createCountMetricProducerAndUpdateMetadata(
         return nullopt;
     }
 
+    if (metric.has_threshold() &&
+        (metric.threshold().value_comparison_case() == UploadThreshold::kLtFloat ||
+         metric.threshold().value_comparison_case() == UploadThreshold::kGtFloat)) {
+        ALOGW("Count metric incorrect upload threshold type or no type used");
+        return nullopt;
+    }
+
     return {new CountMetricProducer(key, metric, conditionIndex, initialConditionCache, wizard,
                                     metricHash, timeBaseNs, currentTimeNs, eventActivationMap,
                                     eventDeactivationMap, slicedStateAtoms, stateGroupMap)};
