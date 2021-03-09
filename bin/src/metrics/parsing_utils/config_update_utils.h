@@ -33,16 +33,6 @@ namespace statsd {
 // *Note*: only updateStatsdConfig() should be called from outside this file.
 // All other functions are intermediate steps, created to make unit testing easier.
 
-// Possible update states for a component. PRESERVE means we should keep the existing one.
-// REPLACE means we should create a new one because the existing one changed
-// NEW means we should create a new one because one does not currently exist.
-enum UpdateStatus {
-    UPDATE_UNKNOWN = 0,
-    UPDATE_PRESERVE = 1,
-    UPDATE_REPLACE = 2,
-    UPDATE_NEW = 3,
-};
-
 // Recursive function to determine if a matcher needs to be updated.
 // input:
 // [config]: the input StatsdConfig
@@ -214,6 +204,7 @@ bool determineAlertUpdateStatus(const Alert& alert,
 // Update MetricProducers.
 // input:
 // [config]: the input config
+// [currentTimeNs]: time of the config update
 // [metricProducerMap]: metric id to index mapping in the new config
 // [replacedMetrics]: set of metric ids that have changed and were replaced
 // [oldAlertTrackerMap]: alert id to index mapping in the existing MetricsManager.
@@ -226,7 +217,7 @@ bool determineAlertUpdateStatus(const Alert& alert,
 // output:
 // [newAlertTrackerMap]: mapping of alert id to index in the new config
 // [newAnomalyTrackers]: contains the list of sp to the AnomalyTrackers created.
-bool updateAlerts(const StatsdConfig& config,
+bool updateAlerts(const StatsdConfig& config, const int64_t currentTimeNs,
                   const std::unordered_map<int64_t, int>& metricProducerMap,
                   const std::set<int64_t>& replacedMetrics,
                   const std::unordered_map<int64_t, int>& oldAlertTrackerMap,
