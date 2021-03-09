@@ -993,7 +993,8 @@ TEST(ValueMetricProducerTest, TestAnomalyDetection) {
                                       pullerManager);
     valueProducer.prepareFirstBucket();
 
-    sp<AnomalyTracker> anomalyTracker = valueProducer.addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            valueProducer.addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
 
     LogEvent event1(/*uid=*/0, /*pid=*/0);
     CreateRepeatedValueLogEvent(&event1, tagId, bucketStartTimeNs + 1 * NS_PER_SEC, 10);
@@ -1076,7 +1077,8 @@ TEST(ValueMetricProducerTest, TestAnomalyDetectionMultipleBucketsSkipped) {
     sp<ValueMetricProducer> valueProducer =
             ValueMetricProducerTestHelper::createValueProducerWithCondition(pullerManager, metric,
                                                                             ConditionState::kFalse);
-    sp<AnomalyTracker> anomalyTracker = valueProducer->addAnomalyTracker(alert, alarmMonitor);
+    sp<AnomalyTracker> anomalyTracker =
+            valueProducer->addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
 
     valueProducer->onConditionChanged(true, bucketStartTimeNs + 1);
 
