@@ -3389,8 +3389,9 @@ TEST_F(ConfigUpdateTest, TestUpdateAlerts) {
     unordered_map<int, vector<int>> deactivationAtomTrackerToMetricMap;
     vector<int> metricsWithActivation;
     set<int64_t> replacedMetrics;
+    int64_t currentTimeNs = 12345;
     EXPECT_TRUE(updateMetrics(
-            key, config, /*timeBaseNs=*/123, /*currentTimeNs=*/12345, new StatsPullerManager(),
+            key, config, /*timeBaseNs=*/123, currentTimeNs, new StatsPullerManager(),
             oldAtomMatchingTrackerMap, oldAtomMatchingTrackerMap, /*replacedMatchers*/ {},
             oldAtomMatchingTrackers, oldConditionTrackerMap, /*replacedConditions=*/{},
             oldConditionTrackers, {ConditionState::kUnknown}, /*stateAtomIdMap*/ {},
@@ -3404,9 +3405,9 @@ TEST_F(ConfigUpdateTest, TestUpdateAlerts) {
 
     unordered_map<int64_t, int> newAlertTrackerMap;
     vector<sp<AnomalyTracker>> newAnomalyTrackers;
-    EXPECT_TRUE(updateAlerts(config, newMetricProducerMap, replacedMetrics, oldAlertTrackerMap,
-                             oldAnomalyTrackers, anomalyAlarmMonitor, newMetricProducers,
-                             newAlertTrackerMap, newAnomalyTrackers));
+    EXPECT_TRUE(updateAlerts(config, currentTimeNs, newMetricProducerMap, replacedMetrics,
+                             oldAlertTrackerMap, oldAnomalyTrackers, anomalyAlarmMonitor,
+                             newMetricProducers, newAlertTrackerMap, newAnomalyTrackers));
 
     unordered_map<int64_t, int> expectedAlertMap = {
             {alert1Id, alert1Index},
