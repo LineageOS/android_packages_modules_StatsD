@@ -38,7 +38,6 @@ java_binary_host {
 
 java_test_host {
     name: "statsd_testdrive_test",
-    test_suites: ["general-tests"],
     srcs: ["test/com/android/statsd/shelltools/testdrive/*.java"],
     static_libs: [
         "statsd_testdrive_lib",
