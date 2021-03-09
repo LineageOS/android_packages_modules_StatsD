@@ -959,7 +959,8 @@ bool determineAlertUpdateStatus(const Alert& alert,
     return true;
 }
 
-bool updateAlerts(const StatsdConfig& config, const unordered_map<int64_t, int>& metricProducerMap,
+bool updateAlerts(const StatsdConfig& config, const int64_t currentTimeNs,
+                  const unordered_map<int64_t, int>& metricProducerMap,
                   const set<int64_t>& replacedMetrics,
                   const unordered_map<int64_t, int>& oldAlertTrackerMap,
                   const vector<sp<AnomalyTracker>>& oldAnomalyTrackers,
@@ -998,14 +999,16 @@ bool updateAlerts(const StatsdConfig& config, const unordered_map<int64_t, int>&
                           (long long)alert.metric_id());
                     return false;
                 }
-                allMetricProducers[metricProducerIt->second]->addAnomalyTracker(anomalyTracker);
+                allMetricProducers[metricProducerIt->second]->addAnomalyTracker(anomalyTracker,
+                                                                                currentTimeNs);
                 newAnomalyTrackers.push_back(anomalyTracker);
                 break;
             }
             case UPDATE_REPLACE:
             case UPDATE_NEW: {
-                optional<sp<AnomalyTracker>> anomalyTracker = createAnomalyTracker(
-                        alert, anomalyAlarmMonitor, metricProducerMap, allMetricProducers);
+                optional<sp<AnomalyTracker>> anomalyTracker =
+                        createAnomalyTracker(alert, anomalyAlarmMonitor, alertUpdateStatuses[i],
+                                             currentTimeNs, metricProducerMap, allMetricProducers);
                 if (!anomalyTracker) {
                     return false;
                 }
@@ -1097,9 +1100,9 @@ bool updateStatsdConfig(const ConfigKey& key, const StatsdConfig& config, const 
         return false;
     }
 
-    if (!updateAlerts(config, newMetricProducerMap, replacedMetrics, oldAlertTrackerMap,
-                      oldAnomalyTrackers, anomalyAlarmMonitor, newMetricProducers,
-                      newAlertTrackerMap, newAnomalyTrackers)) {
+    if (!updateAlerts(config, currentTimeNs, newMetricProducerMap, replacedMetrics,
+                      oldAlertTrackerMap, oldAnomalyTrackers, anomalyAlarmMonitor,
+                      newMetricProducers, newAlertTrackerMap, newAnomalyTrackers)) {
         ALOGE("updateAlerts failed");
         return false;
     }
