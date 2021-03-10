@@ -20,6 +20,7 @@
 #include "anomaly/DurationAnomalyTracker.h"
 #include "condition/ConditionWizard.h"
 #include "config/ConfigKey.h"
+#include "metrics/parsing_utils/config_update_utils.h"
 #include "stats_util.h"
 
 namespace android {
@@ -133,11 +134,26 @@ public:
     // Replace old value with new value for the given state atom.
     virtual void updateCurrentStateKey(const int32_t atomId, const FieldValue& newState) = 0;
 
-    void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker) {
+    void addAnomalyTracker(sp<AnomalyTracker>& anomalyTracker, const UpdateStatus& updateStatus,
+                           const int64_t updateTimeNs) {
         mAnomalyTrackers.push_back(anomalyTracker);
+        // Preserved anomaly trackers will have the correct alarm times.
+        // New/replaced alerts will need to set alarms for pending durations, or may have already
+        // fired if the full bucket duration is high enough.
+        // NB: this depends on a config updating that splits a partial bucket having just happened.
+        // If this constraint changes, predict will return the wrong timestamp.
+        if (updateStatus == UpdateStatus::UPDATE_NEW ||
+            updateStatus == UpdateStatus::UPDATE_PRESERVE) {
+            const int64_t alarmTimeNs = predictAnomalyTimestampNs(*anomalyTracker, updateTimeNs);
+            if (alarmTimeNs <= updateTimeNs || hasAccumulatingDuration()) {
+                anomalyTracker->startAlarm(mEventKey, std::max(alarmTimeNs, updateTimeNs));
+            }
+        }
     }
 
 protected:
+    virtual bool hasAccumulatingDuration() = 0;
+
     int64_t getCurrentBucketEndTimeNs() const {
         return mStartTimeNs + (mCurrentBucketNum + 1) * mBucketSizeNs;
     }
