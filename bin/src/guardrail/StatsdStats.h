@@ -116,7 +116,7 @@ public:
 
     const static int kMaxTimestampCount = 20;
 
-    const static int kMaxLogSourceCount = 50;
+    const static int kMaxLogSourceCount = 150;
 
     const static int kMaxPullAtomPackages = 100;
 
