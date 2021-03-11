@@ -111,6 +111,10 @@ CountMetricProducer::CountMetricProducer(
         mMetric2StateLinks.push_back(ms);
     }
 
+    if (metric.has_threshold()) {
+        mUploadThreshold = metric.threshold();
+    }
+
     flushIfNeededLocked(startTimeNs);
     // Adjust start for partial bucket
     mCurrentBucketStartTimeNs = startTimeNs;
@@ -374,6 +378,26 @@ void CountMetricProducer::flushIfNeededLocked(const int64_t& eventTimeNs) {
          (long long)mCurrentBucketStartTimeNs);
 }
 
+bool CountMetricProducer::countPassesThreshold(const int64_t& count) {
+    if (mUploadThreshold == nullopt) {
+        return true;
+    }
+
+    switch (mUploadThreshold->value_comparison_case()) {
+        case UploadThreshold::kLtInt:
+            return count < mUploadThreshold->lt_int();
+        case UploadThreshold::kGtInt:
+            return count > mUploadThreshold->gt_int();
+        case UploadThreshold::kLteInt:
+            return count <= mUploadThreshold->lte_int();
+        case UploadThreshold::kGteInt:
+            return count >= mUploadThreshold->gte_int();
+        default:
+            ALOGE("Count metric incorrect upload threshold type used");
+            return false;
+    }
+}
+
 void CountMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
                                                    const int64_t& nextBucketStartTimeNs) {
     int64_t fullBucketEndTimeNs = getCurrentBucketEndTimeNs();
@@ -385,12 +409,13 @@ void CountMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
         info.mBucketEndNs = fullBucketEndTimeNs;
     }
     for (const auto& counter : *mCurrentSlicedCounter) {
-        info.mCount = counter.second;
-        auto& bucketList = mPastBuckets[counter.first];
-        bucketList.push_back(info);
-        VLOG("metric %lld, dump key value: %s -> %lld", (long long)mMetricId,
-             counter.first.toString().c_str(),
-             (long long)counter.second);
+        if (countPassesThreshold(counter.second)) {
+            info.mCount = counter.second;
+            auto& bucketList = mPastBuckets[counter.first];
+            bucketList.push_back(info);
+            VLOG("metric %lld, dump key value: %s -> %lld", (long long)mMetricId,
+                 counter.first.toString().c_str(), (long long)counter.second);
+        }
     }
 
     // If we have finished a full bucket, then send this to anomaly tracker.

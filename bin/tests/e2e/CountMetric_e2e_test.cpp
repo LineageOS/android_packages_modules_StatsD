@@ -893,6 +893,78 @@ TEST(CountMetricE2eTest, TestMultipleSlicedStates) {
     EXPECT_EQ(1, data.bucket_info(1).count());
 }
 
+TEST(CountMetricE2eTest, TestUploadThreshold) {
+    // Initialize config.
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    auto appCrashMatcher = CreateSimpleAtomMatcher("APP_CRASH_OCCURRED", util::APP_CRASH_OCCURRED);
+    *config.add_atom_matcher() = appCrashMatcher;
+
+    int64_t thresholdCount = 2;
+    UploadThreshold threshold;
+    threshold.set_gt_int(thresholdCount);
+
+    int64_t metricId = 123456;
+    CountMetric countMetric = createCountMetric("COUNT", appCrashMatcher.id(), nullopt, {});
+    *countMetric.mutable_dimensions_in_what() =
+            CreateDimensions(util::APP_CRASH_OCCURRED, {1 /*uid*/});
+    *countMetric.mutable_threshold() = threshold;
+    *config.add_count_metric() = countMetric;
+
+    // Initialize StatsLogProcessor.
+    const uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    const uint64_t bucketSizeNs =
+            TimeUnitToBucketSizeInMillis(config.count_metric(0).bucket()) * 1000000LL;
+    int uid = 12345;
+    int64_t cfgId = 98765;
+    ConfigKey cfgKey(uid, cfgId);
+    auto processor = CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, cfgKey);
+
+    int appUid1 = 1;
+    int appUid2 = 2;
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(
+            CreateAppCrashOccurredEvent(bucketStartTimeNs + 20 * NS_PER_SEC, appUid1));  // 0:30
+    events.push_back(
+            CreateAppCrashOccurredEvent(bucketStartTimeNs + 40 * NS_PER_SEC, appUid2));  // 0:50
+    events.push_back(
+            CreateAppCrashOccurredEvent(bucketStartTimeNs + 60 * NS_PER_SEC, appUid1));  // 1:10
+    events.push_back(
+            CreateAppCrashOccurredEvent(bucketStartTimeNs + 65 * NS_PER_SEC, appUid1));  // 1:15
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Check dump report.
+    vector<uint8_t> buffer;
+    ConfigMetricsReportList reports;
+    processor->onDumpReport(cfgKey, bucketStartTimeNs + bucketSizeNs + 1, false, true, ADB_DUMP,
+                            FAST, &buffer);
+    ASSERT_GT(buffer.size(), 0);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+
+    ASSERT_EQ(1, reports.reports_size());
+    ASSERT_EQ(1, reports.reports(0).metrics_size());
+    EXPECT_TRUE(reports.reports(0).metrics(0).has_count_metrics());
+    StatsLogReport::CountMetricDataWrapper countMetrics;
+    sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).count_metrics(), &countMetrics);
+    ASSERT_EQ(1, countMetrics.data_size());
+
+    CountMetricData data = countMetrics.data(0);
+
+    // Uid 1 reports a count greater than the threshold.
+    // Uid 2 is dropped because the count was less than the threshold.
+    ValidateUidDimension(data.dimensions_in_what(), util::APP_CRASH_OCCURRED, appUid1);
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        3);
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
