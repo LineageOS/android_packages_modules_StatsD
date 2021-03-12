@@ -126,6 +126,8 @@ private:
 
     bool hitGuardRailLocked(const MetricDimensionKey& newKey);
 
+    bool countPassesThreshold(const int64_t& count);
+
     FRIEND_TEST(CountMetricProducerTest, TestNonDimensionalEvents);
     FRIEND_TEST(CountMetricProducerTest, TestEventsWithNonSlicedCondition);
     FRIEND_TEST(CountMetricProducerTest, TestEventsWithSlicedCondition);
