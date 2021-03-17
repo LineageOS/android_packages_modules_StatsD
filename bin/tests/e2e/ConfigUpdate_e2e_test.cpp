@@ -43,23 +43,6 @@ using namespace std;
 namespace {
 // Setup for test fixture.
 class ConfigUpdateE2eTest : public ::testing::Test {
-private:
-    string originalFlagValue;
-public:
-    void SetUp() override {
-        originalFlagValue = getFlagBool(PARTIAL_CONFIG_UPDATE_FLAG, "");
-        string rawFlagName =
-                StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_NAMESPACE.c_str(),
-                             PARTIAL_CONFIG_UPDATE_FLAG.c_str());
-        SetProperty(rawFlagName, "true");
-    }
-
-    void TearDown() override {
-        string rawFlagName =
-                StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_NAMESPACE.c_str(),
-                             PARTIAL_CONFIG_UPDATE_FLAG.c_str());
-        SetProperty(rawFlagName, originalFlagValue);
-    }
 };
 
 void ValidateSubsystemSleepDimension(const DimensionsValue& value, string name) {

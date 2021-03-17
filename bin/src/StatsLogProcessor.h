@@ -48,7 +48,7 @@ public:
     void OnLogEvent(LogEvent* event);
 
     void OnConfigUpdated(const int64_t timestampNs, const ConfigKey& key,
-                         const StatsdConfig& config);
+                         const StatsdConfig& config, bool modularUpdate = true);
     void OnConfigRemoved(const ConfigKey& key);
 
     size_t GetMetricsSize(const ConfigKey& key) const;
