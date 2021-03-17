@@ -88,6 +88,11 @@ cc_library {
     },
 }
 
+cc_library_headers {
+    name: "libstatspull_headers",
+    export_include_dirs: ["include"],
+}
+
 // ONLY USE IN TESTS.
 cc_library_static {
     name: "libstatspull_private",
