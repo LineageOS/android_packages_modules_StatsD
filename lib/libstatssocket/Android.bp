@@ -89,7 +89,10 @@ cc_test_library {
 cc_library_headers {
     name: "libstatssocket_headers",
     export_include_dirs: ["include"],
-    apex_available: ["com.android.resolv"],
+    apex_available: [
+        "com.android.resolv",
+        "//apex_available:platform",
+    ],
     min_sdk_version: "29",
 }
 
