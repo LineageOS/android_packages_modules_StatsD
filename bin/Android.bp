@@ -227,7 +227,7 @@ cc_binary {
 cc_test {
     name: "statsd_test",
     defaults: ["statsd_defaults"],
-    test_suites: ["device-tests", "mts"],
+    test_suites: ["device-tests", "mts-statsd"],
     test_config: "statsd_test.xml",
 
     //TODO(b/153588990): Remove when the build system properly separates
