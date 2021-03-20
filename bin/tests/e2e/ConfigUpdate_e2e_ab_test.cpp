@@ -53,24 +53,6 @@ StatsdConfig CreateSimpleConfig() {
 
 // Setup for parameterized tests.
 class ConfigUpdateE2eAbTest : public TestWithParam<bool> {
-private:
-    string originalFlagValue;
-
-public:
-    void SetUp() override {
-        originalFlagValue = getFlagBool(PARTIAL_CONFIG_UPDATE_FLAG, "");
-        string rawFlagName =
-                StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_NAMESPACE.c_str(),
-                             PARTIAL_CONFIG_UPDATE_FLAG.c_str());
-        SetProperty(rawFlagName, GetParam() ? "true" : "false");
-    }
-
-    void TearDown() override {
-        string rawFlagName =
-                StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_NAMESPACE.c_str(),
-                             PARTIAL_CONFIG_UPDATE_FLAG.c_str());
-        SetProperty(rawFlagName, originalFlagValue);
-    }
 };
 
 INSTANTIATE_TEST_SUITE_P(ConfigUpdateE2eAbTest, ConfigUpdateE2eAbTest, testing::Bool());
@@ -99,7 +81,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestUidMapVersionStringInstaller) {
     // Now update.
     config.set_version_strings_in_metric_report(false);
     config.set_installer_in_metric_report(true);
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
     EXPECT_EQ(processor->mMetricsManagers.size(), 1u);
     EXPECT_EQ(metricsManager == processor->mMetricsManagers.begin()->second, GetParam());
     EXPECT_TRUE(metricsManager->isConfigValid());
@@ -140,7 +122,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestHashStrings) {
 
     // Now update.
     config.set_hash_strings_in_metric_report(false);
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
     EXPECT_EQ(processor->mMetricsManagers.size(), 1u);
     EXPECT_EQ(metricsManager == processor->mMetricsManagers.begin()->second, GetParam());
     EXPECT_TRUE(metricsManager->isConfigValid());
@@ -173,7 +155,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestAnnotations) {
     annotation = config.add_annotation();
     annotation->set_field_int64(22);
     annotation->set_field_int32(2);
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
 
     ConfigMetricsReportList reports;
     vector<uint8_t> buffer;
@@ -208,7 +190,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestPersistLocally) {
 
     // Now update.
     config.set_persist_locally(true);
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
 
     // Should get 2: 1 in memory + 1 on disk. Both should be saved on disk.
     reports.Clear();
@@ -245,7 +227,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestNoReportMetrics) {
     // Now update.
     config.clear_no_report_metric();
     config.add_no_report_metric(config.count_metric(1).id());
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
 
     ConfigMetricsReportList reports;
     vector<uint8_t> buffer;
@@ -282,7 +264,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestAtomsAllowedFromAnyUid) {
 
     // Now update. Allow plugged state to be logged from any uid, so the atom will be counted.
     config.add_whitelisted_atom_ids(util::PLUGGED_STATE_CHANGED);
-    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 1000, cfgKey, config, GetParam());
     unique_ptr<LogEvent> event2 = CreateBatteryStateChangedEvent(
             baseTimeNs + 2000, BatteryPluggedStateEnum::BATTERY_PLUGGED_USB);
     processor->OnLogEvent(event.get());
@@ -311,7 +293,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestConfigTtl) {
     EXPECT_EQ(metricsManager->getTtlEndNs(), baseTimeNs + NS_PER_SEC);
 
     config.set_ttl_in_seconds(5);
-    processor->OnConfigUpdated(baseTimeNs + 2 * NS_PER_SEC, cfgKey, config);
+    processor->OnConfigUpdated(baseTimeNs + 2 * NS_PER_SEC, cfgKey, config, GetParam());
     metricsManager = processor->mMetricsManagers.begin()->second;
     EXPECT_EQ(metricsManager->getTtlEndNs(), baseTimeNs + 7 * NS_PER_SEC);
 
@@ -344,7 +326,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestExistingGaugePullRandomOneSample) {
             SharedRefBase::make<FakeSubsystemSleepCallback>(), util::SUBSYSTEM_SLEEP_STATE);
 
     uint64_t updateTimeNs = bucketStartTimeNs + 60 * NS_PER_SEC;
-    processor->OnConfigUpdated(updateTimeNs, key, config);
+    processor->OnConfigUpdated(updateTimeNs, key, config, GetParam());
     uint64_t dumpTimeNs = bucketStartTimeNs + 90 * NS_PER_SEC;
     ConfigMetricsReportList reports;
     vector<uint8_t> buffer;
