@@ -34,4 +34,5 @@ android_test {
         "device-tests",
         "mts-statsd",
     ],
+    min_sdk_version: "30",
 }
