@@ -219,11 +219,12 @@ public final class StatsLog {
      * @param buffer    The encoded buffer of data to write.
      * @param size      The number of bytes from the buffer to write.
      * @hide
+     * @deprecated Use {@link write(final StatsEvent statsEvent)} instead.
+     *
      */
-    // TODO(b/144935988): Mark deprecated.
+    @Deprecated
     @SystemApi
     public static void writeRaw(@NonNull byte[] buffer, int size) {
-        // TODO(b/144935988): make this no-op once clients have migrated to StatsEvent.
         writeImpl(buffer, size, 0);
     }
 
