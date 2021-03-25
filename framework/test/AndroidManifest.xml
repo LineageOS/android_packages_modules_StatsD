@@ -18,6 +18,8 @@
         package="com.android.os.statsd.framework.test"
         >
 
+    <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
+
     <instrumentation
             android:name="androidx.test.runner.AndroidJUnitRunner"
             android:targetPackage="com.android.os.statsd.framework.test"
