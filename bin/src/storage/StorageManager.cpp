@@ -629,10 +629,9 @@ bool StorageManager::readConfigFromDisk(const ConfigKey& key, string* content) {
             int fd = open(StringPrintf("%s/%s", STATS_SERVICE_DIR, name).c_str(),
                                   O_RDONLY | O_CLOEXEC);
             if (fd != -1) {
-                if (android::base::ReadFdToString(fd, content)) {
-                    return true;
-                }
+                bool success = android::base::ReadFdToString(fd, content);
                 close(fd);
+                return success;
             }
         }
     }
