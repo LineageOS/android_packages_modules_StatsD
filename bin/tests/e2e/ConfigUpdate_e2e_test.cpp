@@ -2203,6 +2203,174 @@ TEST_F(ConfigUpdateE2eTest, TestAnomalyDurationMetric) {
     SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, newSubId);
 }
 
+TEST_F(ConfigUpdateE2eTest, TestAlarms) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");
+    Alarm alarmPreserve = createAlarm("AlarmPreserve", /*offset*/ 5 * MS_PER_SEC,
+                                      /*period*/ TimeUnitToBucketSizeInMillis(ONE_MINUTE));
+    Alarm alarmReplace = createAlarm("AlarmReplace", /*offset*/ 1,
+                                     /*period*/ TimeUnitToBucketSizeInMillis(FIVE_MINUTES));
+    Alarm alarmRemove = createAlarm("AlarmRemove", /*offset*/ 1,
+                                    /*period*/ TimeUnitToBucketSizeInMillis(ONE_MINUTE));
+    *config.add_alarm() = alarmReplace;
+    *config.add_alarm() = alarmPreserve;
+    *config.add_alarm() = alarmRemove;
+
+    int preserveSubId = 1, replaceSubId = 2, removeSubId = 3;
+    Subscription preserveSub = createSubscription("S1", Subscription::ALARM, alarmPreserve.id());
+    preserveSub.mutable_broadcast_subscriber_details()->set_subscriber_id(preserveSubId);
+    Subscription replaceSub = createSubscription("S2", Subscription::ALARM, alarmReplace.id());
+    replaceSub.mutable_broadcast_subscriber_details()->set_subscriber_id(replaceSubId);
+    Subscription removeSub = createSubscription("S3", Subscription::ALARM, alarmRemove.id());
+    removeSub.mutable_broadcast_subscriber_details()->set_subscriber_id(removeSubId);
+    *config.add_subscription() = preserveSub;
+    *config.add_subscription() = removeSub;
+    *config.add_subscription() = replaceSub;
+
+    int64_t configUid = 123, configId = 987;
+    ConfigKey key(configUid, configId);
+
+    int alarmPreserveCount = 0, alarmReplaceCount = 0, alarmRemoveCount = 0;
+
+    // The binder calls here will happen synchronously because they are in-process.
+    shared_ptr<MockPendingIntentRef> preserveBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*preserveBroadcast, sendSubscriberBroadcast(configUid, configId, preserveSub.id(),
+                                                            alarmPreserve.id(), _, _))
+            .Times(4)
+            .WillRepeatedly([&alarmPreserveCount](int64_t, int64_t, int64_t, int64_t,
+                                                  const vector<string>&,
+                                                  const StatsDimensionsValueParcel&) {
+                alarmPreserveCount++;
+                return Status::ok();
+            });
+
+    shared_ptr<MockPendingIntentRef> replaceBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*replaceBroadcast, sendSubscriberBroadcast(configUid, configId, replaceSub.id(),
+                                                           alarmReplace.id(), _, _))
+            .Times(2)
+            .WillRepeatedly([&alarmReplaceCount](int64_t, int64_t, int64_t, int64_t,
+                                                 const vector<string>&,
+                                                 const StatsDimensionsValueParcel&) {
+                alarmReplaceCount++;
+                return Status::ok();
+            });
+
+    shared_ptr<MockPendingIntentRef> removeBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*removeBroadcast, sendSubscriberBroadcast(configUid, configId, removeSub.id(),
+                                                          alarmRemove.id(), _, _))
+            .Times(1)
+            .WillRepeatedly([&alarmRemoveCount](int64_t, int64_t, int64_t, int64_t,
+                                                const vector<string>&,
+                                                const StatsDimensionsValueParcel&) {
+                alarmRemoveCount++;
+                return Status::ok();
+            });
+
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, preserveSubId, preserveBroadcast);
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, replaceSubId, replaceBroadcast);
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, removeSubId, removeBroadcast);
+
+    int64_t startTimeSec = 10;
+    sp<StatsLogProcessor> processor = CreateStatsLogProcessor(
+            startTimeSec * NS_PER_SEC, startTimeSec * NS_PER_SEC, config, key);
+
+    sp<AlarmMonitor> alarmMonitor = processor->getPeriodicAlarmMonitor();
+    // First alarm is for alarm preserve's offset of 5 seconds.
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 5);
+
+    // Alarm fired at 5. AlarmPreserve should fire.
+    int32_t alarmFiredTimestampSec = startTimeSec + 5;
+    auto alarmSet = alarmMonitor->popSoonerThan(static_cast<uint32_t>(alarmFiredTimestampSec));
+    processor->onPeriodicAlarmFired(alarmFiredTimestampSec * NS_PER_SEC, alarmSet);
+    EXPECT_EQ(alarmPreserveCount, 1);
+    EXPECT_EQ(alarmReplaceCount, 0);
+    EXPECT_EQ(alarmRemoveCount, 0);
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 60);
+
+    // Alarm fired at 75. AlarmPreserve and AlarmRemove should fire.
+    alarmFiredTimestampSec = startTimeSec + 75;
+    alarmSet = alarmMonitor->popSoonerThan(static_cast<uint32_t>(alarmFiredTimestampSec));
+    processor->onPeriodicAlarmFired(alarmFiredTimestampSec * NS_PER_SEC, alarmSet);
+    EXPECT_EQ(alarmPreserveCount, 2);
+    EXPECT_EQ(alarmReplaceCount, 0);
+    EXPECT_EQ(alarmRemoveCount, 1);
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 120);
+
+    // Do config update.
+    StatsdConfig newConfig;
+    newConfig.add_allowed_log_source("AID_ROOT");
+
+    // Change alarm replace's definition.
+    alarmReplace.set_period_millis(TimeUnitToBucketSizeInMillis(ONE_MINUTE));
+    Alarm alarmNew = createAlarm("AlarmNew", /*offset*/ 1,
+                                 /*period*/ TimeUnitToBucketSizeInMillis(FIVE_MINUTES));
+    *newConfig.add_alarm() = alarmNew;
+    *newConfig.add_alarm() = alarmPreserve;
+    *newConfig.add_alarm() = alarmReplace;
+
+    int newSubId = 4;
+    Subscription newSub = createSubscription("S4", Subscription::ALARM, alarmNew.id());
+    newSub.mutable_broadcast_subscriber_details()->set_subscriber_id(newSubId);
+    *newConfig.add_subscription() = newSub;
+    *newConfig.add_subscription() = replaceSub;
+    *newConfig.add_subscription() = preserveSub;
+
+    int alarmNewCount = 0;
+    shared_ptr<MockPendingIntentRef> newBroadcast =
+            SharedRefBase::make<StrictMock<MockPendingIntentRef>>();
+    EXPECT_CALL(*newBroadcast,
+                sendSubscriberBroadcast(configUid, configId, newSub.id(), alarmNew.id(), _, _))
+            .Times(1)
+            .WillRepeatedly([&alarmNewCount](int64_t, int64_t, int64_t, int64_t,
+                                             const vector<string>&,
+                                             const StatsDimensionsValueParcel&) {
+                alarmNewCount++;
+                return Status::ok();
+            });
+    SubscriberReporter::getInstance().setBroadcastSubscriber(key, newSubId, newBroadcast);
+
+    processor->OnConfigUpdated((startTimeSec + 90) * NS_PER_SEC, key, newConfig);
+    // After the update, the alarm time should remain unchanged since alarm replace now fires every
+    // minute with no offset.
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 120);
+
+    // Alarm fired at 120. AlermReplace should fire.
+    alarmFiredTimestampSec = startTimeSec + 120;
+    alarmSet = alarmMonitor->popSoonerThan(static_cast<uint32_t>(alarmFiredTimestampSec));
+    processor->onPeriodicAlarmFired(alarmFiredTimestampSec * NS_PER_SEC, alarmSet);
+    EXPECT_EQ(alarmPreserveCount, 2);
+    EXPECT_EQ(alarmReplaceCount, 1);
+    EXPECT_EQ(alarmNewCount, 0);
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 125);
+
+    // Alarm fired at 130. AlarmPreserve should fire.
+    alarmFiredTimestampSec = startTimeSec + 130;
+    alarmSet = alarmMonitor->popSoonerThan(static_cast<uint32_t>(alarmFiredTimestampSec));
+    processor->onPeriodicAlarmFired(alarmFiredTimestampSec * NS_PER_SEC, alarmSet);
+    EXPECT_EQ(alarmPreserveCount, 3);
+    EXPECT_EQ(alarmReplaceCount, 1);
+    EXPECT_EQ(alarmNewCount, 0);
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 180);
+
+    // Alarm fired late at 310. All alerms should fire.
+    alarmFiredTimestampSec = startTimeSec + 310;
+    alarmSet = alarmMonitor->popSoonerThan(static_cast<uint32_t>(alarmFiredTimestampSec));
+    processor->onPeriodicAlarmFired(alarmFiredTimestampSec * NS_PER_SEC, alarmSet);
+    EXPECT_EQ(alarmPreserveCount, 4);
+    EXPECT_EQ(alarmReplaceCount, 2);
+    EXPECT_EQ(alarmNewCount, 1);
+    EXPECT_EQ(alarmMonitor->getRegisteredAlarmTimeSec(), startTimeSec + 360);
+
+    // Clear subscribers
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, preserveSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, replaceSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, removeSubId);
+    SubscriberReporter::getInstance().unsetBroadcastSubscriber(key, newSubId);
+}
+
 TEST_F(ConfigUpdateE2eTest, TestNewDurationExistingWhat) {
     StatsdConfig config;
     config.add_allowed_log_source("AID_ROOT");

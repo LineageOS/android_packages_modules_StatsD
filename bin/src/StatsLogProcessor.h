@@ -339,6 +339,7 @@ private:
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithSameDeactivation);
     FRIEND_TEST(MetricActivationE2eTest, TestCountMetricWithTwoMetricsTwoDeactivations);
 
+    FRIEND_TEST(ConfigUpdateE2eTest, TestAlarms);
     FRIEND_TEST(ConfigUpdateE2eTest, TestGaugeMetric);
     FRIEND_TEST(ConfigUpdateE2eTest, TestValueMetric);
     FRIEND_TEST(ConfigUpdateE2eTest, TestAnomalyDurationMetric);
