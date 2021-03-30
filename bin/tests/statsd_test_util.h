@@ -221,6 +221,8 @@ ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const
 Alert createAlert(const string& name, const int64_t metricId, const int buckets,
                   const int64_t triggerSum);
 
+Alarm createAlarm(const string& name, const int64_t offsetMillis, const int64_t periodMillis);
+
 Subscription createSubscription(const string& name, const Subscription_RuleType type,
                                 const int64_t ruleId);
 
