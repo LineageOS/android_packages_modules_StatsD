@@ -523,6 +523,14 @@ Alert createAlert(const string& name, const int64_t metricId, const int buckets,
     return alert;
 }
 
+Alarm createAlarm(const string& name, const int64_t offsetMillis, const int64_t periodMillis) {
+    Alarm alarm;
+    alarm.set_id(StringToId(name));
+    alarm.set_offset_millis(offsetMillis);
+    alarm.set_period_millis(periodMillis);
+    return alarm;
+}
+
 Subscription createSubscription(const string& name, const Subscription_RuleType type,
                                 const int64_t ruleId) {
     Subscription subscription;
