@@ -65,18 +65,8 @@ prebuilt_etc {
 }
 
 // ==========================================================
-// Make stats-log-api-gen available to unbundled modules
+// Make libstatssocket available to unbundled modules
 // ==========================================================
-module_exports {
-    name: "stats-log-api-gen-exports",
-    host_supported: true,
-    device_supported: false,
-    compile_multilib: "64",
-    native_binaries: [
-        "stats-log-api-gen",
-    ],
-}
-
 sdk {
     name: "statsd-module-sdk",
     java_sdk_libs: [
@@ -86,7 +76,6 @@ sdk {
         "libstatssocket",
     ],
 }
-
 
 // TODO(b/180769414): ART should be able to use the statsd-module-sdk entry,
 // but unfortunately that conflicts with internal builds. Make a special copy
