@@ -31,6 +31,9 @@ java_library {
         "framework-annotations-lib",
         "framework-statsd",
     ],
+    static_libs: [
+        "modules-utils-build",
+    ],
     plugins: ["java_api_finder"],
     apex_available: [
         "com.android.os.statsd",
