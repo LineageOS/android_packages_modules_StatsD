@@ -47,7 +47,9 @@ import android.os.UserManager;
 import android.util.Log;
 import android.util.proto.ProtoOutputStream;
 
+import com.android.modules.utils.build.SdkLevel;
 import com.android.internal.annotations.GuardedBy;
+import com.android.server.stats.StatsHelper;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -588,6 +590,20 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
         }
         sayHiToStatsd(); // tell statsd that we're ready too and link to it
 
+        if (SdkLevel.isAtLeastS()) {
+            StatsHelper.sendStatsdReadyBroadcast(mContext);
+        } else {
+            sendStatsdStartedDirectedBroadcast();
+        }
+    }
+
+    /**
+     * Sends directed broadcasts to all receivers interested in ACTION_STATSD_STARTED broadcast.
+     *
+     * Only use this on R- platform.
+     * Use {@link android.stats.StatsHelper.sendStatsdReadyBroadcast(Context context)} on S+.
+     **/
+    private void sendStatsdStartedDirectedBroadcast() {
         final Intent intent = new Intent(StatsManager.ACTION_STATSD_STARTED);
         // Retrieve list of broadcast receivers for this broadcast & send them directed broadcasts
         // to wake them up (if they're in background).
