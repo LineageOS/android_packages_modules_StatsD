@@ -728,8 +728,8 @@ public class AtomTests {
     private static final String HTTPS_HOST_URL =
             "https://connectivitycheck.gstatic.com/generate_204";
 
-    private void doGenerateNetworkTraffic(@NonNull Context context,
-            @NetworkCapabilities.Transport int transport) throws InterruptedException {
+    private void doGenerateNetworkTraffic(@NonNull Context context, int transport)
+            throws InterruptedException {
         final ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
         final NetworkRequest request = new NetworkRequest.Builder().addCapability(
                 NetworkCapabilities.NET_CAPABILITY_INTERNET).addTransportType(transport).build();
@@ -741,8 +741,7 @@ public class AtomTests {
         // If network is not available, throws IllegalStateException.
         final Network network = callback.waitForAvailable();
         if (network == null) {
-            throw new IllegalStateException("network "
-                    + NetworkCapabilities.transportNameOf(transport) + " is not available.");
+            throw new IllegalStateException("network " + request + " is not available.");
         }
 
         final long startTime = SystemClock.elapsedRealtime();
