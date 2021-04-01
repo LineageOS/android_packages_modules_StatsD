@@ -128,6 +128,9 @@ AtomMatcher CreateMoveToForegroundAtomMatcher();
 // Create AtomMatcher proto for process crashes
 AtomMatcher CreateProcessCrashAtomMatcher() ;
 
+// Add an AtomMatcher to a combination AtomMatcher.
+void addMatcherToMatcherCombination(const AtomMatcher& matcher, AtomMatcher* combinationMatcher);
+
 // Create Predicate proto for screen is on.
 Predicate CreateScreenIsOnPredicate();
 
@@ -202,6 +205,9 @@ FieldMatcher CreateAttributionUidDimensions(const int atomId,
 FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields);
+
+EventMetric createEventMetric(const string& name, const int64_t what,
+                              const optional<int64_t>& condition);
 
 CountMetric createCountMetric(const string& name, const int64_t what,
                               const optional<int64_t>& condition, const vector<int64_t>& states);
