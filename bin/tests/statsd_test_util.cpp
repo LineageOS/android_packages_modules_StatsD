@@ -241,6 +241,10 @@ AtomMatcher CreateProcessCrashAtomMatcher() {
         "Crashed", ProcessLifeCycleStateChanged::CRASHED);
 }
 
+void addMatcherToMatcherCombination(const AtomMatcher& matcher, AtomMatcher* combinationMatcher) {
+    combinationMatcher->mutable_combination()->add_matcher(matcher.id());
+}
+
 Predicate CreateScheduledJobPredicate() {
     Predicate predicate;
     predicate.set_id(StringToId("ScheduledJobRunningPredicate"));
@@ -444,6 +448,17 @@ FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
         dimensions.add_child()->set_field(field);
     }
     return dimensions;
+}
+
+EventMetric createEventMetric(const string& name, const int64_t what,
+                              const optional<int64_t>& condition) {
+    EventMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what);
+    if (condition) {
+        metric.set_condition(condition.value());
+    }
+    return metric;
 }
 
 CountMetric createCountMetric(const string& name, const int64_t what,
