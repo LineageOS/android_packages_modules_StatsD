@@ -163,7 +163,7 @@ public:
     static const int64_t kPullMaxDelayNs = 30 * NS_PER_SEC;
 
     // Maximum number of pushed atoms statsd stats will track above kMaxPushedAtomId.
-    static const int kMaxNonPlatformPushedAtoms = 100;
+    static const int kMaxNonPlatformPushedAtoms = 400;
 
     // Maximum atom id value that we consider a platform pushed atom.
     // This should be updated once highest pushed atom id in atoms.proto approaches this value.
