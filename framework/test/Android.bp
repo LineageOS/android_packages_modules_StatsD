@@ -31,7 +31,7 @@ android_test {
         "framework-statsd.impl",
     ],
     test_suites: [
-        "device-tests",
+        "general-tests",
         "mts-statsd",
     ],
     min_sdk_version: "30",
