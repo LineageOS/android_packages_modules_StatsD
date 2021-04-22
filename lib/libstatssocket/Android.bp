@@ -79,10 +79,8 @@ cc_test_library {
         "libstatssocket_defaults",
     ],
     visibility: [
-        "//frameworks/base/apex/statsd/tests/libstatspull",
-        "//frameworks/base/cmds/statsd",
         "//packages/modules/StatsD/apex/tests/libstatspull",
-        "//packages/modules/StatsD/bin",
+        "//packages/modules/StatsD/statsd",
     ],
 }
 
