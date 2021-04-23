@@ -103,7 +103,6 @@ cc_library_static {
         "-DLIB_STATS_PULL_TESTS_FLAG",
     ],
     visibility: [
-        "//frameworks/base/apex/statsd/tests/libstatspull",
         "//packages/modules/StatsD/apex/tests/libstatspull",
     ],
 }
