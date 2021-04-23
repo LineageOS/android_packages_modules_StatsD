@@ -114,7 +114,7 @@ ValueMetricProducer::ValueMetricProducer(
       mUseZeroDefaultBase(metric.use_zero_default_base()),
       mHasGlobalBase(false),
       mCurrentBucketIsSkipped(false),
-      mMaxPullDelayNs(metric.max_pull_delay_sec() > 0 ? metric.max_pull_delay_sec() * NS_PER_SEC
+      mMaxPullDelayNs(metric.has_max_pull_delay_sec() ? metric.max_pull_delay_sec() * NS_PER_SEC
                                                       : StatsdStats::kPullMaxDelayNs),
       mSplitBucketForAppUpgrade(metric.split_bucket_for_app_upgrade()),
       // Condition timer will be set later within the constructor after pulling events
