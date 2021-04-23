@@ -22,6 +22,7 @@
     <option name="test-suite-tag" value="apct" />
     <option name="test-suite-tag" value="mts" />
     <option name="test-tag" value="FrameworkStatsdTest" />
+    <option name="config-descriptor:metadata" key="mainline-param" value="com.google.android.os.statsd.apex" />
     <test class="com.android.tradefed.testtype.AndroidJUnitTest" >
         <option name="package" value="com.android.os.statsd.framework.test" />
         <option name="runner" value="androidx.test.runner.AndroidJUnitRunner" />
