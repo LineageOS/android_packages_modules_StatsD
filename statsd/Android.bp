@@ -92,7 +92,6 @@ cc_defaults {
     static_libs: [
         "libbase",
         "libcutils",
-        "libgtest_prod",
         "libprotoutil",
         "libstatslog_statsd",
         "libsysutils",
@@ -104,6 +103,9 @@ cc_defaults {
         "libbinder_ndk",
         "libincident",
         "liblog",
+    ],
+    header_libs: [
+        "libgtest_prod_headers",
     ],
 }
 
@@ -389,9 +391,12 @@ cc_benchmark {
     ],
 
     shared_libs: [
-        "libgtest_prod",
         "libprotobuf-cpp-lite",
         "libstatslog",
+    ],
+
+    header_libs: [
+        "libgtest_prod_headers",
     ],
 }
 
