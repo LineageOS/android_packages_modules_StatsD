@@ -21,52 +21,17 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-cc_library {
-    name: "libkll",
-    srcs: [
-        "compactor_stack.cpp",
-        "kll.cpp",
-        "sampler.cpp",
-    ],
-    static_libs: [
-        "libkll-encoder",
-        "libkll-protos",
-    ],
-    shared_libs: [
-        "libprotobuf-cpp-lite",
-    ],
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wextra",
-    ],
-    export_include_dirs: ["include"],
+cc_library_static {
+    name: "libkll-protos",
+    srcs: ["*.proto"],
+    proto: {
+        export_proto_headers: true,
+        type: "lite",
+        canonical_path_from_root: false,
+    },
+
     apex_available: [
         "com.android.os.statsd",
         "//apex_available:platform",
-    ],
-    min_sdk_version: "30",
-}
-
-cc_test {
-    name: "libkll_test",
-    srcs: [
-        "tests/**/*.cpp",
-    ],
-    static_libs: [
-        "libgmock",
-        "libkll",
-        "libkll-encoder",
-        "libkll-protos",
-    ],
-    shared_libs: [
-        "libprotobuf-cpp-lite",
-    ],
-    test_suites: ["general-tests"],
-
-    cflags: [
-        "-Wall",
-        "-Werror",
-        "-Wextra",
     ],
 }
