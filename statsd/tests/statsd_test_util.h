@@ -406,7 +406,7 @@ void ValidateDurationBucket(const DurationBucketInfo& bucket, int64_t startTimeN
 void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startTimeNs,
                               int64_t endTimeNs, vector<int64_t> eventTimesNs);
 void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
-                         int64_t value, int64_t conditionTrueNs);
+                         const vector<int64_t>& values, int64_t conditionTrueNs);
 
 struct DimensionsPair {
     DimensionsPair(DimensionsValue m1, google::protobuf::RepeatedPtrField<StateValue> m2)
@@ -420,7 +420,7 @@ bool LessThan(const StateValue& s1, const StateValue& s2);
 bool LessThan(const DimensionsValue& s1, const DimensionsValue& s2);
 bool LessThan(const DimensionsPair& s1, const DimensionsPair& s2);
 
-
+void backfillStartEndTimestamp(StatsLogReport* report);
 void backfillStartEndTimestamp(ConfigMetricsReport *config_report);
 void backfillStartEndTimestamp(ConfigMetricsReportList *config_report_list);
 
@@ -442,6 +442,8 @@ void backfillStringInDimension(const std::map<uint64_t, string>& str_map,
     }
 }
 
+void backfillDimensionPath(StatsLogReport* report);
+void backfillDimensionPath(ConfigMetricsReport* config_report);
 void backfillDimensionPath(ConfigMetricsReportList* config_report_list);
 
 bool backfillDimensionPath(const DimensionsValue& path,
@@ -487,6 +489,20 @@ void sortMetricDataByDimensionsValue(const T& metricData, T* sortedMetricData) {
     for (int i = 0; i < metricData.data_size(); ++i) {
         dimensionIndexMap.insert(
                 std::make_pair(DimensionsPair(metricData.data(i).dimensions_in_what(),
+                                              metricData.data(i).slice_by_state()),
+                               i));
+    }
+    for (const auto& itr : dimensionIndexMap) {
+        *sortedMetricData->add_data() = metricData.data(itr.second);
+    }
+}
+
+template <typename T>
+void sortMetricDataByFirstDimensionLeafValue(const T& metricData, T* sortedMetricData) {
+    std::map<DimensionsPair, int, DimensionCompare> dimensionIndexMap;
+    for (int i = 0; i < metricData.data_size(); ++i) {
+        dimensionIndexMap.insert(
+                std::make_pair(DimensionsPair(metricData.data(i).dimension_leaf_values_in_what()[0],
                                               metricData.data(i).slice_by_state()),
                                i));
     }
