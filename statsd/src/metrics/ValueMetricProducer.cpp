@@ -155,6 +155,10 @@ ValueMetricProducer::ValueMetricProducer(
         mMetric2StateLinks.push_back(ms);
     }
 
+    if (metric.has_threshold()) {
+        mUploadThreshold = metric.threshold();
+    }
+
     int64_t numBucketsForward = calcBucketsForwardCount(startTimeNs);
     mCurrentBucketNum += numBucketsForward;
 
@@ -1144,21 +1148,21 @@ PastValueBucket ValueMetricProducer::buildPartialBucket(int64_t bucketEndTime,
     PastValueBucket bucket;
     bucket.mBucketStartNs = mCurrentBucketStartTimeNs;
     bucket.mBucketEndNs = bucketEndTime;
-    for (const auto& interval : intervals) {
-        if (interval.hasValue) {
-            // skip the output if the diff is zero
-            if (mSkipZeroDiffOutput && mUseDiff && interval.value.isZero()) {
-                continue;
-            }
-            bucket.valueIndex.push_back(interval.valueIndex);
-            if (mAggregationType != ValueMetric::AVG) {
-                bucket.values.push_back(interval.value);
-            } else {
-                double sum = interval.value.type == LONG ? (double)interval.value.long_value
-                                                         : interval.value.double_value;
-                bucket.values.push_back(Value((double)sum / interval.sampleSize));
-            }
+
+    // The first value field acts as a "gatekeeper" - if it does not pass the specified threshold,
+    // then all interval values are discarded for this bucket.
+    if ((intervals.size() <= 0) || (intervals[0].hasValue && !valuePassesThreshold(intervals[0]))) {
+        return bucket;
+    }
+
+    for (const Interval& interval : intervals) {
+        // Skip the output if the diff is zero
+        if (!interval.hasValue || (mSkipZeroDiffOutput && mUseDiff && interval.value.isZero())) {
+            continue;
         }
+
+        bucket.valueIndex.push_back(interval.valueIndex);
+        bucket.values.push_back(getFinalValue(interval));
     }
     return bucket;
 }
@@ -1275,6 +1279,44 @@ size_t ValueMetricProducer::byteSizeLocked() const {
         totalSize += pair.second.size() * kBucketSize;
     }
     return totalSize;
+}
+
+bool ValueMetricProducer::valuePassesThreshold(const Interval& interval) {
+    if (mUploadThreshold == nullopt) {
+        return true;
+    }
+
+    Value finalValue = getFinalValue(interval);
+
+    double doubleValue =
+            finalValue.type == LONG ? (double)finalValue.long_value : finalValue.double_value;
+    switch (mUploadThreshold->value_comparison_case()) {
+        case UploadThreshold::kLtInt:
+            return doubleValue < (double)mUploadThreshold->lt_int();
+        case UploadThreshold::kGtInt:
+            return doubleValue > (double)mUploadThreshold->gt_int();
+        case UploadThreshold::kLteInt:
+            return doubleValue <= (double)mUploadThreshold->lte_int();
+        case UploadThreshold::kGteInt:
+            return doubleValue >= (double)mUploadThreshold->gte_int();
+        case UploadThreshold::kLtFloat:
+            return doubleValue <= (double)mUploadThreshold->lt_float();
+        case UploadThreshold::kGtFloat:
+            return doubleValue >= (double)mUploadThreshold->gt_float();
+        default:
+            ALOGE("Value metric no upload threshold type used");
+            return false;
+    }
+}
+
+Value ValueMetricProducer::getFinalValue(const Interval& interval) {
+    if (mAggregationType != ValueMetric::AVG) {
+        return interval.value;
+    } else {
+        double sum = interval.value.type == LONG ? (double)interval.value.long_value
+                                                 : interval.value.double_value;
+        return Value((double)sum / interval.sampleSize);
+    }
 }
 
 }  // namespace statsd

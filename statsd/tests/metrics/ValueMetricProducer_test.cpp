@@ -6913,6 +6913,85 @@ TEST(ValueMetricProducerTest, TestForcedBucketSplitWhenConditionUnknownSkipsBuck
     EXPECT_EQ(NanoToMillis(appUpdateTimeNs), dropEvent.drop_time_millis());
 }
 
+TEST(ValueMetricProducerTest, TestUploadThreshold) {
+    // Create metric with upload threshold and two value fields.
+    int64_t thresholdValue = 15;
+    ValueMetric metric = ValueMetricProducerTestHelper::createMetric();
+    metric.mutable_value_field()->add_child()->set_field(3);
+    metric.mutable_threshold()->set_gt_int(thresholdValue);
+    *metric.mutable_dimensions_in_what() = CreateDimensions(tagId, {1 /*uid*/});
+
+    sp<MockStatsPullerManager> pullerManager = new StrictMock<MockStatsPullerManager>();
+
+    EXPECT_CALL(*pullerManager, Pull(tagId, kConfigKey, _, _))
+            // First bucket pull.
+            .WillOnce(Invoke([](int tagId, const ConfigKey&, const int64_t eventTimeNs,
+                                vector<std::shared_ptr<LogEvent>>* data) {
+                data->clear();
+                data->push_back(
+                        CreateThreeValueLogEvent(tagId, bucketStartTimeNs + 1, 1 /*uid*/, 5, 5));
+                data->push_back(
+                        CreateThreeValueLogEvent(tagId, bucketStartTimeNs + 1, 2 /*uid*/, 5, 5));
+                return true;
+            }))
+            // Dump report.
+            .WillOnce(Invoke([](int tagId, const ConfigKey&, const int64_t eventTimeNs,
+                                vector<std::shared_ptr<LogEvent>>* data) {
+                data->clear();
+                data->push_back(CreateThreeValueLogEvent(tagId, bucket2StartTimeNs + 10000000000,
+                                                         1 /*uid*/, 22, 21));
+                data->push_back(CreateThreeValueLogEvent(tagId, bucket2StartTimeNs + 10000000000,
+                                                         2 /*uid*/, 30, 10));
+                return true;
+            }));
+
+    sp<ValueMetricProducer> valueProducer =
+        ValueMetricProducerTestHelper::createValueProducerNoConditions(
+                pullerManager, metric);
+
+    // Bucket 2 start.
+    vector<shared_ptr<LogEvent>> allData;
+    allData.clear();
+    allData.push_back(CreateThreeValueLogEvent(tagId, bucket2StartTimeNs + 1, 1 /*uid*/, 21, 21));
+    allData.push_back(CreateThreeValueLogEvent(tagId, bucket2StartTimeNs + 1, 2 /*uid*/, 20, 5));
+    valueProducer->onDataPulled(allData, /** succeed */ true, bucket2StartTimeNs);
+
+    // Check dump report.
+    ProtoOutputStream output;
+    std::set<string> strSet;
+    int64_t dumpReportTimeNs = bucket2StartTimeNs + 10000000000;
+    valueProducer->onDumpReport(dumpReportTimeNs, true /* include current buckets */, true,
+                                NO_TIME_CONSTRAINTS /* dumpLatency */, &strSet, &output);
+
+    StatsLogReport report = outputStreamToProto(&output);
+    backfillDimensionPath(&report);
+    backfillStartEndTimestamp(&report);
+    EXPECT_TRUE(report.has_value_metrics());
+    StatsLogReport::ValueMetricDataWrapper valueMetrics;
+    sortMetricDataByDimensionsValue(report.value_metrics(), &valueMetrics);
+    ASSERT_EQ(1, valueMetrics.data_size());
+    ASSERT_EQ(1, report.value_metrics().skipped_size());
+
+    // Check data keyed to uid 1.
+    ValueMetricData data = valueMetrics.data(0);
+    ValidateUidDimension(data.dimensions_in_what(), tagId, 1);
+    ASSERT_EQ(1, data.bucket_info_size());
+    // First bucket.
+    // Values pass threshold.
+    ValidateValueBucket(data.bucket_info(0), bucketStartTimeNs, bucket2StartTimeNs, {16, 16}, -1);
+    // Second bucket is dropped because values do not pass threshold.
+
+    // Check data keyed to uid 2.
+    // First bucket and second bucket are dropped because values do not pass threshold.
+
+    // Check that second bucket has NO_DATA drop reason.
+    EXPECT_EQ(bucket2StartTimeNs, report.value_metrics().skipped(0).start_bucket_elapsed_nanos());
+    EXPECT_EQ(dumpReportTimeNs, report.value_metrics().skipped(0).end_bucket_elapsed_nanos());
+    ASSERT_EQ(1, report.value_metrics().skipped(0).drop_event_size());
+    EXPECT_EQ(BucketDropReason::NO_DATA,
+              report.value_metrics().skipped(0).drop_event(0).drop_reason());
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
