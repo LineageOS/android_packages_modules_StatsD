@@ -281,6 +281,10 @@ private:
     // condition change or an active state change.
     void updateCurrentSlicedBucketConditionTimers(bool newCondition, int64_t eventTimeNs);
 
+    bool valuePassesThreshold(const Interval& interval);
+
+    Value getFinalValue(const Interval& interval);
+
     static const size_t kBucketSize = sizeof(PastValueBucket{});
 
     const size_t mDimensionSoftLimit;
@@ -371,6 +375,7 @@ private:
     FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithDataMissingInConditionChange);
     FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithMissingDataThenFlushBucket);
     FRIEND_TEST(ValueMetricProducerTest, TestSlicedStateWithNoPullOnBucketBoundary);
+    FRIEND_TEST(ValueMetricProducerTest, TestUploadThreshold);
 
     FRIEND_TEST(ValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenOneConditionFailed);
     FRIEND_TEST(ValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenInitialPullFailed);
