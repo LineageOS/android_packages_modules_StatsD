@@ -15,32 +15,25 @@
 //
 
 // ==========================================================
-// Native library used to compute KLL quantiles
+// Encoding for KLL
 // ==========================================================
 package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
-cc_library {
-    name: "libkll",
+cc_library_static {
+    name: "libkll-encoder",
     srcs: [
-        "compactor_stack.cpp",
-        "kll.cpp",
-        "sampler.cpp",
+        "encoder.cpp",
+        "varint.cpp",
     ],
     static_libs: [
-        "libkll-encoder",
-        "libkll-protos",
-    ],
-    shared_libs: [
-        "libprotobuf-cpp-lite",
     ],
     cflags: [
         "-Wall",
         "-Werror",
         "-Wextra",
     ],
-    export_include_dirs: ["include"],
     apex_available: [
         "com.android.os.statsd",
         "//apex_available:platform",
@@ -49,15 +42,12 @@ cc_library {
 }
 
 cc_test {
-    name: "libkll_test",
+    name: "libkll-encoder_test",
     srcs: [
-        "tests/**/*.cpp",
+        "*_test.cpp",
     ],
     static_libs: [
-        "libgmock",
-        "libkll",
         "libkll-encoder",
-        "libkll-protos",
     ],
     shared_libs: [
         "libprotobuf-cpp-lite",
