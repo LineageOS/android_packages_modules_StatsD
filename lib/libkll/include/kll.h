@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2021, The Android Open Source Project
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include "aggregator.pb.h"
 #include "compactor_stack.h"
 #include "random_generator.h"
 
@@ -60,6 +61,9 @@ public:
     // sampling is used for weights below that range. So the precision loss by
     // downscaling and randomized rounding is negligible.
     void AddWeighted(int64_t value, int weight);
+
+    // Not safe to be called concurrently.
+    zetasketch::android::AggregatorStateProto SerializeToProto();
 
     bool IsSamplerOn() const {
         return compactor_stack_.IsSamplerOn();
@@ -142,9 +146,5 @@ private:
     RandomGenerator* random_ = nullptr;
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// Serialization
-// TODO(b/182182345): Add method for serialization.
-//
 }  // namespace aggregation
 }  // namespace dist_proc
