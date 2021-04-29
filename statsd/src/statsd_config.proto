@@ -329,6 +329,8 @@ message ValueMetric {
 
   repeated MetricStateLink state_link = 19;
 
+  optional UploadThreshold threshold = 20;
+
   enum AggregationType {
     SUM = 1;
     MIN = 2;

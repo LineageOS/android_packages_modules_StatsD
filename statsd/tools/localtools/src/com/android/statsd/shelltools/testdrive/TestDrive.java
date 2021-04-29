@@ -73,10 +73,12 @@ public class TestDrive {
             "com.google.android.providers.media.module",
             "com.android.imsserviceentitlement",
             "com.google.android.cellbroadcastreceiver",
+            "AID_KEYSTORE",
     };
     private static final String[] DEFAULT_PULL_SOURCES = {
+            "AID_KEYSTORE",
+            "AID_RADIO",
             "AID_SYSTEM",
-            "AID_RADIO"
     };
     private static final Logger LOGGER = Logger.getLogger(TestDrive.class.getName());
 
