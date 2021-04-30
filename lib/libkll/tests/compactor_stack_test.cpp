@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2021, The Android Open Source Project
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -108,16 +108,16 @@ TEST_P(AddsToCompactorsTest, AddWithWeightToCompactorsTest) {
 
 INSTANTIATE_TEST_SUITE_P(AddsToCompactorsTestCases, AddsToCompactorsTest,
                          ::testing::ValuesIn(GenCompactorsTestParams()));
-class KLLQuantileUseSamplerTest : public ::testing::Test {
+class KllQuantileUseSamplerTest : public ::testing::Test {
 protected:
-    KLLQuantileUseSamplerTest() {
+    KllQuantileUseSamplerTest() {
     }
-    ~KLLQuantileUseSamplerTest() override {
+    ~KllQuantileUseSamplerTest() override {
     }
     MTRandomGenerator random_;
 };
 
-TEST_F(KLLQuantileUseSamplerTest, ZeroCapacityAfterReplacedWithSampler) {
+TEST_F(KllQuantileUseSamplerTest, ZeroCapacityAfterReplacedWithSampler) {
     CompactorStack compactor_stack(10, 10, &random_);
     for (int i = 0; i < 200000; i++) {
         compactor_stack.Add(random_.UnbiasedUniform(std::numeric_limits<uint64_t>::max()));
@@ -129,7 +129,7 @@ TEST_F(KLLQuantileUseSamplerTest, ZeroCapacityAfterReplacedWithSampler) {
     }
 }
 
-TEST_F(KLLQuantileUseSamplerTest, NumStoredItemsWithSampledItem) {
+TEST_F(KllQuantileUseSamplerTest, NumStoredItemsWithSampledItem) {
     CompactorStack compactor_stack(10, 10, &random_);
     for (int i = 0; i < 2000; i++) {
         compactor_stack.Add(random_.UnbiasedUniform(std::numeric_limits<uint64_t>::max()));
@@ -138,7 +138,7 @@ TEST_F(KLLQuantileUseSamplerTest, NumStoredItemsWithSampledItem) {
 
     int num_items_in_compactors = 0;
     for (const auto& compactor : compactor_stack.compactors()) {
-        if (compactor.capacity() > 0u) {
+        if (compactor.capacity() > 0) {
             num_items_in_compactors += compactor.size();
         }
     }
@@ -151,7 +151,7 @@ TEST_F(KLLQuantileUseSamplerTest, NumStoredItemsWithSampledItem) {
     }
 }
 
-TEST_F(KLLQuantileUseSamplerTest, ResetWithSampler) {
+TEST_F(KllQuantileUseSamplerTest, ResetWithSampler) {
     // Set a fixed seed for this test, as it is not given that there are 40 items
     // in the compactor stack after 2000 insertions.
     MTRandomGenerator random(10);
