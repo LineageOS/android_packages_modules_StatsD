@@ -825,7 +825,7 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
                 replacedMetrics.insert(metric.id());
                 [[fallthrough]];  // Intentionally fallthrough to create the new metric producer.
             case UPDATE_NEW: {
-                producer = createValueMetricProducerAndUpdateMetadata(
+                producer = createNumericValueMetricProducerAndUpdateMetadata(
                         key, config, timeBaseNs, currentTimeNs, pullerManager, metric, metricIndex,
                         allAtomMatchingTrackers, newAtomMatchingTrackerMap, allConditionTrackers,
                         conditionTrackerMap, initialConditionCache, wizard, matcherWizard,
