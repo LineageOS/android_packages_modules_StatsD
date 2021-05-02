@@ -14,6 +14,7 @@
 
 #include "statsd_test_util.h"
 
+#include <aggregator.pb.h>
 #include <aidl/android/util/StatsEventParcel.h>
 
 #include "matchers/SimpleAtomMatchingTracker.h"
@@ -22,6 +23,7 @@
 
 using aidl::android::util::StatsEventParcel;
 using std::shared_ptr;
+using zetasketch::android::AggregatorStateProto;
 
 namespace android {
 namespace os {
@@ -239,6 +241,10 @@ AtomMatcher CreateProcessLifeCycleStateChangedAtomMatcher(
 AtomMatcher CreateProcessCrashAtomMatcher() {
     return CreateProcessLifeCycleStateChangedAtomMatcher(
         "Crashed", ProcessLifeCycleStateChanged::CRASHED);
+}
+
+AtomMatcher CreateAppStartOccurredAtomMatcher() {
+    return CreateSimpleAtomMatcher("AppStartOccurredMatcher", util::APP_START_OCCURRED);
 }
 
 void addMatcherToMatcherCombination(const AtomMatcher& matcher, AtomMatcher* combinationMatcher) {
@@ -524,6 +530,20 @@ ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const
     }
     for (const int64_t state : states) {
         metric.add_slice_by_state(state);
+    }
+    return metric;
+}
+
+KllMetric createKllMetric(const string& name, const AtomMatcher& what, const int valueField,
+                          const optional<int64_t>& condition) {
+    KllMetric metric;
+    metric.set_id(StringToId(name));
+    metric.set_what(what.id());
+    metric.set_bucket(TEN_MINUTES);
+    metric.mutable_kll_field()->set_field(what.simple_atom_matcher().atom_id());
+    metric.mutable_kll_field()->add_child()->set_field(valueField);
+    if (condition) {
+        metric.set_condition(condition.value());
     }
     return metric;
 }
@@ -1308,6 +1328,21 @@ void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int
     }
 }
 
+void ValidateKllBucket(const KllBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
+                       const vector<int64_t> sketchSizes, int64_t conditionTrueNs) {
+    EXPECT_EQ(bucket.start_bucket_elapsed_nanos(), startTimeNs);
+    EXPECT_EQ(bucket.end_bucket_elapsed_nanos(), endTimeNs);
+    ASSERT_EQ(bucket.sketches_size(), sketchSizes.size());
+    for (int i = 0; i < sketchSizes.size(); ++i) {
+        AggregatorStateProto aggProto;
+        EXPECT_TRUE(aggProto.ParseFromString(bucket.sketches(i).kll_sketch()));
+        EXPECT_EQ(aggProto.num_values(), sketchSizes[i]);
+    }
+    if (conditionTrueNs > 0) {
+        EXPECT_EQ(bucket.condition_true_nanos(), conditionTrueNs);
+    }
+}
+
 bool EqualsTo(const DimensionsValue& s1, const DimensionsValue& s2) {
     if (s1.field() != s2.field()) {
         return false;
@@ -1578,6 +1613,12 @@ void backfillStartEndTimestamp(StatsLogReport *report) {
         if (report->value_metrics().skipped_size() > 0) {
             backfillStartEndTimestampForSkippedBuckets(
                 timeBaseNs, report->mutable_value_metrics());
+        }
+    } else if (report->has_kll_metrics()) {
+        backfillStartEndTimestampForMetrics(timeBaseNs, bucketSizeNs,
+                                            report->mutable_kll_metrics());
+        if (report->kll_metrics().skipped_size() > 0) {
+            backfillStartEndTimestampForSkippedBuckets(timeBaseNs, report->mutable_kll_metrics());
         }
     }
 }
