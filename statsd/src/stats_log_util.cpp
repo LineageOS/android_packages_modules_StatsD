@@ -99,9 +99,6 @@ const int FIELD_ID_MIN_BUCKET_BOUNDARY_DELAY_NS = 9;
 const int FIELD_ID_MAX_BUCKET_BOUNDARY_DELAY_NS = 10;
 const int FIELD_ID_BUCKET_UNKNOWN_CONDITION = 11;
 const int FIELD_ID_BUCKET_COUNT = 12;
-const int FIELD_ID_LATE_LOG_EVENT = 13;
-const int FIELD_ID_SUM_LATE_LOG_EVENT_EXTRA_DURATION_NS = 14;
-const int FIELD_ID_MAX_LATE_LOG_EVENT_EXTRA_DURATION_NS = 15;
 
 namespace {
 
@@ -550,12 +547,6 @@ void writeAtomMetricStatsToStream(const std::pair<int64_t, StatsdStats::AtomMetr
                              (long long)pair.second.bucketUnknownCondition, protoOutput);
     writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_COUNT,
                              (long long)pair.second.bucketCount, protoOutput);
-    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_LATE_LOG_EVENT,
-                             (long long)pair.second.lateLogEvent, protoOutput);
-    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_SUM_LATE_LOG_EVENT_EXTRA_DURATION_NS,
-                             (long long)pair.second.sumLateLogEventExtraDurationNs, protoOutput);
-    writeNonZeroStatToStream(FIELD_TYPE_INT64 | FIELD_ID_MAX_LATE_LOG_EVENT_EXTRA_DURATION_NS,
-                             (long long)pair.second.maxLateLogEventExtraDurationNs, protoOutput);
     protoOutput->end(token);
 }
 
