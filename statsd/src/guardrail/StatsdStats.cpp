@@ -521,15 +521,6 @@ void StatsdStats::noteLateLogEventSkipped(int64_t metricId) {
     getAtomMetricStats(metricId).lateLogEventSkipped++;
 }
 
-void StatsdStats::noteLateLogEvent(int64_t metricId, int64_t extraDurationNs) {
-    lock_guard<std::mutex> lock(mLock);
-    AtomMetricStats& metricStats = getAtomMetricStats(metricId);
-    metricStats.lateLogEvent++;
-    metricStats.sumLateLogEventExtraDurationNs += extraDurationNs;
-    metricStats.maxLateLogEventExtraDurationNs =
-            std::max(metricStats.maxLateLogEventExtraDurationNs, extraDurationNs);
-}
-
 void StatsdStats::noteSkippedForwardBuckets(int64_t metricId) {
     lock_guard<std::mutex> lock(mLock);
     getAtomMetricStats(metricId).skippedForwardBuckets++;
