@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2021, The Android Open Source Project
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -36,14 +36,14 @@ using ::testing::Eq;
 using ::testing::Optional;
 using ::testing::Pair;
 
-class KLLQuantileSamplerTest : public ::testing::Test {
+class KllQuantileSamplerTest : public ::testing::Test {
 protected:
-    KLLQuantileSamplerTest() : random_() {
+    KllQuantileSamplerTest() : random_() {
     }
     MTRandomGenerator random_;
 };
 
-TEST_F(KLLQuantileSamplerTest, Add100Items) {
+TEST_F(KllQuantileSamplerTest, Add100Items) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
@@ -67,20 +67,20 @@ TEST_F(KLLQuantileSamplerTest, Add100Items) {
     }
 }
 
-TEST_F(KLLQuantileSamplerTest, ZeroItems) {
+TEST_F(KllQuantileSamplerTest, ZeroItems) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, OneItem) {
+TEST_F(KllQuantileSamplerTest, OneItem) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Add(4);
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(4), Eq(1))));
 }
 
-TEST_F(KLLQuantileSamplerTest, TwoInts) {
+TEST_F(KllQuantileSamplerTest, TwoInts) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     EXPECT_EQ(sampler.capacity(), 2);
@@ -95,7 +95,7 @@ TEST_F(KLLQuantileSamplerTest, TwoInts) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, TwoIntsCapacityFour) {
+TEST_F(KllQuantileSamplerTest, TwoIntsCapacityFour) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.DoubleCapacity();
@@ -109,7 +109,7 @@ TEST_F(KLLQuantileSamplerTest, TwoIntsCapacityFour) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(AnyOf(Eq(1), Eq(2)), Eq(2))));
 }
 
-TEST_F(KLLQuantileSamplerTest, FourInts) {
+TEST_F(KllQuantileSamplerTest, FourInts) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     EXPECT_EQ(sampler.capacity(), 2);
@@ -127,7 +127,7 @@ TEST_F(KLLQuantileSamplerTest, FourInts) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, ThreeInts) {
+TEST_F(KllQuantileSamplerTest, ThreeInts) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     EXPECT_EQ(sampler.capacity(), 2);
@@ -143,21 +143,21 @@ TEST_F(KLLQuantileSamplerTest, ThreeInts) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(3), Eq(1))));
 }
 
-TEST_F(KLLQuantileSamplerTest, AddWithWeightZero) {
+TEST_F(KllQuantileSamplerTest, AddWithWeightZero) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.AddWithWeight(5, 0);
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, AddWithWeightOne) {
+TEST_F(KllQuantileSamplerTest, AddWithWeightOne) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.AddWithWeight(5, 1);
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(5), Eq(1))));
 }
 
-TEST_F(KLLQuantileSamplerTest, AddWithWeightTwo) {
+TEST_F(KllQuantileSamplerTest, AddWithWeightTwo) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.AddWithWeight(1, 2);
@@ -169,7 +169,7 @@ TEST_F(KLLQuantileSamplerTest, AddWithWeightTwo) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, AddWithWeightThree) {
+TEST_F(KllQuantileSamplerTest, AddWithWeightThree) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.AddWithWeight(3, 3);
@@ -181,7 +181,7 @@ TEST_F(KLLQuantileSamplerTest, AddWithWeightThree) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(3), Eq(1))));
 }
 
-TEST_F(KLLQuantileSamplerTest, WeightThreeNonEmptySampler) {
+TEST_F(KllQuantileSamplerTest, WeightThreeNonEmptySampler) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Add(1);
@@ -192,7 +192,7 @@ TEST_F(KLLQuantileSamplerTest, WeightThreeNonEmptySampler) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(AnyOf(Eq(1), Eq(2)), Eq(4))));
 }
 
-TEST_F(KLLQuantileSamplerTest, WeightFiveNonEmptySampler) {
+TEST_F(KllQuantileSamplerTest, WeightFiveNonEmptySampler) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Add(1);
@@ -207,7 +207,7 @@ TEST_F(KLLQuantileSamplerTest, WeightFiveNonEmptySampler) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(3), Eq(3))));
 }
 
-TEST_F(KLLQuantileSamplerTest, DoubleCapacityBetweenAdds) {
+TEST_F(KllQuantileSamplerTest, DoubleCapacityBetweenAdds) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Add(1);
@@ -227,14 +227,14 @@ TEST_F(KLLQuantileSamplerTest, DoubleCapacityBetweenAdds) {
                 Optional(Pair(AnyOf(Eq((1)), Eq((2)), Eq((3)), Eq((4)), Eq((5))), Eq(5))));
 }
 
-TEST_F(KLLQuantileSamplerTest, ResetZeroItems) {
+TEST_F(KllQuantileSamplerTest, ResetZeroItems) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Reset();
     EXPECT_THAT(sampler.sampled_item_and_weight(), Eq(std::nullopt));
 }
 
-TEST_F(KLLQuantileSamplerTest, ResetBetweenAddingOneItem) {
+TEST_F(KllQuantileSamplerTest, ResetBetweenAddingOneItem) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.Add(1);
@@ -244,7 +244,7 @@ TEST_F(KLLQuantileSamplerTest, ResetBetweenAddingOneItem) {
     EXPECT_THAT(sampler.sampled_item_and_weight(), Optional(Pair(Eq(2), Eq(1))));
 }
 
-TEST_F(KLLQuantileSamplerTest, ResetBetweenAddingTenItems) {
+TEST_F(KllQuantileSamplerTest, ResetBetweenAddingTenItems) {
     CompactorStack compactor_stack(1000, 100000, &random_);
     KllSampler sampler(&compactor_stack);
     sampler.DoubleCapacity();
