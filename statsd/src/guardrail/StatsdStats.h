@@ -419,11 +419,6 @@ public:
     void noteLateLogEventSkipped(int64_t metricId);
 
     /**
-     * A log event was too late, arrived in the wrong bucket.
-     */
-    void noteLateLogEvent(int64_t metricId, int64_t extraDurationNs);
-
-    /**
      * Buckets were skipped as time elapsed without any data for them
      */
     void noteSkippedForwardBuckets(int64_t metricId);
@@ -547,9 +542,6 @@ public:
         int64_t maxBucketBoundaryDelayNs = 0;
         long bucketUnknownCondition = 0;
         long bucketCount = 0;
-        long lateLogEvent = 0;
-        int64_t sumLateLogEventExtraDurationNs = 0;
-        int64_t maxLateLogEventExtraDurationNs = 0;
     } AtomMetricStats;
 
 private:
