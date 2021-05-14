@@ -345,9 +345,6 @@ TEST(StatsdStatsTest, TestAtomMetricsStats) {
     // old event, we get it from the stats buffer. should be ignored.
     stats.noteBucketDropped(10000000000LL);
 
-    stats.noteLateLogEvent(10000000000LL, 10L);
-    stats.noteLateLogEvent(10000000000LL, 50L);
-
     stats.noteBucketBoundaryDelayNs(10000000000LL, -1L);
     stats.noteBucketBoundaryDelayNs(10000000000LL, -10L);
     stats.noteBucketBoundaryDelayNs(10000000000LL, 2L);
@@ -367,18 +364,12 @@ TEST(StatsdStatsTest, TestAtomMetricsStats) {
     EXPECT_EQ(1L, atomStats.bucket_dropped());
     EXPECT_EQ(-10L, atomStats.min_bucket_boundary_delay_ns());
     EXPECT_EQ(2L, atomStats.max_bucket_boundary_delay_ns());
-    EXPECT_EQ(2L, atomStats.late_log_event());
-    EXPECT_EQ(60L, atomStats.sum_late_log_event_extra_duration_ns());
-    EXPECT_EQ(50L, atomStats.max_late_log_event_extra_duration_ns());
 
     auto atomStats2 = report.atom_metric_stats(1);
     EXPECT_EQ(10000000001LL, atomStats2.metric_id());
     EXPECT_EQ(0L, atomStats2.bucket_dropped());
     EXPECT_EQ(0L, atomStats2.min_bucket_boundary_delay_ns());
     EXPECT_EQ(1L, atomStats2.max_bucket_boundary_delay_ns());
-    EXPECT_EQ(0L, atomStats2.late_log_event());
-    EXPECT_EQ(0L, atomStats2.sum_late_log_event_extra_duration_ns());
-    EXPECT_EQ(0L, atomStats2.max_late_log_event_extra_duration_ns());
 }
 
 TEST(StatsdStatsTest, TestAnomalyMonitor) {
