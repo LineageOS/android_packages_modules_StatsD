@@ -488,9 +488,7 @@ message StatsdStatsReport {
       optional int64 max_bucket_boundary_delay_ns = 10;
       optional int64 bucket_unknown_condition = 11;
       optional int64 bucket_count = 12;
-      optional int64 late_log_event = 13;
-      optional int64 sum_late_log_event_extra_duration_ns = 14;
-      optional int64 max_late_log_event_extra_duration_ns = 15;
+      reserved 13 to 15;
     }
     repeated AtomMetricStats atom_metric_stats = 17;
 
