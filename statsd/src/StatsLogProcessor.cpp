@@ -82,7 +82,7 @@ constexpr const char* kPermissionUsage = "android.permission.PACKAGE_USAGE_STATS
 #define STATS_METADATA_DIR "/data/misc/stats-metadata"
 
 // Cool down period for writing data to disk to avoid overwriting files.
-#define WRITE_DATA_COOL_DOWN_SEC 5
+#define WRITE_DATA_COOL_DOWN_SEC 15
 
 StatsLogProcessor::StatsLogProcessor(const sp<UidMap>& uidMap,
                                      const sp<StatsPullerManager>& pullerManager,
