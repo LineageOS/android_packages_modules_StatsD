@@ -36,7 +36,10 @@ apex_defaults {
         "service-statsd",
     ],
     compile_multilib: "both",
-    prebuilts: ["com.android.os.statsd.init.rc"],
+    prebuilts: [
+        "com.android.os.statsd.init.rc",
+        "current_sdkinfo",
+    ],
     name: "com.android.os.statsd-defaults",
     updatable: true,
     min_sdk_version: "30",
