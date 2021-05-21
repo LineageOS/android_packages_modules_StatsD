@@ -95,6 +95,7 @@ cc_defaults {
         "libbase",
         "libcutils",
         "libkll",
+        "libmodules-utils-build",
         "libprotoutil",
         "libstatslog_statsd",
         "libsysutils",
