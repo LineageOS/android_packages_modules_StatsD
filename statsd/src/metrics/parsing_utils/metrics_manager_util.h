@@ -150,7 +150,7 @@ optional<sp<MetricProducer>> createEventMetricProducerAndUpdateMetadata(
 
 // Creates a CountMetricProducer and updates the vectors/maps used by MetricsManager with
 // the appropriate indices. Returns an sp to the producer, or nullopt if there was an error.
-optional<sp<MetricProducer>> createValueMetricProducerAndUpdateMetadata(
+optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
         const ConfigKey& key, const StatsdConfig& config, const int64_t timeBaseNs,
         const int64_t currentTimeNs, const sp<StatsPullerManager>& pullerManager,
         const ValueMetric& metric, const int metricIndex,

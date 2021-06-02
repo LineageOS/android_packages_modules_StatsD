@@ -78,7 +78,8 @@ GaugeMetricProducer::GaugeMetricProducer(
         const int atomId, const int64_t timeBaseNs, const int64_t startTimeNs,
         const sp<StatsPullerManager>& pullerManager,
         const unordered_map<int, shared_ptr<Activation>>& eventActivationMap,
-        const unordered_map<int, vector<shared_ptr<Activation>>>& eventDeactivationMap)
+        const unordered_map<int, vector<shared_ptr<Activation>>>& eventDeactivationMap,
+        const size_t dimensionSoftLimit, const size_t dimensionHardLimit)
     : MetricProducer(metric.id(), key, timeBaseNs, conditionIndex, initialConditionCache, wizard,
                      protoHash, eventActivationMap, eventDeactivationMap, /*slicedStateAtoms=*/{},
                      /*stateGroupMap=*/{}),
@@ -92,14 +93,8 @@ GaugeMetricProducer::GaugeMetricProducer(
       mMinBucketSizeNs(metric.min_bucket_size_nanos()),
       mMaxPullDelayNs(metric.max_pull_delay_sec() > 0 ? metric.max_pull_delay_sec() * NS_PER_SEC
                                                       : StatsdStats::kPullMaxDelayNs),
-      mDimensionSoftLimit(StatsdStats::kAtomDimensionKeySizeLimitMap.find(pullTagId) !=
-                                          StatsdStats::kAtomDimensionKeySizeLimitMap.end()
-                                  ? StatsdStats::kAtomDimensionKeySizeLimitMap.at(pullTagId).first
-                                  : StatsdStats::kDimensionKeySizeSoftLimit),
-      mDimensionHardLimit(StatsdStats::kAtomDimensionKeySizeLimitMap.find(pullTagId) !=
-                                          StatsdStats::kAtomDimensionKeySizeLimitMap.end()
-                                  ? StatsdStats::kAtomDimensionKeySizeLimitMap.at(pullTagId).second
-                                  : StatsdStats::kDimensionKeySizeHardLimit),
+      mDimensionSoftLimit(dimensionSoftLimit),
+      mDimensionHardLimit(dimensionHardLimit),
       mGaugeAtomsPerDimensionLimit(metric.max_num_gauge_atoms_per_bucket()),
       mSplitBucketForAppUpgrade(metric.split_bucket_for_app_upgrade()) {
     mCurrentSlicedBucket = std::make_shared<DimToGaugeAtomsMap>();
@@ -404,7 +399,7 @@ void GaugeMetricProducer::pullAndMatchEventsLocked(const int64_t timestampNs) {
     }
 }
 
-void GaugeMetricProducer::onActiveStateChangedLocked(const int64_t& eventTimeNs) {
+void GaugeMetricProducer::onActiveStateChangedLocked(const int64_t eventTimeNs) {
     MetricProducer::onActiveStateChangedLocked(eventTimeNs);
     if (ConditionState::kTrue != mCondition || !mIsPulled) {
         return;
@@ -412,7 +407,6 @@ void GaugeMetricProducer::onActiveStateChangedLocked(const int64_t& eventTimeNs)
     if (mTriggerAtomId == -1 || (mIsActive && mSamplingType == GaugeMetric::RANDOM_ONE_SAMPLE)) {
         pullAndMatchEventsLocked(eventTimeNs);
     }
-
 }
 
 void GaugeMetricProducer::onConditionChangedLocked(const bool conditionMet,

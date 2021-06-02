@@ -550,7 +550,7 @@ TEST(ValueMetricE2eTest, TestInitWithSlicedState) {
     EXPECT_EQ(1, StateManager::getInstance().getStateTrackersCount());
     EXPECT_EQ(1, StateManager::getInstance().getListenersCount(SCREEN_STATE_ATOM_ID));
 
-    // Check that ValueMetricProducer was initialized correctly.
+    // Check that NumericValueMetricProducer was initialized correctly.
     ASSERT_EQ(1U, processor->mMetricsManagers.size());
     sp<MetricsManager> metricsManager = processor->mMetricsManagers.begin()->second;
     EXPECT_TRUE(metricsManager->isConfigValid());
@@ -610,7 +610,7 @@ TEST(ValueMetricE2eTest, TestInitWithSlicedState_WithDimensions) {
     EXPECT_EQ(1, StateManager::getInstance().getStateTrackersCount());
     EXPECT_EQ(1, StateManager::getInstance().getListenersCount(UID_PROCESS_STATE_ATOM_ID));
 
-    // Check that ValueMetricProducer was initialized correctly.
+    // Check that NumericValueMetricProducer was initialized correctly.
     ASSERT_EQ(1U, processor->mMetricsManagers.size());
     sp<MetricsManager> metricsManager = processor->mMetricsManagers.begin()->second;
     EXPECT_TRUE(metricsManager->isConfigValid());
