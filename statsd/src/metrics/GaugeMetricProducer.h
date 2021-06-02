@@ -66,7 +66,9 @@ public:
             const sp<StatsPullerManager>& pullerManager,
             const std::unordered_map<int, std::shared_ptr<Activation>>& eventActivationMap = {},
             const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
-                    eventDeactivationMap = {});
+                    eventDeactivationMap = {},
+            const size_t dimensionSoftLimit = StatsdStats::kDimensionKeySizeSoftLimit,
+            const size_t dimensionHardLimit = StatsdStats::kDimensionKeySizeHardLimit);
 
     virtual ~GaugeMetricProducer();
 
@@ -120,7 +122,7 @@ private:
     void onConditionChangedLocked(const bool conditionMet, const int64_t eventTime) override;
 
     // Internal interface to handle active state change.
-    void onActiveStateChangedLocked(const int64_t& eventTimeNs) override;
+    void onActiveStateChangedLocked(const int64_t eventTimeNs) override;
 
     // Internal interface to handle sliced condition change.
     void onSlicedConditionMayChangeLocked(bool overallCondition, const int64_t eventTime) override;

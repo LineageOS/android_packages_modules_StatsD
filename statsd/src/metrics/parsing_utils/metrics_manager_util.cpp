@@ -25,6 +25,7 @@
 #include "condition/CombinationConditionTracker.h"
 #include "condition/SimpleConditionTracker.h"
 #include "external/StatsPullerManager.h"
+#include "guardrail/StatsdStats.h"
 #include "hash.h"
 #include "matchers/CombinationAtomMatchingTracker.h"
 #include "matchers/EventMatcherWizard.h"
@@ -34,7 +35,7 @@
 #include "metrics/EventMetricProducer.h"
 #include "metrics/GaugeMetricProducer.h"
 #include "metrics/MetricProducer.h"
-#include "metrics/ValueMetricProducer.h"
+#include "metrics/NumericValueMetricProducer.h"
 #include "state/StateManager.h"
 #include "stats_util.h"
 
@@ -627,7 +628,7 @@ optional<sp<MetricProducer>> createEventMetricProducerAndUpdateMetadata(
                                     eventDeactivationMap)};
 }
 
-optional<sp<MetricProducer>> createValueMetricProducerAndUpdateMetadata(
+optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
         const ConfigKey& key, const StatsdConfig& config, const int64_t timeBaseNs,
         const int64_t currentTimeNs, const sp<StatsPullerManager>& pullerManager,
         const ValueMetric& metric, const int metricIndex,
@@ -724,10 +725,26 @@ optional<sp<MetricProducer>> createValueMetricProducerAndUpdateMetadata(
         return nullopt;
     }
 
-    return {new ValueMetricProducer(key, metric, conditionIndex, initialConditionCache, wizard,
-                                    metricHash, trackerIndex, matcherWizard, pullTagId, timeBaseNs,
-                                    currentTimeNs, pullerManager, eventActivationMap,
-                                    eventDeactivationMap, slicedStateAtoms, stateGroupMap)};
+    const TimeUnit bucketSizeTimeUnit =
+            metric.bucket() == TIME_UNIT_UNSPECIFIED ? ONE_HOUR : metric.bucket();
+    const int64_t bucketSizeNs =
+            MillisToNano(TimeUnitToBucketSizeInMillisGuardrailed(key.GetUid(), bucketSizeTimeUnit));
+
+    const bool containsAnyPositionInDimensionsInWhat = HasPositionANY(metric.dimensions_in_what());
+    const bool sliceByPositionAll = HasPositionALL(metric.dimensions_in_what());
+
+    const auto [dimensionSoftLimit, dimensionHardLimit] =
+            StatsdStats::getAtomDimensionKeySizeLimits(pullTagId);
+
+    return new NumericValueMetricProducer(
+            key, metric, metricHash, {pullTagId, pullerManager},
+            {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
+             metric.split_bucket_for_app_upgrade()},
+            {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
+             metric.dimensions_in_what(), fieldMatchers},
+            {conditionIndex, metric.links(), initialConditionCache, wizard},
+            {metric.state_link(), slicedStateAtoms, stateGroupMap},
+            {eventActivationMap, eventDeactivationMap}, {dimensionSoftLimit, dimensionHardLimit});
 }
 
 optional<sp<MetricProducer>> createGaugeMetricProducerAndUpdateMetadata(
@@ -837,10 +854,14 @@ optional<sp<MetricProducer>> createGaugeMetricProducerAndUpdateMetadata(
         return nullopt;
     }
 
+    const auto [dimensionSoftLimit, dimensionHardLimit] =
+            StatsdStats::getAtomDimensionKeySizeLimits(pullTagId);
+
     return {new GaugeMetricProducer(key, metric, conditionIndex, initialConditionCache, wizard,
                                     metricHash, trackerIndex, matcherWizard, pullTagId,
                                     triggerAtomId, atomTagId, timeBaseNs, currentTimeNs,
-                                    pullerManager, eventActivationMap, eventDeactivationMap)};
+                                    pullerManager, eventActivationMap, eventDeactivationMap,
+                                    dimensionSoftLimit, dimensionHardLimit)};
 }
 
 optional<sp<AnomalyTracker>> createAnomalyTracker(
@@ -1071,12 +1092,12 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
         allMetricProducers.push_back(producer.value());
     }
 
-    // build ValueMetricProducer
+    // build NumericValueMetricProducer
     for (int i = 0; i < config.value_metric_size(); i++) {
         int metricIndex = allMetricProducers.size();
         const ValueMetric& metric = config.value_metric(i);
         metricMap.insert({metric.id(), metricIndex});
-        optional<sp<MetricProducer>> producer = createValueMetricProducerAndUpdateMetadata(
+        optional<sp<MetricProducer>> producer = createNumericValueMetricProducerAndUpdateMetadata(
                 key, config, timeBaseTimeNs, currentTimeNs, pullerManager, metric, metricIndex,
                 allAtomMatchingTrackers, atomMatchingTrackerMap, allConditionTrackers,
                 conditionTrackerMap, initialConditionCache, wizard, matcherWizard, stateAtomIdMap,
