@@ -426,7 +426,7 @@ protected:
 
     bool evaluateActiveStateLocked(int64_t elapsedTimestampNs);
 
-    virtual void onActiveStateChangedLocked(const int64_t& eventTimeNs) {
+    virtual void onActiveStateChangedLocked(const int64_t eventTimeNs) {
         if (!mIsActive) {
             flushLocked(eventTimeNs);
         }
@@ -494,6 +494,7 @@ protected:
 
     int mConditionTrackerIndex;
 
+    // TODO(b/185770739): use !mMetric2ConditionLinks.empty()
     bool mConditionSliced;
 
     sp<ConditionWizard> mWizard;
