@@ -45,6 +45,8 @@ using ConditionLinks = google::protobuf::RepeatedPtrField<MetricConditionLink>;
 
 using StateLinks = google::protobuf::RepeatedPtrField<MetricStateLink>;
 
+struct Empty {};
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android

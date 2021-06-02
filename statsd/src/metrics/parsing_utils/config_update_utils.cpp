@@ -596,6 +596,21 @@ bool determineAllMetricUpdateStatuses(const StatsdConfig& config,
             return false;
         }
     }
+    for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
+        const KllMetric& metric = config.kll_metric(i);
+        set<int64_t> conditionDependencies;
+        if (metric.has_condition()) {
+            conditionDependencies.insert(metric.condition());
+        }
+        if (!determineMetricUpdateStatus(
+                    config, metric, metric.id(), METRIC_TYPE_KLL, {metric.what()},
+                    conditionDependencies, metric.slice_by_state(), metric.links(),
+                    oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+                    replacedMatchers, replacedConditions, replacedStates,
+                    metricsToUpdate[metricIndex])) {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -664,7 +679,7 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
     sp<EventMatcherWizard> matcherWizard = new EventMatcherWizard(allAtomMatchingTrackers);
     const int allMetricsCount = config.count_metric_size() + config.duration_metric_size() +
                                 config.event_metric_size() + config.gauge_metric_size() +
-                                config.value_metric_size();
+                                config.value_metric_size() + config.kll_metric_size();
     newMetricProducers.reserve(allMetricsCount);
 
     // Construct map from metric id to metric activation index. The map will be used to determine
@@ -872,6 +887,46 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
                         metricToActivationMap, trackerToMetricMap, conditionToMetricMap,
                         activationAtomTrackerToMetricMap, deactivationAtomTrackerToMetricMap,
                         metricsWithActivation);
+                break;
+            }
+            default: {
+                ALOGE("Metric \"%lld\" update state is unknown. This should never happen",
+                      (long long)metric.id());
+                return false;
+            }
+        }
+        if (!producer) {
+            return false;
+        }
+        newMetricProducers.push_back(producer.value());
+    }
+
+    for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
+        const KllMetric& metric = config.kll_metric(i);
+        newMetricProducerMap[metric.id()] = metricIndex;
+        optional<sp<MetricProducer>> producer;
+        switch (metricsToUpdate[metricIndex]) {
+            case UPDATE_PRESERVE: {
+                producer = updateMetric(
+                        config, i, metricIndex, metric.id(), allAtomMatchingTrackers,
+                        oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap, matcherWizard,
+                        allConditionTrackers, conditionTrackerMap, wizard, oldMetricProducerMap,
+                        oldMetricProducers, metricToActivationMap, trackerToMetricMap,
+                        conditionToMetricMap, activationAtomTrackerToMetricMap,
+                        deactivationAtomTrackerToMetricMap, metricsWithActivation);
+                break;
+            }
+            case UPDATE_REPLACE:
+                replacedMetrics.insert(metric.id());
+                [[fallthrough]];  // Intentionally fallthrough to create the new metric producer.
+            case UPDATE_NEW: {
+                producer = createKllMetricProducerAndUpdateMetadata(
+                        key, config, timeBaseNs, currentTimeNs, pullerManager, metric, metricIndex,
+                        allAtomMatchingTrackers, newAtomMatchingTrackerMap, allConditionTrackers,
+                        conditionTrackerMap, initialConditionCache, wizard, matcherWizard,
+                        stateAtomIdMap, allStateGroupMaps, metricToActivationMap,
+                        trackerToMetricMap, conditionToMetricMap, activationAtomTrackerToMetricMap,
+                        deactivationAtomTrackerToMetricMap, metricsWithActivation);
                 break;
             }
             default: {
