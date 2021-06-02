@@ -41,6 +41,10 @@ typedef std::map<int64_t, HashableDimensionKey> ConditionKey;
 
 typedef std::unordered_map<MetricDimensionKey, int64_t> DimToValMap;
 
+using ConditionLinks = google::protobuf::RepeatedPtrField<MetricConditionLink>;
+
+using StateLinks = google::protobuf::RepeatedPtrField<MetricStateLink>;
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
