@@ -61,6 +61,7 @@ cc_defaults {
         "src/metrics/DurationMetricProducer.cpp",
         "src/metrics/EventMetricProducer.cpp",
         "src/metrics/GaugeMetricProducer.cpp",
+        "src/metrics/KllMetricProducer.cpp",
         "src/metrics/MetricProducer.cpp",
         "src/metrics/MetricsManager.cpp",
         "src/metrics/ValueMetricProducer.cpp",
@@ -93,6 +94,7 @@ cc_defaults {
     static_libs: [
         "libbase",
         "libcutils",
+        "libkll",
         "libmodules-utils-build",
         "libprotoutil",
         "libstatslog_statsd",

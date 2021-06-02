@@ -94,6 +94,7 @@ enum MetricType {
     METRIC_TYPE_DURATION = 3,
     METRIC_TYPE_GAUGE = 4,
     METRIC_TYPE_VALUE = 5,
+    METRIC_TYPE_KLL = 6,
 };
 struct Activation {
     Activation(const ActivationType& activationType, const int64_t ttlNs)
