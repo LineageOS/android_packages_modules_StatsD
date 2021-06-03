@@ -434,7 +434,7 @@ void DurationMetricProducer::onSlicedConditionMayChangeLocked(bool overallCondit
     onSlicedConditionMayChangeInternalLocked(overallCondition, eventTime);
 }
 
-void DurationMetricProducer::onActiveStateChangedLocked(const int64_t& eventTimeNs) {
+void DurationMetricProducer::onActiveStateChangedLocked(const int64_t eventTimeNs) {
     MetricProducer::onActiveStateChangedLocked(eventTimeNs);
 
     if (!mConditionSliced) {

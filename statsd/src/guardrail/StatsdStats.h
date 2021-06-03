@@ -498,6 +498,11 @@ public:
      */
     void dumpStats(int outFd) const;
 
+    /**
+     * Return soft and hard atom key dimension size limits as an std::pair.
+     */
+    static std::pair<size_t, size_t> getAtomDimensionKeySizeLimits(const int atomId = -1);
+
     typedef struct PullTimeoutMetadata {
         int64_t pullTimeoutUptimeMillis;
         int64_t pullTimeoutElapsedMillis;
