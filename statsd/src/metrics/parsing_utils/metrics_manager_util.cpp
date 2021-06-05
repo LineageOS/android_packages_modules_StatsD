@@ -34,6 +34,7 @@
 #include "metrics/DurationMetricProducer.h"
 #include "metrics/EventMetricProducer.h"
 #include "metrics/GaugeMetricProducer.h"
+#include "metrics/KllMetricProducer.h"
 #include "metrics/MetricProducer.h"
 #include "metrics/NumericValueMetricProducer.h"
 #include "state/StateManager.h"
@@ -663,17 +664,13 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
 
     int trackerIndex;
     if (!handleMetricWithAtomMatchingTrackers(metric.what(), metricIndex,
-                                              metric.has_dimensions_in_what(),
-                                              allAtomMatchingTrackers, atomMatchingTrackerMap,
-                                              trackerToMetricMap, trackerIndex)) {
+                                              /*enforceOneAtom=*/true, allAtomMatchingTrackers,
+                                              atomMatchingTrackerMap, trackerToMetricMap,
+                                              trackerIndex)) {
         return nullopt;
     }
 
     sp<AtomMatchingTracker> atomMatcher = allAtomMatchingTrackers.at(trackerIndex);
-    // If it is pulled atom, it should be simple matcher with one tagId.
-    if (atomMatcher->getAtomIds().size() != 1) {
-        return nullopt;
-    }
     int atomTagId = *(atomMatcher->getAtomIds().begin());
     int pullTagId = pullerManager->PullerForMatcherExists(atomTagId) ? atomTagId : -1;
 
@@ -738,6 +735,119 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
 
     return new NumericValueMetricProducer(
             key, metric, metricHash, {pullTagId, pullerManager},
+            {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
+             metric.split_bucket_for_app_upgrade()},
+            {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
+             metric.dimensions_in_what(), fieldMatchers},
+            {conditionIndex, metric.links(), initialConditionCache, wizard},
+            {metric.state_link(), slicedStateAtoms, stateGroupMap},
+            {eventActivationMap, eventDeactivationMap}, {dimensionSoftLimit, dimensionHardLimit});
+}
+
+optional<sp<MetricProducer>> createKllMetricProducerAndUpdateMetadata(
+        const ConfigKey& key, const StatsdConfig& config, const int64_t timeBaseNs,
+        const int64_t currentTimeNs, const sp<StatsPullerManager>& pullerManager,
+        const KllMetric& metric, const int metricIndex,
+        const vector<sp<AtomMatchingTracker>>& allAtomMatchingTrackers,
+        const unordered_map<int64_t, int>& atomMatchingTrackerMap,
+        vector<sp<ConditionTracker>>& allConditionTrackers,
+        const unordered_map<int64_t, int>& conditionTrackerMap,
+        const vector<ConditionState>& initialConditionCache, const sp<ConditionWizard>& wizard,
+        const sp<EventMatcherWizard>& matcherWizard,
+        const unordered_map<int64_t, int>& stateAtomIdMap,
+        const unordered_map<int64_t, unordered_map<int, int64_t>>& allStateGroupMaps,
+        const unordered_map<int64_t, int>& metricToActivationMap,
+        unordered_map<int, vector<int>>& trackerToMetricMap,
+        unordered_map<int, vector<int>>& conditionToMetricMap,
+        unordered_map<int, vector<int>>& activationAtomTrackerToMetricMap,
+        unordered_map<int, vector<int>>& deactivationAtomTrackerToMetricMap,
+        vector<int>& metricsWithActivation) {
+    if (!metric.has_id() || !metric.has_what()) {
+        ALOGE("cannot find metric id or \"what\" in KllMetric \"%lld\"", (long long)metric.id());
+        return nullopt;
+    }
+    if (!metric.has_kll_field()) {
+        ALOGE("cannot find \"kll_field\" in KllMetric \"%lld\"", (long long)metric.id());
+        return nullopt;
+    }
+    std::vector<Matcher> fieldMatchers;
+    translateFieldMatcher(metric.kll_field(), &fieldMatchers);
+    if (fieldMatchers.empty()) {
+        ALOGE("incorrect \"kll_field\" in KllMetric \"%lld\"", (long long)metric.id());
+        return nullopt;
+    }
+
+    int trackerIndex;
+    if (!handleMetricWithAtomMatchingTrackers(metric.what(), metricIndex,
+                                              /*enforceOneAtom=*/true, allAtomMatchingTrackers,
+                                              atomMatchingTrackerMap, trackerToMetricMap,
+                                              trackerIndex)) {
+        return nullopt;
+    }
+
+    int conditionIndex = -1;
+    if (metric.has_condition()) {
+        if (!handleMetricWithConditions(metric.condition(), metricIndex, conditionTrackerMap,
+                                        metric.links(), allConditionTrackers, conditionIndex,
+                                        conditionToMetricMap)) {
+            return nullopt;
+        }
+    } else if (metric.links_size() > 0) {
+        ALOGE("metrics has a MetricConditionLink but doesn't have a condition");
+        return nullopt;
+    }
+
+    std::vector<int> slicedStateAtoms;
+    unordered_map<int, unordered_map<int, int64_t>> stateGroupMap;
+    if (metric.slice_by_state_size() > 0) {
+        if (!handleMetricWithStates(config, metric.slice_by_state(), stateAtomIdMap,
+                                    allStateGroupMaps, slicedStateAtoms, stateGroupMap)) {
+            return nullopt;
+        }
+    } else if (metric.state_link_size() > 0) {
+        ALOGE("KllMetric has a MetricStateLink but doesn't have a sliced state");
+        return nullopt;
+    }
+
+    // Check that all metric state links are a subset of dimensions_in_what fields.
+    std::vector<Matcher> dimensionsInWhat;
+    translateFieldMatcher(metric.dimensions_in_what(), &dimensionsInWhat);
+    for (const auto& stateLink : metric.state_link()) {
+        if (!handleMetricWithStateLink(stateLink.fields_in_what(), dimensionsInWhat)) {
+            ALOGW("KllMetric's MetricStateLinks must be a subset of the dimensions in what");
+            return nullopt;
+        }
+    }
+
+    unordered_map<int, shared_ptr<Activation>> eventActivationMap;
+    unordered_map<int, vector<shared_ptr<Activation>>> eventDeactivationMap;
+    if (!handleMetricActivation(config, metric.id(), metricIndex, metricToActivationMap,
+                                atomMatchingTrackerMap, activationAtomTrackerToMetricMap,
+                                deactivationAtomTrackerToMetricMap, metricsWithActivation,
+                                eventActivationMap, eventDeactivationMap)) {
+        return nullopt;
+    }
+
+    uint64_t metricHash;
+    if (!getMetricProtoHash(config, metric, metric.id(), metricToActivationMap, metricHash)) {
+        return nullopt;
+    }
+
+    const TimeUnit bucketSizeTimeUnit =
+            metric.bucket() == TIME_UNIT_UNSPECIFIED ? ONE_HOUR : metric.bucket();
+    const int64_t bucketSizeNs =
+            MillisToNano(TimeUnitToBucketSizeInMillisGuardrailed(key.GetUid(), bucketSizeTimeUnit));
+
+    const bool containsAnyPositionInDimensionsInWhat = HasPositionANY(metric.dimensions_in_what());
+    const bool sliceByPositionAll = HasPositionALL(metric.dimensions_in_what());
+
+    sp<AtomMatchingTracker> atomMatcher = allAtomMatchingTrackers.at(trackerIndex);
+    const int atomTagId = *(atomMatcher->getAtomIds().begin());
+    const auto [dimensionSoftLimit, dimensionHardLimit] =
+            StatsdStats::getAtomDimensionKeySizeLimits(atomTagId);
+
+    return new KllMetricProducer(
+            key, metric, metricHash, {/*pullTagId=*/-1, pullerManager},
             {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
              metric.split_bucket_for_app_upgrade()},
             {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
@@ -1021,7 +1131,7 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
     sp<EventMatcherWizard> matcherWizard = new EventMatcherWizard(allAtomMatchingTrackers);
     const int allMetricsCount = config.count_metric_size() + config.duration_metric_size() +
                                 config.event_metric_size() + config.gauge_metric_size() +
-                                config.value_metric_size();
+                                config.value_metric_size() + config.kll_metric_size();
     allMetricProducers.reserve(allMetricsCount);
 
     // Construct map from metric id to metric activation index. The map will be used to determine
@@ -1098,6 +1208,24 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
         const ValueMetric& metric = config.value_metric(i);
         metricMap.insert({metric.id(), metricIndex});
         optional<sp<MetricProducer>> producer = createNumericValueMetricProducerAndUpdateMetadata(
+                key, config, timeBaseTimeNs, currentTimeNs, pullerManager, metric, metricIndex,
+                allAtomMatchingTrackers, atomMatchingTrackerMap, allConditionTrackers,
+                conditionTrackerMap, initialConditionCache, wizard, matcherWizard, stateAtomIdMap,
+                allStateGroupMaps, metricToActivationMap, trackerToMetricMap, conditionToMetricMap,
+                activationAtomTrackerToMetricMap, deactivationAtomTrackerToMetricMap,
+                metricsWithActivation);
+        if (!producer) {
+            return false;
+        }
+        allMetricProducers.push_back(producer.value());
+    }
+
+    // build KllMetricProducer
+    for (int i = 0; i < config.kll_metric_size(); i++) {
+        int metricIndex = allMetricProducers.size();
+        const KllMetric& metric = config.kll_metric(i);
+        metricMap.insert({metric.id(), metricIndex});
+        optional<sp<MetricProducer>> producer = createKllMetricProducerAndUpdateMetadata(
                 key, config, timeBaseTimeNs, currentTimeNs, pullerManager, metric, metricIndex,
                 allAtomMatchingTrackers, atomMatchingTrackerMap, allConditionTrackers,
                 conditionTrackerMap, initialConditionCache, wizard, matcherWizard, stateAtomIdMap,
