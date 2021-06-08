@@ -72,9 +72,7 @@ prebuilt_etc {
 // ==========================================================
 sdk {
     name: "statsd-module-sdk",
-    java_sdk_libs: [
-        "framework-statsd",
-    ],
+    bootclasspath_fragments: ["com.android.os.statsd-bootclasspath-fragment"],
     native_shared_libs: [
         "libstatssocket",
     ],
