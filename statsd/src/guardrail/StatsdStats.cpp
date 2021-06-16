@@ -1099,6 +1099,13 @@ void StatsdStats::dumpStats(std::vector<uint8_t>* output, bool reset) {
     VLOG("reset=%d, returned proto size %lu", reset, (unsigned long)bufferSize);
 }
 
+std::pair<size_t, size_t> StatsdStats::getAtomDimensionKeySizeLimits(const int atomId) {
+    return kAtomDimensionKeySizeLimitMap.find(atomId) != kAtomDimensionKeySizeLimitMap.end()
+                   ? kAtomDimensionKeySizeLimitMap.at(atomId)
+                   : std::make_pair<size_t, size_t>(kDimensionKeySizeSoftLimit,
+                                                    kDimensionKeySizeHardLimit);
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android

@@ -23,14 +23,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/statsd_config.pb.h"
 #include "src/condition/CombinationConditionTracker.h"
 #include "src/condition/SimpleConditionTracker.h"
 #include "src/matchers/CombinationAtomMatchingTracker.h"
 #include "src/metrics/DurationMetricProducer.h"
 #include "src/metrics/GaugeMetricProducer.h"
-#include "src/metrics/ValueMetricProducer.h"
+#include "src/metrics/NumericValueMetricProducer.h"
 #include "src/metrics/parsing_utils/metrics_manager_util.h"
+#include "src/statsd_config.pb.h"
 #include "tests/statsd_test_util.h"
 
 using namespace testing;
@@ -2745,7 +2745,8 @@ TEST_F(ConfigUpdateTest, TestUpdateValueMetrics) {
 
     // Used later to ensure the condition wizard is replaced. Get it before doing the update.
     sp<EventMatcherWizard> oldMatcherWizard =
-            static_cast<ValueMetricProducer*>(oldMetricProducers[0].get())->mEventMatcherWizard;
+            static_cast<NumericValueMetricProducer*>(oldMetricProducers[0].get())
+                    ->mEventMatcherWizard;
     EXPECT_EQ(oldMatcherWizard->getStrongCount(), 6);
 
     // Change value2, causing it to be replaced.
@@ -2874,32 +2875,32 @@ TEST_F(ConfigUpdateTest, TestUpdateValueMetrics) {
     ASSERT_EQ(metricsWithActivation.size(), 0);
 
     // Verify tracker indices/ids/conditions/states are correct.
-    ValueMetricProducer* valueProducer1 =
-            static_cast<ValueMetricProducer*>(newMetricProducers[value1Index].get());
+    NumericValueMetricProducer* valueProducer1 =
+            static_cast<NumericValueMetricProducer*>(newMetricProducers[value1Index].get());
     EXPECT_EQ(valueProducer1->getMetricId(), value1Id);
     EXPECT_EQ(valueProducer1->mConditionTrackerIndex, predicate1Index);
     EXPECT_EQ(valueProducer1->mCondition, ConditionState::kUnknown);
     EXPECT_EQ(valueProducer1->mWhatMatcherIndex, matcher4Index);
-    ValueMetricProducer* valueProducer2 =
-            static_cast<ValueMetricProducer*>(newMetricProducers[value2Index].get());
+    NumericValueMetricProducer* valueProducer2 =
+            static_cast<NumericValueMetricProducer*>(newMetricProducers[value2Index].get());
     EXPECT_EQ(valueProducer2->getMetricId(), value2Id);
     EXPECT_EQ(valueProducer2->mConditionTrackerIndex, -1);
     EXPECT_EQ(valueProducer2->mCondition, ConditionState::kTrue);
     EXPECT_EQ(valueProducer2->mWhatMatcherIndex, matcher1Index);
-    ValueMetricProducer* valueProducer3 =
-            static_cast<ValueMetricProducer*>(newMetricProducers[value3Index].get());
+    NumericValueMetricProducer* valueProducer3 =
+            static_cast<NumericValueMetricProducer*>(newMetricProducers[value3Index].get());
     EXPECT_EQ(valueProducer3->getMetricId(), value3Id);
     EXPECT_EQ(valueProducer3->mConditionTrackerIndex, predicate2Index);
     EXPECT_EQ(valueProducer3->mCondition, ConditionState::kUnknown);
     EXPECT_EQ(valueProducer3->mWhatMatcherIndex, matcher5Index);
-    ValueMetricProducer* valueProducer4 =
-            static_cast<ValueMetricProducer*>(newMetricProducers[value4Index].get());
+    NumericValueMetricProducer* valueProducer4 =
+            static_cast<NumericValueMetricProducer*>(newMetricProducers[value4Index].get());
     EXPECT_EQ(valueProducer4->getMetricId(), value4Id);
     EXPECT_EQ(valueProducer4->mConditionTrackerIndex, -1);
     EXPECT_EQ(valueProducer4->mCondition, ConditionState::kTrue);
     EXPECT_EQ(valueProducer4->mWhatMatcherIndex, matcher3Index);
-    ValueMetricProducer* valueProducer6 =
-            static_cast<ValueMetricProducer*>(newMetricProducers[value6Index].get());
+    NumericValueMetricProducer* valueProducer6 =
+            static_cast<NumericValueMetricProducer*>(newMetricProducers[value6Index].get());
     EXPECT_EQ(valueProducer6->getMetricId(), value6Id);
     EXPECT_EQ(valueProducer6->mConditionTrackerIndex, predicate1Index);
     EXPECT_EQ(valueProducer6->mCondition, ConditionState::kUnknown);
