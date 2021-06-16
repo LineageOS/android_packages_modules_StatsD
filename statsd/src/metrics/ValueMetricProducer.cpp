@@ -19,6 +19,7 @@
 
 #include "ValueMetricProducer.h"
 
+#include <kll.h>
 #include <limits.h>
 #include <stdlib.h>
 
@@ -35,8 +36,10 @@ using android::util::FIELD_TYPE_INT32;
 using android::util::FIELD_TYPE_INT64;
 using android::util::FIELD_TYPE_MESSAGE;
 using android::util::ProtoOutputStream;
+using dist_proc::aggregation::KllQuantile;
 using std::optional;
 using std::shared_ptr;
+using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 
@@ -854,6 +857,7 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::initNextSlicedBucket(
 
 // Explicit template instantiations
 template class ValueMetricProducer<Value, vector<optional<Value>>>;
+template class ValueMetricProducer<unique_ptr<KllQuantile>, Empty>;
 
 }  // namespace statsd
 }  // namespace os
