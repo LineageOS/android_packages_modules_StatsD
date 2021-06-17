@@ -78,16 +78,6 @@ sdk {
     ],
 }
 
-// TODO(b/180769414): ART should be able to use the statsd-module-sdk entry,
-// but unfortunately that conflicts with internal builds. Make a special copy
-// for ART for the time being.
-sdk {
-    name: "statsd-module-sdk-for-art",
-    native_shared_libs: [
-        "libstatssocket",
-    ],
-}
-
 // Encapsulate the contributions made by the com.android.os.statsd to the bootclasspath.
 bootclasspath_fragment {
     name: "com.android.os.statsd-bootclasspath-fragment",
