@@ -6,3 +6,5 @@ singhtejinder@google.com
 tsaichristine@google.com
 yaochen@google.com
 yro@google.com
+
+include platform/packages/modules/common:/MODULES_OWNERS  # see go/mainline-owners-policy
