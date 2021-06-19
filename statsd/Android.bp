@@ -310,6 +310,7 @@ cc_test {
         "tests/metrics/DurationMetricProducer_test.cpp",
         "tests/metrics/EventMetricProducer_test.cpp",
         "tests/metrics/GaugeMetricProducer_test.cpp",
+        "tests/metrics/KllMetricProducer_test.cpp",
         "tests/metrics/MaxDurationTracker_test.cpp",
         "tests/metrics/metrics_test_helper.cpp",
         "tests/metrics/OringDurationTracker_test.cpp",
