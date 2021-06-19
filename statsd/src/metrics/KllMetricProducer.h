@@ -107,6 +107,19 @@ private:
 
     // Internal function to calculate the current used bytes.
     size_t byteSizeLocked() const override;
+
+    FRIEND_TEST(KllMetricProducerTest, TestByteSize);
+    FRIEND_TEST(KllMetricProducerTest, TestPushedEventsWithoutCondition);
+    FRIEND_TEST(KllMetricProducerTest, TestPushedEventsWithCondition);
+    FRIEND_TEST(KllMetricProducerTest, TestForcedBucketSplitWhenConditionUnknownSkipsBucket);
+
+    FRIEND_TEST(KllMetricProducerTest_BucketDrop, TestInvalidBucketWhenConditionUnknown);
+    FRIEND_TEST(KllMetricProducerTest_BucketDrop, TestBucketDropWhenBucketTooSmall);
+    FRIEND_TEST(KllMetricProducerTest_BucketDrop, TestBucketDropWhenDataUnavailable);
+
+    FRIEND_TEST(KllMetricProducerTest_PartialBucket, TestPushedEventsMultipleBuckets);
+
+    FRIEND_TEST(ConfigUpdateTest, TestUpdateKllMetrics);
 };
 
 }  // namespace statsd
