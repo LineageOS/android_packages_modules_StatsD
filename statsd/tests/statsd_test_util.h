@@ -44,6 +44,25 @@ using android::util::ProtoReader;
 using google::protobuf::RepeatedPtrField;
 using Status = ::ndk::ScopedAStatus;
 
+// Wrapper for assertion helpers called from tests to keep track of source location of failures.
+// Example usage:
+//      static void myTestVerificationHelper(Foo foo) {
+//          EXPECT_EQ(...);
+//          ASSERT_EQ(...);
+//      }
+//
+//      TEST_F(MyTest, TestFoo) {
+//          ...
+//          TRACE_CALL(myTestVerificationHelper, foo);
+//          ...
+//      }
+//
+#define TRACE_CALL(function, ...) \
+    do {                          \
+        SCOPED_TRACE("");         \
+        (function)(__VA_ARGS__);  \
+    } while (false)
+
 const int SCREEN_STATE_ATOM_ID = util::SCREEN_STATE_CHANGED;
 const int UID_PROCESS_STATE_ATOM_ID = util::UID_PROCESS_STATE_CHANGED;
 
@@ -126,7 +145,10 @@ AtomMatcher CreateMoveToBackgroundAtomMatcher();
 AtomMatcher CreateMoveToForegroundAtomMatcher();
 
 // Create AtomMatcher proto for process crashes
-AtomMatcher CreateProcessCrashAtomMatcher() ;
+AtomMatcher CreateProcessCrashAtomMatcher();
+
+// Create AtomMatcher proto for app launches.
+AtomMatcher CreateAppStartOccurredAtomMatcher();
 
 // Add an AtomMatcher to a combination AtomMatcher.
 void addMatcherToMatcherCombination(const AtomMatcher& matcher, AtomMatcher* combinationMatcher);
@@ -223,6 +245,9 @@ GaugeMetric createGaugeMetric(const string& name, const int64_t what,
 
 ValueMetric createValueMetric(const string& name, const AtomMatcher& what, const int valueField,
                               const optional<int64_t>& condition, const vector<int64_t>& states);
+
+KllMetric createKllMetric(const string& name, const AtomMatcher& what, const int valueField,
+                          const optional<int64_t>& condition);
 
 Alert createAlert(const string& name, const int64_t metricId, const int buckets,
                   const int64_t triggerSum);
@@ -407,6 +432,8 @@ void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startT
                               int64_t endTimeNs, vector<int64_t> eventTimesNs);
 void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
                          const vector<int64_t>& values, int64_t conditionTrueNs);
+void ValidateKllBucket(const KllBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
+                       const std::vector<int64_t> sketchSizes, int64_t conditionTrueNs);
 
 struct DimensionsPair {
     DimensionsPair(DimensionsValue m1, google::protobuf::RepeatedPtrField<StateValue> m2)
