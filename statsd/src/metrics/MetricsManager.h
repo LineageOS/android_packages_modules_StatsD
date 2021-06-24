@@ -36,7 +36,7 @@ namespace os {
 namespace statsd {
 
 // A MetricsManager is responsible for managing metrics from one single config source.
-class MetricsManager : public virtual android::RefBase, public virtual PullUidProvider {
+class MetricsManager : public virtual RefBase, public virtual PullUidProvider {
 public:
     MetricsManager(const ConfigKey& configKey, const StatsdConfig& config, const int64_t timeBaseNs,
                    const int64_t currentTimeNs, const sp<UidMap>& uidMap,
