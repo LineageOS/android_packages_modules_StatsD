@@ -338,6 +338,8 @@ message ValueMetric {
 
   optional UploadThreshold threshold = 20;
 
+  optional int64 condition_correction_threshold_nanos = 21;
+
   enum AggregationType {
     SUM = 1;
     MIN = 2;
