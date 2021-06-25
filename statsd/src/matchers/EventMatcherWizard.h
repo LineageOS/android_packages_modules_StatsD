@@ -22,7 +22,7 @@ namespace android {
 namespace os {
 namespace statsd {
 
-class EventMatcherWizard : public virtual android::RefBase {
+class EventMatcherWizard : public virtual RefBase {
 public:
     EventMatcherWizard(){};  // for testing
     EventMatcherWizard(const std::vector<sp<AtomMatchingTracker>>& eventTrackers)

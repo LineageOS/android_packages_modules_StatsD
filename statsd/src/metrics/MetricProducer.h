@@ -96,6 +96,7 @@ enum MetricType {
     METRIC_TYPE_VALUE = 5,
     METRIC_TYPE_KLL = 6,
 };
+
 struct Activation {
     Activation(const ActivationType& activationType, const int64_t ttlNs)
         : ttl_ns(ttlNs),
@@ -135,7 +136,7 @@ struct SkippedBucket {
 // writing the report to dropbox. MetricProducers should respond to package changes as required in
 // PackageInfoListener, but if none of the metrics are slicing by package name, then the update can
 // be a no-op.
-class MetricProducer : public virtual android::RefBase, public virtual StateListener {
+class MetricProducer : public virtual RefBase, public virtual StateListener {
 public:
     MetricProducer(const int64_t& metricId, const ConfigKey& key, const int64_t timeBaseNs,
                    const int conditionIndex, const vector<ConditionState>& initialConditionCache,
@@ -461,11 +462,11 @@ protected:
     // atom.
     HashableDimensionKey getUnknownStateKey();
 
-    DropEvent buildDropEvent(const int64_t dropTimeNs, const BucketDropReason reason);
+    DropEvent buildDropEvent(const int64_t dropTimeNs, const BucketDropReason reason) const;
 
     // Returns true if the number of drop events in the current bucket has
     // exceeded the maximum number allowed, which is currently capped at 10.
-    bool maxDropEventsReached();
+    bool maxDropEventsReached() const;
 
     const int64_t mMetricId;
 
