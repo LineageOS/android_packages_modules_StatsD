@@ -84,7 +84,7 @@ const unsigned int kBytesChangeRecord = sizeof(struct ChangeRecord);
 
 // UidMap keeps track of what the corresponding app name (APK name) and version code for every uid
 // at any given moment. This map must be updated by StatsCompanionService.
-class UidMap : public virtual android::RefBase {
+class UidMap : public virtual RefBase {
 public:
     UidMap();
     ~UidMap();
