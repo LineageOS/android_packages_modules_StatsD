@@ -340,14 +340,15 @@ HashableDimensionKey MetricProducer::getUnknownStateKey() {
     return stateKey;
 }
 
-DropEvent MetricProducer::buildDropEvent(const int64_t dropTimeNs, const BucketDropReason reason) {
+DropEvent MetricProducer::buildDropEvent(const int64_t dropTimeNs,
+                                         const BucketDropReason reason) const {
     DropEvent event;
     event.reason = reason;
     event.dropTimeNs = dropTimeNs;
     return event;
 }
 
-bool MetricProducer::maxDropEventsReached() {
+bool MetricProducer::maxDropEventsReached() const {
     return mCurrentSkippedBucket.dropEvents.size() >= StatsdStats::kMaxLoggedBucketDropEvents;
 }
 
