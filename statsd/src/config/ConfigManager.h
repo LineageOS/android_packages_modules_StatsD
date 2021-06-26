@@ -35,7 +35,7 @@ namespace statsd {
 /**
  * Keeps track of which configurations have been set from various sources.
  */
-class ConfigManager : public virtual android::RefBase {
+class ConfigManager : public virtual RefBase {
 public:
     ConfigManager();
     virtual ~ConfigManager();
