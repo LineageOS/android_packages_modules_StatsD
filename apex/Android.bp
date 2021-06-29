@@ -83,4 +83,22 @@ bootclasspath_fragment {
     name: "com.android.os.statsd-bootclasspath-fragment",
     contents: ["framework-statsd"],
     apex_available: ["com.android.os.statsd"],
+
+    // The bootclasspath_fragments that provide APIs on which this depends.
+    fragments: [
+        {
+            apex: "com.android.art",
+            module: "art-bootclasspath-fragment",
+        },
+    ],
+
+    // Additional stubs libraries that this fragment's contents use which are
+    // not provided by another bootclasspath_fragment.
+    additional_stubs: [
+        "android-non-updatable",
+    ],
+
+    hidden_api: {
+        max_target_o_low_priority: ["hiddenapi/hiddenapi-max-target-o-low-priority.txt"],
+    },
 }
