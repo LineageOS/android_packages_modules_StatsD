@@ -16,12 +16,17 @@
 
 #include <aggregator.pb.h>
 #include <aidl/android/util/StatsEventParcel.h>
+#include <android-base/properties.h>
+#include <android-base/stringprintf.h>
 
 #include "matchers/SimpleAtomMatchingTracker.h"
 #include "stats_annotations.h"
 #include "stats_event.h"
+#include "stats_util.h"
 
 using aidl::android::util::StatsEventParcel;
+using android::base::SetProperty;
+using android::base::StringPrintf;
 using std::shared_ptr;
 using zetasketch::android::AggregatorStateProto;
 
@@ -1662,6 +1667,12 @@ Status FakeSubsystemSleepCallback::onPullAtom(int atomTag,
     pullNum++;
     resultReceiver->pullFinished(atomTag, /*success=*/true, parcels);
     return Status::ok();
+}
+
+void writeFlag(const string& flagName, const string& flagValue) {
+    SetProperty(StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_NAMESPACE.c_str(),
+                             flagName.c_str()),
+                flagValue);
 }
 
 }  // namespace statsd
