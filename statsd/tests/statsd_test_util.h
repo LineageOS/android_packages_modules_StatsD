@@ -21,14 +21,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/stats_log.pb.h"
-#include "src/statsd_config.pb.h"
 #include "src/StatsLogProcessor.h"
+#include "src/flags/FlagProvider.h"
 #include "src/hash.h"
 #include "src/logd/LogEvent.h"
 #include "src/matchers/EventMatcherWizard.h"
 #include "src/packages/UidMap.h"
+#include "src/stats_log.pb.h"
 #include "src/stats_log_util.h"
+#include "src/statsd_config.pb.h"
 #include "stats_event.h"
 #include "statslog_statsdtest.h"
 
@@ -583,6 +584,29 @@ void backfillStartEndTimestampForSkippedBuckets(const int64_t timeBaseNs, T* met
         backfillStartEndTimestampForPartialBucket(timeBaseNs, metrics->mutable_skipped(i));
     }
 }
+
+inline bool isAtLeastSFuncTrue() {
+    return true;
+}
+
+inline bool isAtLeastSFuncFalse() {
+    return false;
+}
+
+inline std::string getServerFlagFuncTrue(const std::string& flagNamespace,
+                                         const std::string& flagName,
+                                         const std::string& defaultValue) {
+    return FLAG_TRUE;
+}
+
+inline std::string getServerFlagFuncFalse(const std::string& flagNamespace,
+                                          const std::string& flagName,
+                                          const std::string& defaultValue) {
+    return FLAG_FALSE;
+}
+
+void writeFlag(const std::string& flagName, const std::string& flagValue);
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
