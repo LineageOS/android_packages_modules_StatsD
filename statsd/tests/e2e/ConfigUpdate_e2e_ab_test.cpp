@@ -17,7 +17,7 @@
 #include <android/binder_interface_utils.h>
 #include <gtest/gtest.h>
 
-#include "flags/flags.h"
+#include "flags/FlagProvider.h"
 #include "src/StatsLogProcessor.h"
 #include "src/storage/StorageManager.h"
 #include "tests/statsd_test_util.h"
