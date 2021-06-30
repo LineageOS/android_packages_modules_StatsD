@@ -55,6 +55,7 @@ public class CountMetricsTests extends DeviceAtomTestCase {
         uploadConfig(builder);
 
         doAppBreadcrumbReportedStart(0);
+        Thread.sleep(100);
         doAppBreadcrumbReportedStop(0);
         Thread.sleep(2000);  // Wait for the metrics to propagate to statsd.
 
