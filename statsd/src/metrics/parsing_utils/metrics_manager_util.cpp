@@ -25,6 +25,7 @@
 #include "condition/CombinationConditionTracker.h"
 #include "condition/SimpleConditionTracker.h"
 #include "external/StatsPullerManager.h"
+#include "flags/FlagProvider.h"
 #include "guardrail/StatsdStats.h"
 #include "hash.h"
 #include "matchers/CombinationAtomMatchingTracker.h"
@@ -1129,9 +1130,11 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
                  vector<int>& metricsWithActivation) {
     sp<ConditionWizard> wizard = new ConditionWizard(allConditionTrackers);
     sp<EventMatcherWizard> matcherWizard = new EventMatcherWizard(allAtomMatchingTrackers);
+    const bool kllEnabled = FlagProvider::getInstance().getFlagBool(KLL_METRIC_FLAG, FLAG_FALSE);
     const int allMetricsCount = config.count_metric_size() + config.duration_metric_size() +
                                 config.event_metric_size() + config.gauge_metric_size() +
-                                config.value_metric_size() + config.kll_metric_size();
+                                config.value_metric_size() +
+                                (kllEnabled ? config.kll_metric_size() : 0);
     allMetricProducers.reserve(allMetricsCount);
 
     // Construct map from metric id to metric activation index. The map will be used to determine
@@ -1221,21 +1224,25 @@ bool initMetrics(const ConfigKey& key, const StatsdConfig& config, const int64_t
     }
 
     // build KllMetricProducer
-    for (int i = 0; i < config.kll_metric_size(); i++) {
-        int metricIndex = allMetricProducers.size();
-        const KllMetric& metric = config.kll_metric(i);
-        metricMap.insert({metric.id(), metricIndex});
-        optional<sp<MetricProducer>> producer = createKllMetricProducerAndUpdateMetadata(
-                key, config, timeBaseTimeNs, currentTimeNs, pullerManager, metric, metricIndex,
-                allAtomMatchingTrackers, atomMatchingTrackerMap, allConditionTrackers,
-                conditionTrackerMap, initialConditionCache, wizard, matcherWizard, stateAtomIdMap,
-                allStateGroupMaps, metricToActivationMap, trackerToMetricMap, conditionToMetricMap,
-                activationAtomTrackerToMetricMap, deactivationAtomTrackerToMetricMap,
-                metricsWithActivation);
-        if (!producer) {
-            return false;
+    if (kllEnabled) {
+        for (int i = 0; i < config.kll_metric_size(); i++) {
+            int metricIndex = allMetricProducers.size();
+            const KllMetric& metric = config.kll_metric(i);
+            metricMap.insert({metric.id(), metricIndex});
+            optional<sp<MetricProducer>> producer = createKllMetricProducerAndUpdateMetadata(
+                    key, config, timeBaseTimeNs, currentTimeNs, pullerManager, metric, metricIndex,
+                    allAtomMatchingTrackers, atomMatchingTrackerMap, allConditionTrackers,
+                    conditionTrackerMap, initialConditionCache, wizard, matcherWizard,
+                    stateAtomIdMap, allStateGroupMaps, metricToActivationMap, trackerToMetricMap,
+                    conditionToMetricMap, activationAtomTrackerToMetricMap,
+                    deactivationAtomTrackerToMetricMap, metricsWithActivation);
+            if (!producer) {
+                return false;
+            }
+            allMetricProducers.push_back(producer.value());
         }
-        allMetricProducers.push_back(producer.value());
+    } else {
+        ALOGI("KllMetrics in config being ignored due to KLL flag being disabled.");
     }
 
     // Gauge metrics.
