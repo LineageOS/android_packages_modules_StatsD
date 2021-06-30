@@ -27,7 +27,7 @@
 #include "StatsService.h"
 #include "android-base/stringprintf.h"
 #include "external/StatsPullerManager.h"
-#include "flags/flags.h"
+#include "flags/FlagProvider.h"
 #include "guardrail/StatsdStats.h"
 #include "logd/LogEvent.h"
 #include "metrics/CountMetricProducer.h"
