@@ -25,6 +25,7 @@
 
 #include "src/condition/CombinationConditionTracker.h"
 #include "src/condition/SimpleConditionTracker.h"
+#include "src/flags/FlagProvider.h"
 #include "src/matchers/CombinationAtomMatchingTracker.h"
 #include "src/metrics/DurationMetricProducer.h"
 #include "src/metrics/GaugeMetricProducer.h"
@@ -81,11 +82,20 @@ vector<int> metricsWithActivation;
 map<int64_t, uint64_t> oldStateHashes;
 std::set<int64_t> noReportMetricIds;
 
+bool initConfig(const StatsdConfig& config) {
+    return initStatsdConfig(
+            key, config, uidMap, pullerManager, anomalyAlarmMonitor, periodicAlarmMonitor,
+            timeBaseNs, timeBaseNs, allTagIds, oldAtomMatchingTrackers, oldAtomMatchingTrackerMap,
+            oldConditionTrackers, oldConditionTrackerMap, oldMetricProducers, oldMetricProducerMap,
+            oldAnomalyTrackers, oldAlarmTrackers, tmpConditionToMetricMap, tmpTrackerToMetricMap,
+            tmpTrackerToConditionMap, tmpActivationAtomTrackerToMetricMap,
+            tmpDeactivationAtomTrackerToMetricMap, oldAlertTrackerMap, metricsWithActivation,
+            oldStateHashes, noReportMetricIds);
+}
+}  // anonymous namespace
+
 class ConfigUpdateTest : public ::testing::Test {
 public:
-    ConfigUpdateTest() {
-    }
-
     void SetUp() override {
         allTagIds.clear();
         oldAtomMatchingTrackers.clear();
@@ -106,20 +116,13 @@ public:
         oldStateHashes.clear();
         noReportMetricIds.clear();
         StateManager::getInstance().clear();
+        FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue, &getServerFlagFuncTrue);
+    }
+
+    void TearDown() override {
+        FlagProvider::getInstance().resetFuncs();
     }
 };
-
-bool initConfig(const StatsdConfig& config) {
-    return initStatsdConfig(
-            key, config, uidMap, pullerManager, anomalyAlarmMonitor, periodicAlarmMonitor,
-            timeBaseNs, timeBaseNs, allTagIds, oldAtomMatchingTrackers, oldAtomMatchingTrackerMap,
-            oldConditionTrackers, oldConditionTrackerMap, oldMetricProducers, oldMetricProducerMap,
-            oldAnomalyTrackers, oldAlarmTrackers, tmpConditionToMetricMap, tmpTrackerToMetricMap,
-            tmpTrackerToConditionMap, tmpActivationAtomTrackerToMetricMap,
-            tmpDeactivationAtomTrackerToMetricMap, oldAlertTrackerMap, metricsWithActivation,
-            oldStateHashes, noReportMetricIds);
-}
-}  // anonymous namespace
 
 TEST_F(ConfigUpdateTest, TestSimpleMatcherPreserve) {
     StatsdConfig config;
@@ -971,10 +974,10 @@ TEST_F(ConfigUpdateTest, TestEventMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1007,10 +1010,10 @@ TEST_F(ConfigUpdateTest, TestEventMetricActivationAdded) {
 
     unordered_map<int64_t, int> metricToActivationMap = {{12345, 0}};
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1039,7 +1042,7 @@ TEST_F(ConfigUpdateTest, TestEventMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {whatMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1068,7 +1071,7 @@ TEST_F(ConfigUpdateTest, TestEventMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{predicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1104,7 +1107,7 @@ TEST_F(ConfigUpdateTest, TestMetricConditionLinkDepsChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{linkPredicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1139,7 +1142,7 @@ TEST_F(ConfigUpdateTest, TestEventMetricActivationDepsChange) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {startMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1169,10 +1172,10 @@ TEST_F(ConfigUpdateTest, TestCountMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1202,10 +1205,10 @@ TEST_F(ConfigUpdateTest, TestCountMetricDefinitionChange) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1235,7 +1238,7 @@ TEST_F(ConfigUpdateTest, TestCountMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {whatMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1265,7 +1268,7 @@ TEST_F(ConfigUpdateTest, TestCountMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{predicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1295,7 +1298,7 @@ TEST_F(ConfigUpdateTest, TestCountMetricStateChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-            /*replacedStates=*/{sliceState.id()}, metricsToUpdate));
+            /*replacedStates=*/{sliceState.id()}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1318,10 +1321,10 @@ TEST_F(ConfigUpdateTest, TestGaugeMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1340,10 +1343,10 @@ TEST_F(ConfigUpdateTest, TestGaugeMetricDefinitionChange) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1362,7 +1365,7 @@ TEST_F(ConfigUpdateTest, TestGaugeMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {whatMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1388,7 +1391,7 @@ TEST_F(ConfigUpdateTest, TestGaugeMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{predicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1409,7 +1412,7 @@ TEST_F(ConfigUpdateTest, TestGaugeMetricTriggerEventChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {triggerEvent.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1434,10 +1437,10 @@ TEST_F(ConfigUpdateTest, TestDurationMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1461,7 +1464,7 @@ TEST_F(ConfigUpdateTest, TestDurationMetricDefinitionChange) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
                                                  metricToActivationMap, /*replacedMatchers*/ {},
                                                  /*replacedConditions=*/{}, /*replacedStates=*/{},
-                                                 metricsToUpdate));
+                                                 /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1483,7 +1486,7 @@ TEST_F(ConfigUpdateTest, TestDurationMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{what.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1507,7 +1510,7 @@ TEST_F(ConfigUpdateTest, TestDurationMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{condition.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1533,7 +1536,7 @@ TEST_F(ConfigUpdateTest, TestDurationMetricStateChange) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-            /*replacedStates=*/{sliceState.id()}, metricsToUpdate));
+            /*replacedStates=*/{sliceState.id()}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1557,10 +1560,10 @@ TEST_F(ConfigUpdateTest, TestValueMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1577,10 +1580,10 @@ TEST_F(ConfigUpdateTest, TestValueMetricDefinitionChange) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate(1, UPDATE_UNKNOWN);
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1597,7 +1600,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {whatMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1621,7 +1624,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{predicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1642,7 +1645,7 @@ TEST_F(ConfigUpdateTest, TestValueMetricStateChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-            /*replacedStates=*/{sliceState.id()}, metricsToUpdate));
+            /*replacedStates=*/{sliceState.id()}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1664,10 +1667,10 @@ TEST_F(ConfigUpdateTest, TestKllMetricPreserve) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate{UPDATE_UNKNOWN};
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_PRESERVE);
 }
 
@@ -1685,10 +1688,10 @@ TEST_F(ConfigUpdateTest, TestKllMetricDefinitionChange) {
 
     unordered_map<int64_t, int> metricToActivationMap;
     vector<UpdateStatus> metricsToUpdate{UPDATE_UNKNOWN};
-    EXPECT_TRUE(determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
-                                                 metricToActivationMap,
-                                                 /*replacedMatchers*/ {}, /*replacedConditions=*/{},
-                                                 /*replacedStates=*/{}, metricsToUpdate));
+    EXPECT_TRUE(determineAllMetricUpdateStatuses(
+            config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+            /*replacedMatchers*/ {}, /*replacedConditions=*/{},
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1705,7 +1708,7 @@ TEST_F(ConfigUpdateTest, TestKllMetricWhatChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {whatMatcher.id()}, /*replacedConditions=*/{},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 
@@ -1730,7 +1733,7 @@ TEST_F(ConfigUpdateTest, TestKllMetricConditionChanged) {
     EXPECT_TRUE(determineAllMetricUpdateStatuses(
             config, oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
             /*replacedMatchers*/ {}, /*replacedConditions=*/{predicate.id()},
-            /*replacedStates=*/{}, metricsToUpdate));
+            /*replacedStates=*/{}, /*kllEnabled=*/true, metricsToUpdate));
     EXPECT_EQ(metricsToUpdate[0], UPDATE_REPLACE);
 }
 

@@ -140,7 +140,7 @@ bool determineAllMetricUpdateStatuses(const StatsdConfig& config,
                                       const unordered_map<int64_t, int>& metricToActivationMap,
                                       const set<int64_t>& replacedMatchers,
                                       const set<int64_t>& replacedConditions,
-                                      const set<int64_t>& replacedStates,
+                                      const set<int64_t>& replacedStates, const bool kllEnabled,
                                       vector<UpdateStatus>& metricsToUpdate);
 
 // Update MetricProducers.
