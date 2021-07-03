@@ -993,6 +993,19 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().executeShellCommand("cmd battery reset");
     }
 
+    protected void turnBatteryStatsAutoResetOn() throws Exception {
+        getDevice().executeShellCommand("dumpsys batterystats enable no-auto-reset");
+    }
+
+    protected void turnBatteryStatsAutoResetOff() throws Exception {
+        getDevice().executeShellCommand("dumpsys batterystats enable no-auto-reset");
+    }
+
+    protected void flushBatteryStatsHandlers() throws Exception {
+        // Dumping batterystats will flush everything in the batterystats handler threads.
+        getDevice().executeShellCommand(DUMP_BATTERYSTATS_CMD);
+    }
+
     protected void rebootDevice() throws Exception {
         getDevice().rebootUntilOnline();
     }
