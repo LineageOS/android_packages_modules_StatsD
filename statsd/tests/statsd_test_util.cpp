@@ -1640,6 +1640,51 @@ void backfillStartEndTimestamp(ConfigMetricsReportList *config_report_list) {
     }
 }
 
+void backfillAggregatedAtoms(ConfigMetricsReportList* config_report_list) {
+    for (int i = 0; i < config_report_list->reports_size(); ++i) {
+        backfillAggregatedAtoms(config_report_list->mutable_reports(i));
+    }
+}
+
+void backfillAggregatedAtoms(ConfigMetricsReport* config_report) {
+    for (int i = 0; i < config_report->metrics_size(); ++i) {
+        backfillAggregatedAtoms(config_report->mutable_metrics(i));
+    }
+}
+
+void backfillAggregatedAtoms(StatsLogReport* report) {
+    if (report->has_event_metrics()) {
+        backfillAggregatedAtomsInEventMetric(report->mutable_event_metrics());
+    }
+}
+
+void backfillAggregatedAtomsInEventMetric(StatsLogReport::EventMetricDataWrapper* wrapper) {
+    std::vector<EventMetricData> metricData;
+    for (int i = 0; i < wrapper->data_size(); ++i) {
+        AggregatedAtomInfo* atomInfo = wrapper->mutable_data(i)->mutable_aggregated_atom_info();
+        for (int j = 0; j < atomInfo->elapsed_timestamp_nanos_size(); j++) {
+            EventMetricData data;
+            *(data.mutable_atom()) = atomInfo->atom();
+            data.set_elapsed_timestamp_nanos(atomInfo->elapsed_timestamp_nanos(j));
+            metricData.push_back(data);
+        }
+    }
+
+    if (metricData.size() == 0) {
+        return;
+    }
+
+    sort(metricData.begin(), metricData.end(),
+         [](const EventMetricData& lhs, const EventMetricData& rhs) {
+             return lhs.elapsed_timestamp_nanos() < rhs.elapsed_timestamp_nanos();
+         });
+
+    wrapper->clear_data();
+    for (int i = 0; i < metricData.size(); ++i) {
+        *(wrapper->add_data()) = metricData[i];
+    }
+}
+
 Status FakeSubsystemSleepCallback::onPullAtom(int atomTag,
         const shared_ptr<IPullAtomResultReceiver>& resultReceiver) {
     // Convert stats_events into StatsEventParcels.

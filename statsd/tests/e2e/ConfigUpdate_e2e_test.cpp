@@ -204,6 +204,7 @@ TEST_F(ConfigUpdateE2eTest, TestEventMetric) {
     backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);
+    backfillAggregatedAtoms(&reports);
     ASSERT_EQ(reports.reports_size(), 2);
 
     // Report from before update.
