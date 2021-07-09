@@ -2613,7 +2613,7 @@ TEST_F(ConfigUpdateTest, TestUpdateDurationMetrics) {
                                                   conditionCache));
     }
     // Predicate5 should be true since 2 uids have wakelocks
-    EXPECT_EQ(conditionCache, vector({kTrue, kUnknown, kUnknown, kUnknown, kUnknown}));
+    EXPECT_EQ(conditionCache, vector({kTrue, kFalse, kUnknown, kUnknown, kUnknown}));
 
     StatsdConfig newConfig;
     *newConfig.add_duration_metric() = duration6;
@@ -2716,7 +2716,7 @@ TEST_F(ConfigUpdateTest, TestUpdateDurationMetrics) {
             static_cast<DurationMetricProducer*>(newMetricProducers[duration1Index].get());
     EXPECT_EQ(durationProducer1->getMetricId(), duration1Id);
     EXPECT_EQ(durationProducer1->mConditionTrackerIndex, predicate4Index);
-    EXPECT_EQ(durationProducer1->mCondition, ConditionState::kUnknown);
+    EXPECT_EQ(durationProducer1->mCondition, ConditionState::kFalse);
     EXPECT_EQ(durationProducer1->mStartIndex, matcher3Index);
     EXPECT_EQ(durationProducer1->mStopIndex, matcher4Index);
     EXPECT_EQ(durationProducer1->mStopAllIndex, matcher7Index);
