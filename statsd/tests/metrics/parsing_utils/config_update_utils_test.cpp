@@ -120,7 +120,7 @@ public:
     }
 
     void TearDown() override {
-        FlagProvider::getInstance().resetFuncs();
+        FlagProvider::getInstance().resetOverrides();
     }
 };
 
