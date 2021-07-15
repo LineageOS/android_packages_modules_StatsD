@@ -105,6 +105,8 @@ private:
     friend class ConfigUpdateE2eTest;
     friend class ConfigUpdateTest;
     friend class EventMetricE2eTest;
+    friend class GaugeMetricE2ePulledTest;
+    friend class GaugeMetricE2ePushedTest;
     friend class EventMetricProducerTest;
     friend class FlagProviderTest_RMinus;
     friend class FlagProviderTest_SPlus;
@@ -114,9 +116,11 @@ private:
 
     FRIEND_TEST(ConfigUpdateE2eTest, TestKllMetric_KllDisabledBeforeConfigUpdate);
     FRIEND_TEST(ConfigUpdateE2eTest, TestEventMetric);
+    FRIEND_TEST(ConfigUpdateE2eTest, TestGaugeMetric);
     FRIEND_TEST(EventMetricE2eTest, TestEventMetricDataAggregated);
     FRIEND_TEST(EventMetricProducerTest, TestOneAtomTagAggregatedEvents);
     FRIEND_TEST(EventMetricProducerTest, TestTwoAtomTagAggregatedEvents);
+    FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsNoCondition);
     FRIEND_TEST(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagTrue);
     FRIEND_TEST(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagFalse);
     FRIEND_TEST(FlagProviderTest_SPlus, TestOverrideLocalFlags);

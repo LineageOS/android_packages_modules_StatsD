@@ -1070,6 +1070,7 @@ TEST_F(ConfigUpdateE2eTest, TestGaugeMetric) {
     backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);
+    backfillAggregatedAtoms(&reports);
     ASSERT_EQ(reports.reports_size(), 2);
 
     int64_t roundedBucketStartNs = MillisToNano(NanoToMillis(bucketStartTimeNs));

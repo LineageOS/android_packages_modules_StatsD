@@ -19,6 +19,7 @@
 
 #include "GaugeMetricProducer.h"
 
+#include "flags/FlagProvider.h"
 #include "guardrail/StatsdStats.h"
 #include "metrics/parsing_utils/metrics_manager_util.h"
 #include "stats_log_util.h"
@@ -69,6 +70,10 @@ const int FIELD_ID_ELAPSED_ATOM_TIMESTAMP = 4;
 const int FIELD_ID_BUCKET_NUM = 6;
 const int FIELD_ID_START_BUCKET_ELAPSED_MILLIS = 7;
 const int FIELD_ID_END_BUCKET_ELAPSED_MILLIS = 8;
+const int FIELD_ID_AGGREGATED_ATOM = 9;
+// for AggregatedAtomInfo
+const int FIELD_ID_ATOM_VALUE = 1;
+const int FIELD_ID_ATOM_TIMESTAMPS = 2;
 
 GaugeMetricProducer::GaugeMetricProducer(
         const ConfigKey& key, const GaugeMetric& metric, const int conditionIndex,
@@ -98,6 +103,8 @@ GaugeMetricProducer::GaugeMetricProducer(
       mGaugeAtomsPerDimensionLimit(metric.max_num_gauge_atoms_per_bucket()) {
     mCurrentSlicedBucket = std::make_shared<DimToGaugeAtomsMap>();
     mCurrentSlicedBucketForAnomaly = std::make_shared<DimToValMap>();
+    mUseAtomAggregation =
+            FlagProvider::getInstance().getBootFlagBool(AGGREGATE_ATOMS_FLAG, FLAG_FALSE);
     int64_t bucketSizeMills = 0;
     if (metric.has_bucket()) {
         bucketSizeMills = TimeUnitToBucketSizeInMillisGuardrailed(key.GetUid(), metric.bucket());
@@ -317,7 +324,7 @@ void GaugeMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
                                    (long long)(getBucketNumFromEndTimeNs(bucket.mBucketEndNs)));
             }
 
-            if (!bucket.mGaugeAtoms.empty()) {
+            if (!bucket.mGaugeAtoms.empty() && !mUseAtomAggregation) {
                 for (const auto& atom : bucket.mGaugeAtoms) {
                     uint64_t atomsToken =
                         protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED |
@@ -331,10 +338,32 @@ void GaugeMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
                                        (long long)atom.mElapsedTimestampNs);
                 }
             }
+
+            if (!bucket.mAggregatedAtoms.empty() && mUseAtomAggregation) {
+                for (const auto& [atomDimensionKey, elapsedTimestampsNs] :
+                     bucket.mAggregatedAtoms) {
+                    uint64_t aggregatedAtomToken = protoOutput->start(
+                            FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED | FIELD_ID_AGGREGATED_ATOM);
+                    uint64_t atomToken =
+                            protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_ID_ATOM_VALUE);
+                    writeFieldValueTreeToStream(mAtomId,
+                                                atomDimensionKey.getAtomFieldValues().getValues(),
+                                                protoOutput);
+                    protoOutput->end(atomToken);
+                    for (int64_t timestampNs : elapsedTimestampsNs) {
+                        protoOutput->write(
+                                FIELD_TYPE_INT64 | FIELD_COUNT_REPEATED | FIELD_ID_ATOM_TIMESTAMPS,
+                                (long long)timestampNs);
+                    }
+                    protoOutput->end(aggregatedAtomToken);
+                }
+            }
+
             protoOutput->end(bucketInfoToken);
             VLOG("Gauge \t bucket [%lld - %lld] includes %d atoms.",
                  (long long)bucket.mBucketStartNs, (long long)bucket.mBucketEndNs,
-                 (int)bucket.mGaugeAtoms.size());
+                 mUseAtomAggregation ? (int)bucket.mAggregatedAtoms.size()
+                                     : (int)bucket.mGaugeAtoms.size());
         }
         protoOutput->end(wrapperToken);
     }
@@ -619,7 +648,16 @@ void GaugeMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
     bool isBucketLargeEnough = info.mBucketEndNs - mCurrentBucketStartTimeNs >= mMinBucketSizeNs;
     if (isBucketLargeEnough) {
         for (const auto& slice : *mCurrentSlicedBucket) {
-            info.mGaugeAtoms = slice.second;
+            if (!mUseAtomAggregation) {
+                info.mGaugeAtoms = slice.second;
+            } else {
+                info.mAggregatedAtoms.clear();
+                for (const GaugeAtom& atom : slice.second) {
+                    AtomDimensionKey key(mAtomId, HashableDimensionKey(*atom.mFields));
+                    vector<int64_t>& elapsedTimestampsNs = info.mAggregatedAtoms[key];
+                    elapsedTimestampsNs.push_back(atom.mElapsedTimestampNs);
+                }
+            }
             auto& bucketList = mPastBuckets[slice.first];
             bucketList.push_back(info);
             VLOG("Gauge gauge metric %lld, dump key value: %s", (long long)mMetricId,
@@ -658,10 +696,19 @@ size_t GaugeMetricProducer::byteSizeLocked() const {
     size_t totalSize = 0;
     for (const auto& pair : mPastBuckets) {
         for (const auto& bucket : pair.second) {
-            totalSize += bucket.mGaugeAtoms.size() * sizeof(GaugeAtom);
-            for (const auto& atom : bucket.mGaugeAtoms) {
-                if (atom.mFields != nullptr) {
-                    totalSize += atom.mFields->size() * sizeof(FieldValue);
+            if (!mUseAtomAggregation) {
+                totalSize += bucket.mGaugeAtoms.size() * sizeof(GaugeAtom);
+                for (const auto& atom : bucket.mGaugeAtoms) {
+                    if (atom.mFields != nullptr) {
+                        totalSize += atom.mFields->size() * sizeof(FieldValue);
+                    }
+                }
+            } else {
+                for (const auto& [atomDimensionKey, elapsedTimestampsNs] :
+                     bucket.mAggregatedAtoms) {
+                    totalSize += sizeof(FieldValue) *
+                                 atomDimensionKey.getAtomFieldValues().getValues().size();
+                    totalSize += sizeof(int64_t) * elapsedTimestampsNs.size();
                 }
             }
         }
