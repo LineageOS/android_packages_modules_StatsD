@@ -131,7 +131,10 @@ message SimplePredicate {
     UNKNOWN = 0;
     FALSE = 1;
   }
-  optional InitialValue initial_value = 5 [default = UNKNOWN];
+
+  // If unspecified, the default value will be UNKNOWN for conditions without dimensions, and
+  // FALSE for conditions with dimensions.
+  optional InitialValue initial_value = 5;
 
   optional FieldMatcher dimensions = 6;
 }
