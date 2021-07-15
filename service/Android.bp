@@ -29,7 +29,7 @@ java_library {
     sdk_version: "system_server_current",
     libs: [
         "framework-annotations-lib",
-        "framework-statsd",
+        "framework-statsd-internal",
     ],
     static_libs: [
         "modules-utils-build",
