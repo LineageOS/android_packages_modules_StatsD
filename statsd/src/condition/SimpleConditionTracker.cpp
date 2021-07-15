@@ -45,13 +45,10 @@ SimpleConditionTracker::SimpleConditionTracker(
         }
         mContainANYPositionInInternalDimensions = HasPositionANY(simplePredicate.dimensions());
     }
-
-    if (simplePredicate.initial_value() == SimplePredicate_InitialValue_FALSE) {
-        mInitialValue = ConditionState::kFalse;
-    } else {
-        mInitialValue = ConditionState::kUnknown;
-    }
-
+    // If an initial value isn't specified, default to false if sliced and unknown if not sliced.
+    mInitialValue = simplePredicate.has_initial_value()
+                            ? convertInitialValue(simplePredicate.initial_value())
+                            : mSliced ? ConditionState::kFalse : ConditionState::kUnknown;
     mInitialized = true;
 }
 

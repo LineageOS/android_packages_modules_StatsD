@@ -96,7 +96,7 @@ public:
     ~StatsdStats(){};
 
     const static int kDimensionKeySizeSoftLimit = 500;
-    const static int kDimensionKeySizeHardLimit = 800;
+    static constexpr int kDimensionKeySizeHardLimit = 800;
 
     // Per atom dimension key size limit
     static const std::map<int, std::pair<size_t, size_t>> kAtomDimensionKeySizeLimitMap;
