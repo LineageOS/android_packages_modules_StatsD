@@ -80,7 +80,7 @@ ValueMetricProducer<AggregatedValue, DimExtras>::ValueMetricProducer(
                      conditionOptions.initialConditionCache, conditionOptions.conditionWizard,
                      protoHash, activationOptions.eventActivationMap,
                      activationOptions.eventDeactivationMap, stateOptions.slicedStateAtoms,
-                     stateOptions.stateGroupMap),
+                     stateOptions.stateGroupMap, bucketOptions.splitBucketForAppUpgrade),
       mWhatMatcherIndex(whatOptions.whatMatcherIndex),
       mEventMatcherWizard(whatOptions.matcherWizard),
       mPullerManager(pullOptions.pullerManager),
@@ -90,7 +90,6 @@ ValueMetricProducer<AggregatedValue, DimExtras>::ValueMetricProducer(
       mDimensionSoftLimit(guardrailOptions.dimensionSoftLimit),
       mDimensionHardLimit(guardrailOptions.dimensionHardLimit),
       mCurrentBucketIsSkipped(false),
-      mSplitBucketForAppUpgrade(bucketOptions.splitBucketForAppUpgrade),
       // Condition timer will be set later within the constructor after pulling events
       mConditionTimer(false, bucketOptions.timeBaseNs) {
     // TODO(b/185722221): inject directly via initializer list in MetricProducer.
