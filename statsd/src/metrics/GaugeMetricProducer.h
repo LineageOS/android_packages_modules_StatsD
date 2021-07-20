@@ -214,8 +214,6 @@ private:
 
     const size_t mGaugeAtomsPerDimensionLimit;
 
-    const bool mSplitBucketForAppUpgrade;
-
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsWithCondition);
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsWithSlicedCondition);
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsNoCondition);
