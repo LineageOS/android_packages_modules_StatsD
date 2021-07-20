@@ -52,7 +52,8 @@ MetricProducer::MetricProducer(
         const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                 eventDeactivationMap,
         const vector<int>& slicedStateAtoms,
-        const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap)
+        const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap,
+        const bool splitBucketForAppUpgrade)
     : mMetricId(metricId),
       mProtoHash(protoHash),
       mConfigKey(key),
@@ -71,7 +72,8 @@ MetricProducer::MetricProducer(
       mEventDeactivationMap(eventDeactivationMap),
       mIsActive(mEventActivationMap.empty()),
       mSlicedStateAtoms(slicedStateAtoms),
-      mStateGroupMap(stateGroupMap) {
+      mStateGroupMap(stateGroupMap),
+      mSplitBucketForAppUpgrade(splitBucketForAppUpgrade) {
 }
 
 bool MetricProducer::onConfigUpdatedLocked(
