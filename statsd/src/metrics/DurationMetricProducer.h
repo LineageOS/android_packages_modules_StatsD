@@ -189,6 +189,7 @@ private:
     FRIEND_TEST(WakelockDurationE2eTest, TestAggregatedPredicates);
     FRIEND_TEST(DurationMetricTrackerTest, TestFirstBucket);
 
+    FRIEND_TEST(DurationMetricProducerTest, TestSumDurationAppUpgradeSplitDisabled);
     FRIEND_TEST(DurationMetricProducerTest_PartialBucket, TestSumDuration);
     FRIEND_TEST(DurationMetricProducerTest_PartialBucket,
                 TestSumDurationWithSplitInFollowingBucket);
