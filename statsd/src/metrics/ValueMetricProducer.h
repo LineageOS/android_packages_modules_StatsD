@@ -333,8 +333,6 @@ protected:
     // BucketDropReason, many of which make the bucket potentially invalid.
     bool mCurrentBucketIsSkipped;
 
-    const bool mSplitBucketForAppUpgrade;
-
     ConditionTimer mConditionTimer;
 
     inline bool isEventLateLocked(const int64_t eventTimeNs) const {
