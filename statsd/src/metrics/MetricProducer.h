@@ -145,7 +145,8 @@ public:
                    const std::unordered_map<int, std::vector<std::shared_ptr<Activation>>>&
                            eventDeactivationMap,
                    const vector<int>& slicedStateAtoms,
-                   const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap);
+                   const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap,
+                   const bool splitBucketForAppUpgrade);
 
     virtual ~MetricProducer(){};
 
@@ -187,6 +188,9 @@ public:
      */
     virtual void notifyAppUpgrade(const int64_t& eventTimeNs) {
         std::lock_guard<std::mutex> lock(mMutex);
+        if (!mSplitBucketForAppUpgrade) {
+            return;
+        }
         flushLocked(eventTimeNs);
     };
 
@@ -537,6 +541,8 @@ protected:
     std::vector<Metric2State> mMetric2StateLinks;
 
     optional<UploadThreshold> mUploadThreshold;
+
+    const bool mSplitBucketForAppUpgrade;
 
     SkippedBucket mCurrentSkippedBucket;
     // Buckets that were invalidated and had their data dropped.
