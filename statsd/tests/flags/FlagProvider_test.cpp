@@ -37,7 +37,7 @@ struct FlagParam {
 
 class FlagProviderTest_SPlus : public testing::TestWithParam<FlagParam> {
     void TearDown() override {
-        FlagProvider::getInstance().resetFuncs();
+        FlagProvider::getInstance().resetOverrides();
     }
 };
 
@@ -61,6 +61,20 @@ TEST_P(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagFalse) {
     EXPECT_FALSE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, GetParam().flagValue));
 }
 
+TEST_P(FlagProviderTest_SPlus, TestOverrideLocalFlags) {
+    FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue);
+
+    FlagProvider::getInstance().overrideFlag(TEST_FLAG, FLAG_FALSE, /*isBootFlag=*/false);
+    FlagProvider::getInstance().overrideFlag(TEST_FLAG, FLAG_FALSE, /*isBootFlag=*/true);
+    EXPECT_FALSE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, GetParam().flagValue));
+    EXPECT_FALSE(FlagProvider::getInstance().getBootFlagBool(TEST_FLAG, GetParam().flagValue));
+
+    FlagProvider::getInstance().overrideFlag(TEST_FLAG, FLAG_TRUE, /*isBootFlag=*/false);
+    FlagProvider::getInstance().overrideFlag(TEST_FLAG, FLAG_TRUE, /*isBootFlag=*/true);
+    EXPECT_TRUE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, GetParam().flagValue));
+    EXPECT_TRUE(FlagProvider::getInstance().getBootFlagBool(TEST_FLAG, GetParam().flagValue));
+}
+
 class FlagProviderTest_SPlus_RealValues : public testing::TestWithParam<FlagParam> {
     void SetUp() override {
         if (!IsAtLeastS()) {
@@ -70,6 +84,8 @@ class FlagProviderTest_SPlus_RealValues : public testing::TestWithParam<FlagPara
 
     void TearDown() override {
         writeFlag(TEST_FLAG, FLAG_EMPTY);
+        writeBootFlag(TEST_FLAG, FLAG_EMPTY);
+        FlagProvider::getInstance().initBootFlags({TEST_FLAG});
     }
 };
 
@@ -103,6 +119,35 @@ TEST_F(FlagProviderTest_SPlus_RealValues, TestGetFlagBoolServerFlagEmptyDefaultT
     EXPECT_TRUE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, FLAG_TRUE));
 }
 
+TEST_P(FlagProviderTest_SPlus_RealValues, TestGetBootFlagBoolServerFlagTrue) {
+    writeBootFlag(TEST_FLAG, FLAG_TRUE);
+    FlagProvider::getInstance().initBootFlags({TEST_FLAG});
+    EXPECT_TRUE(FlagProvider::getInstance().getBootFlagBool(TEST_FLAG, GetParam().flagValue));
+}
+
+TEST_P(FlagProviderTest_SPlus_RealValues, TestGetBootFlagBoolServerFlagFalse) {
+    writeBootFlag(TEST_FLAG, FLAG_FALSE);
+    FlagProvider::getInstance().initBootFlags({TEST_FLAG});
+    EXPECT_FALSE(FlagProvider::getInstance().getBootFlagBool(TEST_FLAG, GetParam().flagValue));
+}
+
+TEST_P(FlagProviderTest_SPlus_RealValues, TestGetBootFlagBoolServerFlagUpdated) {
+    writeBootFlag(TEST_FLAG, FLAG_FALSE);
+    FlagProvider::getInstance().initBootFlags({TEST_FLAG});
+    writeBootFlag(TEST_FLAG, FLAG_TRUE);
+    EXPECT_FALSE(FlagProvider::getInstance().getBootFlagBool(TEST_FLAG, GetParam().flagValue));
+}
+
+TEST_F(FlagProviderTest_SPlus_RealValues, TestGetFlagBoolNoInitServerFlagEmptyDefaultFalse) {
+    writeBootFlag(TEST_FLAG, FLAG_EMPTY);
+    EXPECT_FALSE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, FLAG_FALSE));
+}
+
+TEST_F(FlagProviderTest_SPlus_RealValues, TestGetFlagBoolNoInitServerFlagEmptyDefaultTrue) {
+    writeBootFlag(TEST_FLAG, FLAG_EMPTY);
+    EXPECT_TRUE(FlagProvider::getInstance().getFlagBool(TEST_FLAG, FLAG_TRUE));
+}
+
 class FlagProviderTest_RMinus : public testing::TestWithParam<FlagParam> {
     void SetUp() override {
         writeFlag(TEST_FLAG, GetParam().flagValue);
@@ -110,7 +155,7 @@ class FlagProviderTest_RMinus : public testing::TestWithParam<FlagParam> {
     }
 
     void TearDown() override {
-        FlagProvider::getInstance().resetFuncs();
+        FlagProvider::getInstance().resetOverrides();
         writeFlag(TEST_FLAG, FLAG_EMPTY);
     }
 };

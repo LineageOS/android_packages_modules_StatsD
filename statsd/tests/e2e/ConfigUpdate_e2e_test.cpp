@@ -57,7 +57,7 @@ class ConfigUpdateE2eTest : public ::testing::Test {
     }
 
     void TearDown() override {
-        FlagProvider::getInstance().resetFuncs();
+        FlagProvider::getInstance().resetOverrides();
     }
 };
 
