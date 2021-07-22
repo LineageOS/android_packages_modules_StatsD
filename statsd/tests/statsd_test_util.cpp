@@ -1675,6 +1675,11 @@ void writeFlag(const string& flagName, const string& flagValue) {
                 flagValue);
 }
 
+void writeBootFlag(const string& flagName, const string& flagValue) {
+    SetProperty(StringPrintf("persist.device_config.%s.%s", STATSD_NATIVE_BOOT_NAMESPACE.c_str(),
+                             flagName.c_str()),
+                flagValue);
+}
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
