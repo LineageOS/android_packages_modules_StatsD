@@ -607,6 +607,8 @@ inline std::string getServerFlagFuncFalse(const std::string& flagNamespace,
 
 void writeFlag(const std::string& flagName, const std::string& flagValue);
 
+void writeBootFlag(const std::string& flagName, const std::string& flagValue);
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
