@@ -330,9 +330,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsNoCondition) {
     EXPECT_EQ(11, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(8, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {8}, {bucketSizeNs},
+                                    {bucketStartTimeNs}, {bucket2StartTimeNs});
 
     allData.clear();
     allData.push_back(CreateRepeatedValueLogEvent(tagId, bucket3StartTimeNs + 1, 23));
@@ -346,12 +345,9 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsNoCondition) {
     EXPECT_EQ(23, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(12, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    ASSERT_EQ(2UL, valueProducer->mPastBuckets.begin()->second.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
-    EXPECT_EQ(12, valueProducer->mPastBuckets.begin()->second.back().aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second.back().mConditionTrueNs);
+    assertPastBucketValuesSingleKey(
+            valueProducer->mPastBuckets, {8, 12}, {bucketSizeNs, bucketSizeNs},
+            {bucketStartTimeNs, bucket2StartTimeNs}, {bucket2StartTimeNs, bucket3StartTimeNs});
 
     allData.clear();
     allData.push_back(CreateRepeatedValueLogEvent(tagId, bucket4StartTimeNs + 1, 36));
@@ -364,14 +360,10 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsNoCondition) {
     EXPECT_EQ(36, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(13, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    ASSERT_EQ(3UL, valueProducer->mPastBuckets.begin()->second.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
-    EXPECT_EQ(12, valueProducer->mPastBuckets.begin()->second[1].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[1].mConditionTrueNs);
-    EXPECT_EQ(13, valueProducer->mPastBuckets.begin()->second[2].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[2].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {8, 12, 13},
+                                    {bucketSizeNs, bucketSizeNs, bucketSizeNs},
+                                    {bucketStartTimeNs, bucket2StartTimeNs, bucket3StartTimeNs},
+                                    {bucket2StartTimeNs, bucket3StartTimeNs, bucket4StartTimeNs});
 }
 
 TEST_P(NumericValueMetricProducerTest_PartialBucket, TestPartialBucketCreated) {
@@ -466,9 +458,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsWithFiltering) {
     EXPECT_EQ(11, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(8, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {8}, {bucketSizeNs},
+                                    {bucketStartTimeNs}, {bucket2StartTimeNs});
 
     allData.clear();
     allData.push_back(CreateTwoValueLogEvent(tagId, bucket3StartTimeNs + 1, 4, 23));
@@ -480,9 +471,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsWithFiltering) {
     EXPECT_EQ(11, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(8, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {8}, {bucketSizeNs},
+                                    {bucketStartTimeNs}, {bucket2StartTimeNs});
 
     allData.clear();
     allData.push_back(CreateTwoValueLogEvent(tagId, bucket4StartTimeNs + 1, 3, 36));
@@ -495,10 +485,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsWithFiltering) {
     EXPECT_EQ(true, curBase.has_value());
     EXPECT_EQ(36, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.begin()->second.size());
-    EXPECT_EQ(8, valueProducer->mPastBuckets.begin()->second.back().aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second.back().mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {8}, {bucketSizeNs},
+                                    {bucketStartTimeNs}, {bucket2StartTimeNs});
 }
 
 /*
@@ -542,9 +530,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsTakeAbsoluteValueOnReset) {
     EXPECT_EQ(10, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(10, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    EXPECT_EQ(10, valueProducer->mPastBuckets.begin()->second.back().aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second.back().mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {10}, {bucketSizeNs},
+                                    {bucket2StartTimeNs}, {bucket3StartTimeNs});
 
     allData.clear();
     allData.push_back(CreateRepeatedValueLogEvent(tagId, bucket4StartTimeNs + 1, 36));
@@ -556,12 +543,9 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsTakeAbsoluteValueOnReset) {
     EXPECT_EQ(36, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(26, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    ASSERT_EQ(2UL, valueProducer->mPastBuckets.begin()->second.size());
-    EXPECT_EQ(10, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
-    EXPECT_EQ(26, valueProducer->mPastBuckets.begin()->second[1].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[1].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(
+            valueProducer->mPastBuckets, {10, 26}, {bucketSizeNs, bucketSizeNs},
+            {bucket2StartTimeNs, bucket3StartTimeNs}, {bucket3StartTimeNs, bucket4StartTimeNs});
 }
 
 /*
@@ -614,9 +598,8 @@ TEST(NumericValueMetricProducerTest, TestPulledEventsTakeZeroOnReset) {
     EXPECT_EQ(36, curBase.value().long_value);
     EXPECT_EQ(0, curInterval.sampleSize);
     EXPECT_EQ(26, curInterval.aggregate.long_value);
-    ASSERT_EQ(1UL, valueProducer->mPastBuckets.size());
-    EXPECT_EQ(26, valueProducer->mPastBuckets.begin()->second[0].aggregates[0].long_value);
-    EXPECT_EQ(bucketSizeNs, valueProducer->mPastBuckets.begin()->second[0].mConditionTrueNs);
+    assertPastBucketValuesSingleKey(valueProducer->mPastBuckets, {26}, {bucketSizeNs},
+                                    {bucket3StartTimeNs}, {bucket4StartTimeNs});
 }
 
 /*
