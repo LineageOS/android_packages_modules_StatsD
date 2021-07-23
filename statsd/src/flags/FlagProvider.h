@@ -39,6 +39,7 @@ const std::string STATSD_NATIVE_BOOT_NAMESPACE = "statsd_native_boot";
 
 const std::string PARTIAL_CONFIG_UPDATE_FLAG = "partial_config_update";
 const std::string KLL_METRIC_FLAG = "kll_metric";
+const std::string AGGREGATE_ATOMS_FLAG = "aggregate_atoms";
 
 const std::string FLAG_TRUE = "true";
 const std::string FLAG_FALSE = "false";
@@ -103,6 +104,10 @@ private:
 
     friend class ConfigUpdateE2eTest;
     friend class ConfigUpdateTest;
+    friend class EventMetricE2eTest;
+    friend class GaugeMetricE2ePulledTest;
+    friend class GaugeMetricE2ePushedTest;
+    friend class EventMetricProducerTest;
     friend class FlagProviderTest_RMinus;
     friend class FlagProviderTest_SPlus;
     friend class FlagProviderTest_SPlus_RealValues;
@@ -110,6 +115,12 @@ private:
     friend class MetricsManagerTest;
 
     FRIEND_TEST(ConfigUpdateE2eTest, TestKllMetric_KllDisabledBeforeConfigUpdate);
+    FRIEND_TEST(ConfigUpdateE2eTest, TestEventMetric);
+    FRIEND_TEST(ConfigUpdateE2eTest, TestGaugeMetric);
+    FRIEND_TEST(EventMetricE2eTest, TestEventMetricDataAggregated);
+    FRIEND_TEST(EventMetricProducerTest, TestOneAtomTagAggregatedEvents);
+    FRIEND_TEST(EventMetricProducerTest, TestTwoAtomTagAggregatedEvents);
+    FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsNoCondition);
     FRIEND_TEST(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagTrue);
     FRIEND_TEST(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagFalse);
     FRIEND_TEST(FlagProviderTest_SPlus, TestOverrideLocalFlags);

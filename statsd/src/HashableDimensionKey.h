@@ -140,6 +140,28 @@ private:
     HashableDimensionKey mStateValuesKey;
 };
 
+class AtomDimensionKey {
+public:
+    explicit AtomDimensionKey(const int32_t atomTag, const HashableDimensionKey& atomFieldValues)
+        : mAtomTag(atomTag), mAtomFieldValues(atomFieldValues){};
+
+    AtomDimensionKey(){};
+
+    inline int32_t getAtomTag() const {
+        return mAtomTag;
+    }
+
+    inline const HashableDimensionKey& getAtomFieldValues() const {
+        return mAtomFieldValues;
+    }
+
+    bool operator==(const AtomDimensionKey& that) const;
+
+private:
+    int32_t mAtomTag;
+    HashableDimensionKey mAtomFieldValues;
+};
+
 android::hash_t hashDimension(const HashableDimensionKey& key);
 
 /**
@@ -226,6 +248,7 @@ bool linked(const std::vector<Metric2State>& stateLinks, const int32_t stateAtom
 
 namespace std {
 
+using android::os::statsd::AtomDimensionKey;
 using android::os::statsd::HashableDimensionKey;
 using android::os::statsd::MetricDimensionKey;
 
@@ -241,6 +264,15 @@ struct hash<MetricDimensionKey> {
     std::size_t operator()(const MetricDimensionKey& key) const {
         android::hash_t hash = hashDimension(key.getDimensionKeyInWhat());
         hash = android::JenkinsHashMix(hash, hashDimension(key.getStateValuesKey()));
+        return android::JenkinsHashWhiten(hash);
+    }
+};
+
+template <>
+struct hash<AtomDimensionKey> {
+    std::size_t operator()(const AtomDimensionKey& key) const {
+        android::hash_t hash = hashDimension(key.getAtomFieldValues());
+        hash = android::JenkinsHashMix(hash, key.getAtomTag());
         return android::JenkinsHashWhiten(hash);
     }
 };
