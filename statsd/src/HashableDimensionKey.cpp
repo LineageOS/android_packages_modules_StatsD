@@ -367,6 +367,10 @@ bool MetricDimensionKey::operator<(const MetricDimensionKey& that) const {
     return mStateValuesKey < that.getStateValuesKey();
 }
 
+bool AtomDimensionKey::operator==(const AtomDimensionKey& that) const {
+    return mAtomTag == that.getAtomTag() && mAtomFieldValues == that.getAtomFieldValues();
+};
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
