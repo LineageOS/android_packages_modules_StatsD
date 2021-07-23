@@ -287,6 +287,7 @@ cc_test {
         "tests/e2e/ConfigUpdate_e2e_test.cpp",
         "tests/e2e/CountMetric_e2e_test.cpp",
         "tests/e2e/DurationMetric_e2e_test.cpp",
+        "tests/e2e/EventMetric_e2e_test.cpp",
         "tests/e2e/GaugeMetric_e2e_pull_test.cpp",
         "tests/e2e/GaugeMetric_e2e_push_test.cpp",
         "tests/e2e/KllMetric_e2e_ab_test.cpp",
