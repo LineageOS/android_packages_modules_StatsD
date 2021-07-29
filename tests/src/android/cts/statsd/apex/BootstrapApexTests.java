@@ -19,17 +19,13 @@ package android.cts.statsd.apex;
 import static com.google.common.truth.Truth.assertThat;
 
 import android.cts.statsd.atom.BaseTestCase;
+import com.android.apex.ApexInfo;
+import com.android.apex.XmlParser;
 import com.android.compatibility.common.util.ApiLevelUtil;
 import com.android.tradefed.log.LogUtil;
-import java.io.StringReader;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.junit.Before;
-import org.w3c.dom.Document;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+import java.io.File;
+import java.io.FileInputStream;
+import java.util.List;
 
 /**
  * Verify statsd is not in the bootstrap apexes
@@ -45,35 +41,32 @@ public class BootstrapApexTests extends BaseTestCase {
                 || ApiLevelUtil.codenameEquals(getDevice(), codename);
     }
 
+    // TODO: use InstallUtilsHost#isApexUpdateSupported after migrating to JUnit4
+    private final boolean isApexUpdateSupported() throws Exception {
+        return getDevice().getBooleanProperty("ro.apex.updatable", false);
+    }
+
+    private List<ApexInfo> readBootstrapApexes() throws Exception {
+        File file = getDevice().pullFile(BOOTSTRAP_APEX_FILE);
+        try (FileInputStream stream = new FileInputStream(file)) {
+            return XmlParser.readApexInfoList(stream).getApexInfo();
+        }
+    }
+
     public void testStatsdNotPresent() throws Exception {
         if (!sdkLevelAtLeast(31, "S")) {
             return;
         }
-        String adbCommand = "cat " + BOOTSTRAP_APEX_FILE;
-        String fileContents = getDevice().executeShellCommand(adbCommand);
-
-        LogUtil.CLog.d(TAG + " Received the following file: " + fileContents);
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document xml = builder.parse(new InputSource(new StringReader(fileContents)));
-
-        NodeList apexInfoList = xml.getElementsByTagName("apex-info-list");
-        assertThat(apexInfoList.getLength()).isEqualTo(1);
-        NodeList apexInfoNodes = apexInfoList.item(0).getChildNodes();
-        assertThat(apexInfoNodes.getLength()).isGreaterThan(0);
-
-        int numApexes = 0;
-        for (int i = 0; i < apexInfoNodes.getLength(); i++) {
-            Node apexInfoNode = apexInfoNodes.item(i);
-            String name = apexInfoNode.getNodeName();
-            if (name.equals("apex-info")) {
-                numApexes++;
-                NamedNodeMap attr = apexInfoNode.getAttributes();
-                Node moduleName = attr.getNamedItem("moduleName");
-                assertThat(moduleName).isNotNull();
-                assertThat(moduleName.getNodeValue()).isNotEqualTo("com.android.os.statsd");
-            }
+        if (!isApexUpdateSupported()) {
+            return;
         }
-        assertThat(numApexes).isGreaterThan(0);
+
+        List<ApexInfo> apexInfoList = readBootstrapApexes();
+        LogUtil.CLog.d(TAG + " Received " + apexInfoList.size() + " apexes in bootstrap apexes");
+        assertThat(apexInfoList.size()).isGreaterThan(0);
+        for (ApexInfo apexInfo : apexInfoList) {
+            LogUtil.CLog.d(TAG + " APEX name is " + apexInfo.getModuleName());
+            assertThat(apexInfo.getModuleName()).isNotEqualTo("com.android.os.statsd");
+        }
     }
 }
