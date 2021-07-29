@@ -238,6 +238,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDuration) {
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
     metric.set_aggregation_type(DurationMetric_AggregationType_SUM);
+    metric.set_split_bucket_for_app_upgrade(true);
     sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
     FieldMatcher dimensions;
 
@@ -256,7 +257,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDuration) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
+                                              getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -301,6 +303,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationWithSplitInFollo
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
     metric.set_aggregation_type(DurationMetric_AggregationType_SUM);
+    metric.set_split_bucket_for_app_upgrade(true);
     sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
     FieldMatcher dimensions;
 
@@ -319,7 +322,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationWithSplitInFollo
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 65 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
+                                              getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -361,6 +365,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationAnomaly) {
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
     metric.set_aggregation_type(DurationMetric_AggregationType_SUM);
+    metric.set_split_bucket_for_app_upgrade(true);
     Alert alert;
     alert.set_num_buckets(3);
     alert.set_trigger_if_sum_gt(2);
@@ -385,7 +390,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationAnomaly) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
+                                              getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -411,6 +417,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDuration) {
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
     metric.set_aggregation_type(DurationMetric_AggregationType_MAX_SPARSE);
+    metric.set_split_bucket_for_app_upgrade(true);
 
     sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
     FieldMatcher dimensions;
@@ -430,7 +437,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDuration) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
+                                              getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -465,6 +473,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDurationWithSplitInNextB
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
     metric.set_aggregation_type(DurationMetric_AggregationType_MAX_SPARSE);
+    metric.set_split_bucket_for_app_upgrade(true);
 
     sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
     FieldMatcher dimensions;
@@ -484,7 +493,8 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDurationWithSplitInNextB
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 65 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
+                                              getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -544,7 +554,7 @@ TEST(DurationMetricProducerTest, TestSumDurationAppUpgradeSplitDisabled) {
     EXPECT_EQ(bucketStartTimeNs, durationProducer.mCurrentBucketStartTimeNs);
 
     int64_t appUpgradeTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
-    durationProducer.notifyAppUpgrade(appUpgradeTimeNs);
+    durationProducer.notifyAppUpgrade(appUpgradeTimeNs, getAppUpgradeBucketDefault());
 
     ASSERT_EQ(0UL, durationProducer.mPastBuckets.size());
     EXPECT_EQ(0, durationProducer.getCurrentBucketNum());

@@ -307,10 +307,10 @@ bool MetricsManager::isConfigValid() const {
 }
 
 void MetricsManager::notifyAppUpgrade(const int64_t& eventTimeNs, const string& apk, const int uid,
-                                      const int64_t version) {
+                                      const int64_t version, const bool bucketSplitDefault) {
     // Inform all metric producers.
     for (const auto& it : mAllMetricProducers) {
-        it->notifyAppUpgrade(eventTimeNs);
+        it->notifyAppUpgrade(eventTimeNs, bucketSplitDefault);
     }
     // check if we care this package
     if (std::find(mAllowedPkg.begin(), mAllowedPkg.end(), apk) != mAllowedPkg.end()) {
@@ -327,11 +327,11 @@ void MetricsManager::notifyAppUpgrade(const int64_t& eventTimeNs, const string& 
     }
 }
 
-void MetricsManager::notifyAppRemoved(const int64_t& eventTimeNs, const string& apk,
-                                      const int uid) {
+void MetricsManager::notifyAppRemoved(const int64_t& eventTimeNs, const string& apk, const int uid,
+                                      const bool bucketSplitDefault) {
     // Inform all metric producers.
     for (const auto& it : mAllMetricProducers) {
-        it->notifyAppRemoved(eventTimeNs);
+        it->notifyAppRemoved(eventTimeNs, bucketSplitDefault);
     }
     // check if we care this package
     if (std::find(mAllowedPkg.begin(), mAllowedPkg.end(), apk) != mAllowedPkg.end()) {

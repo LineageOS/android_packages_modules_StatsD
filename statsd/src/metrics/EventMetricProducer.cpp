@@ -69,7 +69,7 @@ EventMetricProducer::EventMetricProducer(
         const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap)
     : MetricProducer(metric.id(), key, startTimeNs, conditionIndex, initialConditionCache, wizard,
                      protoHash, eventActivationMap, eventDeactivationMap, slicedStateAtoms,
-                     stateGroupMap, /*splitBucketForAppUpgrade=*/false) {
+                     stateGroupMap, /*splitBucketForAppUpgrade=*/nullopt) {
     if (metric.links().size() > 0) {
         for (const auto& link : metric.links()) {
             Metric2Condition mc;
