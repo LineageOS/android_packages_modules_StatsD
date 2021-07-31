@@ -19,7 +19,10 @@ package {
 java_test_host {
     name: "CtsStatsdHostTestCases",
 
-    srcs: ["src/**/*.java"],
+    srcs: [
+        "src/**/*.java",
+        ":apex-info-list",
+    ],
 
     // tag this module as a cts test artifact
     test_suites: [

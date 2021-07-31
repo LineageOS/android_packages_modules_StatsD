@@ -16,6 +16,13 @@ package {
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
 
+soong_config_module_type_import {
+    from: "packages/modules/common/Android.bp",
+    module_types: [
+        "module_java_library",
+    ],
+}
+
 filegroup {
     name: "service-statsd-sources",
     srcs: [
@@ -23,7 +30,7 @@ filegroup {
     ],
 }
 
-java_library {
+module_java_library {
     name: "service-statsd",
     srcs: [ ":service-statsd-sources" ],
     sdk_version: "system_server_current",
@@ -40,4 +47,10 @@ java_library {
         "test_com.android.os.statsd",
     ],
     min_sdk_version: "30",
+    enabled: false,
+    soong_config_variables: {
+        module_build_from_source: {
+            enabled: true,
+        },
+    },
 }
