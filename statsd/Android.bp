@@ -255,10 +255,11 @@ cc_test {
     cflags: [
         "-Wall",
         "-Werror",
+        "-Wno-enum-compare",
         "-Wno-missing-field-initializers",
-        "-Wno-unused-variable",
         "-Wno-unused-function",
         "-Wno-unused-parameter",
+        "-Wno-unused-variable",
     ],
 
     require_root: true,
