@@ -65,7 +65,7 @@ public:
         const int64_t startTimeNs;
         const int64_t bucketSizeNs;
         const int64_t minBucketSizeNs;
-        const bool splitBucketForAppUpgrade;
+        const optional<bool> splitBucketForAppUpgrade;
     };
 
     struct WhatOptions {
@@ -108,7 +108,6 @@ public:
                               int64_t originalPullTimeNs) override {
     }
 
-    void notifyAppUpgrade(const int64_t& eventTimeNs) override;
 
     // ValueMetric needs special logic if it's a pulled atom.
     void onStatsdInitCompleted(const int64_t& eventTimeNs) override;
@@ -133,6 +132,8 @@ protected:
     virtual inline bool canSkipLogEventLocked(
             const MetricDimensionKey& eventKey, bool condition, int64_t eventTimeNs,
             const std::map<int, HashableDimensionKey>& statePrimaryKeys) const = 0;
+
+    void notifyAppUpgradeInternalLocked(const int64_t eventTimeNs) override;
 
     void onDumpReportLocked(const int64_t dumpTimeNs, const bool includeCurrentPartialBucket,
                             const bool eraseData, const DumpLatency dumpLatency,

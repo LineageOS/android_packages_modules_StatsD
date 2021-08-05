@@ -53,7 +53,7 @@ MetricProducer::MetricProducer(
                 eventDeactivationMap,
         const vector<int>& slicedStateAtoms,
         const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap,
-        const bool splitBucketForAppUpgrade)
+        const optional<bool> splitBucketForAppUpgrade)
     : mMetricId(metricId),
       mProtoHash(protoHash),
       mConfigKey(key),
