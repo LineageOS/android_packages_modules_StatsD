@@ -218,6 +218,7 @@ public:
         metric.mutable_value_field()->set_field(tagId);
         metric.mutable_value_field()->add_child()->set_field(2);
         metric.set_max_pull_delay_sec(INT_MAX);
+        metric.set_split_bucket_for_app_upgrade(true);
         return metric;
     }
 
@@ -403,7 +404,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestPartialBucketCreated) {
     // Partial buckets created in 2nd bucket.
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -704,7 +705,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestPushedEvents) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 150;
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -772,7 +773,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestPulledValue) {
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -816,7 +817,7 @@ TEST(NumericValueMetricProducerTest, TestPulledWithAppUpgradeDisabled) {
     valueProducer->onDataPulled(allData, /** succeed */ true, bucket2StartTimeNs);
     ASSERT_EQ(1UL, valueProducer->mCurrentSlicedBucket.size());
 
-    valueProducer->notifyAppUpgrade(bucket2StartTimeNs + 150);
+    valueProducer->notifyAppUpgrade(bucket2StartTimeNs + 150, getAppUpgradeBucketDefault());
     ASSERT_EQ(0UL, valueProducer->mPastBuckets[DEFAULT_METRIC_DIMENSION_KEY].size());
     EXPECT_EQ(bucket2StartTimeNs, valueProducer->mCurrentBucketStartTimeNs);
 }
@@ -853,7 +854,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestPulledValueWhileConditi
     int64_t partialBucketSplitTimeNs = bucket2StartTimeNs - 50;
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -2616,7 +2617,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestFullBucketResetWhenLast
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -2776,7 +2777,7 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestBucketBoundariesOnParti
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
+            valueProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             valueProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -3624,7 +3625,7 @@ TEST(NumericValueMetricProducerTest_BucketDrop, TestConditionUnknownMultipleBuck
 
     // Bucket should be dropped because of condition unknown.
     int64_t appUpgradeTimeNs = bucketStartTimeNs + 5 * NS_PER_SEC;
-    valueProducer->notifyAppUpgrade(appUpgradeTimeNs);
+    valueProducer->notifyAppUpgrade(appUpgradeTimeNs, getAppUpgradeBucketDefault());
 
     // Bucket also dropped due to condition unknown
     vector<shared_ptr<LogEvent>> allData;
@@ -3716,7 +3717,7 @@ TEST(NumericValueMetricProducerTest_BucketDrop,
 
     // App update event.
     int64_t appUpdateTimeNs = bucket2StartTimeNs + 1000;
-    valueProducer->notifyAppUpgrade(appUpdateTimeNs);
+    valueProducer->notifyAppUpgrade(appUpdateTimeNs, getAppUpgradeBucketDefault());
 
     // Check dump report.
     ProtoOutputStream output;
@@ -6850,7 +6851,7 @@ TEST(NumericValueMetricProducerTest, TestForcedBucketSplitWhenConditionUnknownSk
 
     // App update event.
     int64_t appUpdateTimeNs = bucketStartTimeNs + 1000;
-    valueProducer->notifyAppUpgrade(appUpdateTimeNs);
+    valueProducer->notifyAppUpgrade(appUpdateTimeNs, getAppUpgradeBucketDefault());
 
     // Check dump report.
     ProtoOutputStream output;

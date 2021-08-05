@@ -166,14 +166,9 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onStatsdInitCompleted(
 }
 
 template <typename AggregatedValue, typename DimExtras>
-void ValueMetricProducer<AggregatedValue, DimExtras>::notifyAppUpgrade(const int64_t& eventTimeNs) {
-    lock_guard<mutex> lock(mMutex);
-
+void ValueMetricProducer<AggregatedValue, DimExtras>::notifyAppUpgradeInternalLocked(
+        const int64_t eventTimeNs) {
     // TODO(b/188837487): Add mIsActive check
-
-    if (!mSplitBucketForAppUpgrade) {
-        return;
-    }
     if (isPulled() && mCondition == ConditionState::kTrue) {
         pullAndMatchEventsLocked(eventTimeNs);
     }

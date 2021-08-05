@@ -132,6 +132,13 @@ struct SkippedBucket {
     }
 };
 
+template <class T>
+optional<bool> getAppUpgradeBucketSplit(const T& metric) {
+    return metric.has_split_bucket_for_app_upgrade()
+                   ? std::make_optional<bool>(metric.split_bucket_for_app_upgrade())
+                   : std::nullopt;
+}
+
 // A MetricProducer is responsible for compute one single metrics, creating stats log report, and
 // writing the report to dropbox. MetricProducers should respond to package changes as required in
 // PackageInfoListener, but if none of the metrics are slicing by package name, then the update can
@@ -146,7 +153,7 @@ public:
                            eventDeactivationMap,
                    const vector<int>& slicedStateAtoms,
                    const unordered_map<int, unordered_map<int, int64_t>>& stateGroupMap,
-                   const bool splitBucketForAppUpgrade);
+                   const optional<bool> splitBucketForAppUpgrade);
 
     virtual ~MetricProducer(){};
 
@@ -186,17 +193,19 @@ public:
     /**
      * Force a partial bucket split on app upgrade
      */
-    virtual void notifyAppUpgrade(const int64_t& eventTimeNs) {
+    void notifyAppUpgrade(const int64_t& eventTimeNs, const bool bucketSplitDefault) {
         std::lock_guard<std::mutex> lock(mMutex);
-        if (!mSplitBucketForAppUpgrade) {
+        const bool splitBucket =
+                mSplitBucketForAppUpgrade ? mSplitBucketForAppUpgrade.value() : bucketSplitDefault;
+        if (!splitBucket) {
             return;
         }
-        flushLocked(eventTimeNs);
+        notifyAppUpgradeInternalLocked(eventTimeNs);
     };
 
-    void notifyAppRemoved(const int64_t& eventTimeNs) {
+    void notifyAppRemoved(const int64_t& eventTimeNs, const bool bucketSplitDefault) {
         // Force buckets to split on removal also.
-        notifyAppUpgrade(eventTimeNs);
+        notifyAppUpgrade(eventTimeNs, bucketSplitDefault);
     };
 
     /**
@@ -390,6 +399,10 @@ protected:
         flushCurrentBucketLocked(eventTimeNs, eventTimeNs);
     };
 
+    virtual void notifyAppUpgradeInternalLocked(const int64_t eventTimeNs) {
+        flushLocked(eventTimeNs);
+    }
+
     /*
      * Individual metrics can implement their own business logic here. All pre-processing is done.
      *
@@ -542,7 +555,7 @@ protected:
 
     optional<UploadThreshold> mUploadThreshold;
 
-    const bool mSplitBucketForAppUpgrade;
+    const optional<bool> mSplitBucketForAppUpgrade;
 
     SkippedBucket mCurrentSkippedBucket;
     // Buckets that were invalidated and had their data dropped.
