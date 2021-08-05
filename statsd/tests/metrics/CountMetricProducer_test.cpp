@@ -259,6 +259,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInCurrentBucket) {
     CountMetric metric;
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
+    metric.set_split_bucket_for_app_upgrade(true);
     Alert alert;
     alert.set_num_buckets(3);
     alert.set_trigger_if_sum_gt(2);
@@ -283,7 +284,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInCurrentBucket) {
     // Check that there's a past bucket and the bucket end is not adjusted.
     switch (GetParam()) {
         case APP_UPGRADE:
-            countProducer.notifyAppUpgrade(eventTimeNs);
+            countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             countProducer.onStatsdInitCompleted(eventTimeNs);
@@ -330,6 +331,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInNextBucket) {
     CountMetric metric;
     metric.set_id(1);
     metric.set_bucket(ONE_MINUTE);
+    metric.set_split_bucket_for_app_upgrade(true);
 
     sp<MockConditionWizard> wizard = new NaggyMock<MockConditionWizard>();
 
@@ -347,7 +349,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInNextBucket) {
     // occurred after the bucket end time.
     switch (GetParam()) {
         case APP_UPGRADE:
-            countProducer.notifyAppUpgrade(eventTimeNs);
+            countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             countProducer.onStatsdInitCompleted(eventTimeNs);
@@ -409,7 +411,7 @@ TEST(CountMetricProducerTest, TestSplitOnAppUpgradeDisabled) {
 
     // App upgrade event occurs. Make sure no bucket is split.
     // Check that there's a past bucket and the bucket end is not adjusted.
-    countProducer.notifyAppUpgrade(eventTimeNs);
+    countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
 
     ASSERT_EQ(0UL, countProducer.mPastBuckets[DEFAULT_METRIC_DIMENSION_KEY].size());
     EXPECT_EQ(0, countProducer.getCurrentBucketNum());
