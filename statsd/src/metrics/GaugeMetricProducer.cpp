@@ -87,7 +87,7 @@ GaugeMetricProducer::GaugeMetricProducer(
         const size_t dimensionSoftLimit, const size_t dimensionHardLimit)
     : MetricProducer(metric.id(), key, timeBaseNs, conditionIndex, initialConditionCache, wizard,
                      protoHash, eventActivationMap, eventDeactivationMap, /*slicedStateAtoms=*/{},
-                     /*stateGroupMap=*/{}, metric.split_bucket_for_app_upgrade()),
+                     /*stateGroupMap=*/{}, getAppUpgradeBucketSplit(metric)),
       mWhatMatcherIndex(whatMatcherIndex),
       mEventMatcherWizard(matcherWizard),
       mPullerManager(pullerManager),

@@ -1767,6 +1767,10 @@ void writeBootFlag(const string& flagName, const string& flagValue) {
                              flagName.c_str()),
                 flagValue);
 }
+
+bool getAppUpgradeBucketDefault() {
+    return FlagProvider::getInstance().getFlagBool(APP_UPGRADE_BUCKET_SPLIT_FLAG, FLAG_TRUE);
+}
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
