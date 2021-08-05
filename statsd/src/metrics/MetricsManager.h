@@ -68,9 +68,10 @@ public:
         unordered_set<sp<const InternalAlarm>, SpHash<InternalAlarm>>& alarmSet);
 
     void notifyAppUpgrade(const int64_t& eventTimeNs, const string& apk, const int uid,
-                          const int64_t version);
+                          const int64_t version, const bool bucketSplitDefault);
 
-    void notifyAppRemoved(const int64_t& eventTimeNs, const string& apk, const int uid);
+    void notifyAppRemoved(const int64_t& eventTimeNs, const string& apk, const int uid,
+                          const bool bucketSplitDefault);
 
     void onUidMapReceived(const int64_t& eventTimeNs);
 

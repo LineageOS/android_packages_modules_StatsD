@@ -80,12 +80,7 @@ public:
                       bool pullSuccess, int64_t originalPullTimeNs) override;
 
     // GaugeMetric needs to immediately trigger another pull when we create the partial bucket.
-    void notifyAppUpgrade(const int64_t& eventTimeNs) override {
-        std::lock_guard<std::mutex> lock(mMutex);
-
-        if (!mSplitBucketForAppUpgrade) {
-            return;
-        }
+    void notifyAppUpgradeInternalLocked(const int64_t eventTimeNs) override {
         flushLocked(eventTimeNs);
         if (mIsPulled && mSamplingType == GaugeMetric::RANDOM_ONE_SAMPLE) {
             pullAndMatchEventsLocked(eventTimeNs);
