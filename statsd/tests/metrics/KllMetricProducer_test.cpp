@@ -139,7 +139,7 @@ public:
         return new KllMetricProducer(
                 kConfigKey, metric, protoHash, {/*pullAtomId=*/-1, /*pullerManager=*/nullptr},
                 {timeBaseNs, startTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
-                 metric.split_bucket_for_app_upgrade()},
+                 /*conditionCorrectionThresholdNs=*/nullopt, metric.split_bucket_for_app_upgrade()},
                 {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, logEventMatcherIndex,
                  /*eventMatcherWizard=*/nullptr, metric.dimensions_in_what(), fieldMatchers},
                 {conditionIndex, metric.links(), initialConditionCache, wizard},
