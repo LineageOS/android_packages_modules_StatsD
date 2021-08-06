@@ -432,7 +432,8 @@ void ValidateDurationBucket(const DurationBucketInfo& bucket, int64_t startTimeN
 void ValidateGaugeBucketTimes(const GaugeBucketInfo& gaugeBucket, int64_t startTimeNs,
                               int64_t endTimeNs, vector<int64_t> eventTimesNs);
 void ValidateValueBucket(const ValueBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
-                         const vector<int64_t>& values, int64_t conditionTrueNs);
+                         const vector<int64_t>& values, int64_t conditionTrueNs,
+                         int64_t conditionCorrectionNs);
 void ValidateKllBucket(const KllBucketInfo& bucket, int64_t startTimeNs, int64_t endTimeNs,
                        const std::vector<int64_t> sketchSizes, int64_t conditionTrueNs);
 
