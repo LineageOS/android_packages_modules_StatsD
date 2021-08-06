@@ -139,7 +139,7 @@ optional<bool> getAppUpgradeBucketSplit(const T& metric) {
                    : std::nullopt;
 }
 
-// A MetricProducer is responsible for compute one single metrics, creating stats log report, and
+// A MetricProducer is responsible for compute one single metric, creating stats log report, and
 // writing the report to dropbox. MetricProducers should respond to package changes as required in
 // PackageInfoListener, but if none of the metrics are slicing by package name, then the update can
 // be a no-op.
