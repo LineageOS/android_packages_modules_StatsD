@@ -617,6 +617,8 @@ void writeFlag(const std::string& flagName, const std::string& flagValue);
 
 void writeBootFlag(const std::string& flagName, const std::string& flagValue);
 
+bool getAppUpgradeBucketDefault();
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android

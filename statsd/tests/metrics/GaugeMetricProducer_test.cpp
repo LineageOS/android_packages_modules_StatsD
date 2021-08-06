@@ -203,6 +203,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPushedEvents) {
     metric.set_id(metricId);
     metric.set_bucket(ONE_MINUTE);
     metric.mutable_gauge_fields_filter()->set_include_all(true);
+    metric.set_split_bucket_for_app_upgrade(true);
 
     Alert alert;
     alert.set_id(101);
@@ -232,7 +233,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPushedEvents) {
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             gaugeProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -287,6 +288,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPulled) {
     metric.set_id(metricId);
     metric.set_bucket(ONE_MINUTE);
     metric.set_max_pull_delay_sec(INT_MAX);
+    metric.set_split_bucket_for_app_upgrade(true);
     auto gaugeFieldMatcher = metric.mutable_gauge_fields_filter()->mutable_fields();
     gaugeFieldMatcher->set_field(tagId);
     gaugeFieldMatcher->add_child()->set_field(2);
@@ -326,7 +328,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPulled) {
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
             break;
         case BOOT_COMPLETE:
             gaugeProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -392,7 +394,7 @@ TEST(GaugeMetricProducerTest, TestPulledWithAppUpgradeDisabled) {
                          .mFields->begin()
                          ->mValue.int_value);
 
-    gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
+    gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
     ASSERT_EQ(0UL, gaugeProducer.mPastBuckets[DEFAULT_METRIC_DIMENSION_KEY].size());
     EXPECT_EQ(0L, gaugeProducer.mCurrentBucketNum);
     EXPECT_EQ(bucketStartTimeNs, gaugeProducer.mCurrentBucketStartTimeNs);
