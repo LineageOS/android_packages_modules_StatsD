@@ -20,16 +20,7 @@
 
 #include <optional>
 
-#include "MetricProducer.h"
 #include "ValueMetricProducer.h"
-#include "anomaly/AnomalyTracker.h"
-#include "condition/ConditionTimer.h"
-#include "condition/ConditionTracker.h"
-#include "external/PullDataReceiver.h"
-#include "external/StatsPullerManager.h"
-#include "matchers/EventMatcherWizard.h"
-#include "src/statsd_config.pb.h"
-#include "stats_log_util.h"
 
 namespace android {
 namespace os {
@@ -239,6 +230,29 @@ private:
     FRIEND_TEST(NumericValueMetricProducerTest_PartialBucket, TestPushedEvents);
     FRIEND_TEST(NumericValueMetricProducerTest_PartialBucket, TestPulledValue);
     FRIEND_TEST(NumericValueMetricProducerTest_PartialBucket, TestPulledValueWhileConditionFalse);
+
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestAlarmLatePullWhileConditionTrue);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestAlarmLatePullWithConditionChanged);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestAlarmLatePullWhileConditionFalse);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestLatePullOnConditionChangeFalse);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestLatePullOnConditionChangeTrue);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestAlarmLatePullNoCondition);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestAlarmLatePullNoConditionWithSkipped);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestThresholdNotDefinedNoUpload);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestThresholdDefinedZero);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestThresholdUploadPassWhenEqual);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection,
+                TestThresholdUploadPassWhenGreater);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestThresholdUploadSkip);
+    FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestLateStateChangeSlicedAtoms);
 
     FRIEND_TEST(ConfigUpdateTest, TestUpdateValueMetrics);
 
