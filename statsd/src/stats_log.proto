@@ -152,6 +152,8 @@ message ValueBucketInfo {
   optional int64 end_bucket_elapsed_millis = 6;
 
   optional int64 condition_true_nanos = 10;
+
+  optional int64 condition_correction_nanos = 11;
 }
 
 message ValueMetricData {

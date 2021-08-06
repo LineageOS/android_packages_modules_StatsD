@@ -734,10 +734,16 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
     const auto [dimensionSoftLimit, dimensionHardLimit] =
             StatsdStats::getAtomDimensionKeySizeLimits(pullTagId);
 
+    // get the condition_correction_threshold_nanos value
+    const optional<int64_t> conditionCorrectionThresholdNs =
+            metric.has_condition_correction_threshold_nanos()
+                    ? optional<int64_t>(metric.condition_correction_threshold_nanos())
+                    : nullopt;
+
     return new NumericValueMetricProducer(
             key, metric, metricHash, {pullTagId, pullerManager},
             {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
-             getAppUpgradeBucketSplit(metric)},
+             conditionCorrectionThresholdNs, getAppUpgradeBucketSplit(metric)},
             {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
              metric.dimensions_in_what(), fieldMatchers},
             {conditionIndex, metric.links(), initialConditionCache, wizard},
@@ -850,7 +856,7 @@ optional<sp<MetricProducer>> createKllMetricProducerAndUpdateMetadata(
     return new KllMetricProducer(
             key, metric, metricHash, {/*pullTagId=*/-1, pullerManager},
             {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
-             getAppUpgradeBucketSplit(metric)},
+             /*conditionCorrectionThresholdNs=*/nullopt, getAppUpgradeBucketSplit(metric)},
             {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
              metric.dimensions_in_what(), fieldMatchers},
             {conditionIndex, metric.links(), initialConditionCache, wizard},

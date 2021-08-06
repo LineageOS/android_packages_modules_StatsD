@@ -55,6 +55,7 @@ const int FIELD_ID_BUCKET_NUM = 4;
 const int FIELD_ID_START_BUCKET_ELAPSED_MILLIS = 5;
 const int FIELD_ID_END_BUCKET_ELAPSED_MILLIS = 6;
 const int FIELD_ID_CONDITION_TRUE_NS = 10;
+const int FIELD_ID_CONDITION_CORRECTION_NS = 11;
 
 const Value ZERO_LONG((int64_t)0);
 const Value ZERO_DOUBLE(0.0);
@@ -605,8 +606,12 @@ Value NumericValueMetricProducer::getFinalValue(const Interval& interval) const 
 }
 
 NumericValueMetricProducer::DumpProtoFields NumericValueMetricProducer::getDumpProtoFields() const {
-    return {FIELD_ID_VALUE_METRICS, FIELD_ID_BUCKET_NUM, FIELD_ID_START_BUCKET_ELAPSED_MILLIS,
-            FIELD_ID_END_BUCKET_ELAPSED_MILLIS, FIELD_ID_CONDITION_TRUE_NS};
+    return {FIELD_ID_VALUE_METRICS,
+            FIELD_ID_BUCKET_NUM,
+            FIELD_ID_START_BUCKET_ELAPSED_MILLIS,
+            FIELD_ID_END_BUCKET_ELAPSED_MILLIS,
+            FIELD_ID_CONDITION_TRUE_NS,
+            FIELD_ID_CONDITION_CORRECTION_NS};
 }
 
 }  // namespace statsd

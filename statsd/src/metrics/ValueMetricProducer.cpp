@@ -91,7 +91,8 @@ ValueMetricProducer<AggregatedValue, DimExtras>::ValueMetricProducer(
       mDimensionHardLimit(guardrailOptions.dimensionHardLimit),
       mCurrentBucketIsSkipped(false),
       // Condition timer will be set later within the constructor after pulling events
-      mConditionTimer(false, bucketOptions.timeBaseNs) {
+      mConditionTimer(false, bucketOptions.timeBaseNs),
+      mConditionCorrectionThresholdNs(bucketOptions.conditionCorrectionThresholdNs) {
     // TODO(b/185722221): inject directly via initializer list in MetricProducer.
     mBucketSizeNs = bucketOptions.bucketSizeNs;
 
@@ -137,7 +138,7 @@ ValueMetricProducer<AggregatedValue, DimExtras>::ValueMetricProducer(
     // flushIfNeeded to adjust start and end to bucket boundaries.
     // Adjust start for partial bucket
     mCurrentBucketStartTimeNs = bucketOptions.startTimeNs;
-    mConditionTimer.newBucketStart(mCurrentBucketStartTimeNs);
+    mConditionTimer.newBucketStart(mCurrentBucketStartTimeNs, mCurrentBucketStartTimeNs);
 
     // Now that activations are processed, start the condition timer if needed.
     mConditionTimer.onConditionChanged(mIsActive && mCondition == ConditionState::kTrue,
@@ -334,7 +335,8 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onDumpReportLocked(
     }
 
     const auto& [metricTypeFieldId, bucketNumFieldId, startBucketMsFieldId, endBucketMsFieldId,
-                 conditionTrueNsFieldId] = getDumpProtoFields();
+                 conditionTrueNsFieldId,
+                 conditionCorrectionNsFieldId] = getDumpProtoFields();
 
     uint64_t protoToken = protoOutput->start(FIELD_TYPE_MESSAGE | metricTypeFieldId);
 
@@ -402,6 +404,21 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onDumpReportLocked(
                 protoOutput->write(FIELD_TYPE_INT64 | conditionTrueNsFieldId,
                                    (long long)bucket.mConditionTrueNs);
             }
+
+            if (conditionCorrectionNsFieldId) {
+                // We write the condition correction value when below conditions are true:
+                // - if metric is pulled
+                // - if it is enabled by metric configuration via dedicated field,
+                //   see condition_correction_threshold_nanos
+                // - if the abs(value) >= condition_correction_threshold_nanos
+
+                if (isPulled() && mConditionCorrectionThresholdNs &&
+                    (abs(bucket.mConditionCorrectionNs) >= mConditionCorrectionThresholdNs)) {
+                    protoOutput->write(FIELD_TYPE_INT64 | conditionCorrectionNsFieldId.value(),
+                                       (long long)bucket.mConditionCorrectionNs);
+                }
+            }
+
             for (int i = 0; i < (int)bucket.aggIndex.size(); i++) {
                 VLOG("\t bucket [%lld - %lld]", (long long)bucket.mBucketStartNs,
                      (long long)bucket.mBucketEndNs);
@@ -436,7 +453,7 @@ template <typename AggregatedValue, typename DimExtras>
 void ValueMetricProducer<AggregatedValue, DimExtras>::skipCurrentBucket(
         const int64_t dropTimeNs, const BucketDropReason reason) {
     if (!maxDropEventsReached()) {
-        mCurrentSkippedBucket.dropEvents.emplace_back(buildDropEvent(dropTimeNs, reason));
+        mCurrentSkippedBucket.dropEvents.push_back(buildDropEvent(dropTimeNs, reason));
     }
     mCurrentBucketIsSkipped = true;
 }
@@ -726,13 +743,13 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::flushCurrentBucketLocked(
     initNextSlicedBucket(nextBucketStartTimeNs);
 
     // Update the condition timer again, in case we skipped buckets.
-    mConditionTimer.newBucketStart(nextBucketStartTimeNs);
+    mConditionTimer.newBucketStart(eventTimeNs, nextBucketStartTimeNs);
 
     // NOTE: Update the condition timers in `mCurrentSlicedBucket` only when slicing
     // by state. Otherwise, the "global" condition timer will be used.
     if (!mSlicedStateAtoms.empty()) {
         for (auto& [metricDimensionKey, currentBucket] : mCurrentSlicedBucket) {
-            currentBucket.conditionTimer.newBucketStart(nextBucketStartTimeNs);
+            currentBucket.conditionTimer.newBucketStart(eventTimeNs, nextBucketStartTimeNs);
         }
     }
     mCurrentBucketNum += calcBucketsForwardCount(eventTimeNs);
@@ -741,7 +758,7 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::flushCurrentBucketLocked(
 template <typename AggregatedValue, typename DimExtras>
 void ValueMetricProducer<AggregatedValue, DimExtras>::closeCurrentBucket(
         const int64_t eventTimeNs, const int64_t nextBucketStartTimeNs) {
-    int64_t fullBucketEndTimeNs = getCurrentBucketEndTimeNs();
+    const int64_t fullBucketEndTimeNs = getCurrentBucketEndTimeNs();
     int64_t bucketEndTimeNs = fullBucketEndTimeNs;
     int64_t numBucketsForward = calcBucketsForwardCount(eventTimeNs);
 
@@ -758,8 +775,10 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::closeCurrentBucket(
         bucketEndTimeNs = eventTimeNs;
     }
 
-    // Close the current bucket.
-    int64_t conditionTrueDurationNs = mConditionTimer.newBucketStart(bucketEndTimeNs);
+    // Close the current bucket
+    const auto [globalConditionDurationNs, globalConditionCorrectionNs] =
+            mConditionTimer.newBucketStart(eventTimeNs, bucketEndTimeNs);
+
     bool isBucketLargeEnough = bucketEndTimeNs - mCurrentBucketStartTimeNs >= mMinBucketSizeNs;
     if (!isBucketLargeEnough) {
         skipCurrentBucket(eventTimeNs, BucketDropReason::BUCKET_TOO_SMALL);
@@ -775,11 +794,15 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::closeCurrentBucket(
             }
             bucketHasData = true;
             if (!mSlicedStateAtoms.empty()) {
-                bucket.mConditionTrueNs =
-                        currentBucket.conditionTimer.newBucketStart(bucketEndTimeNs);
+                const auto [conditionDurationNs, conditionCorrectionNs] =
+                        currentBucket.conditionTimer.newBucketStart(eventTimeNs, bucketEndTimeNs);
+                bucket.mConditionTrueNs = conditionDurationNs;
+                bucket.mConditionCorrectionNs = conditionCorrectionNs;
             } else {
-                bucket.mConditionTrueNs = conditionTrueDurationNs;
+                bucket.mConditionTrueNs = globalConditionDurationNs;
+                bucket.mConditionCorrectionNs = globalConditionCorrectionNs;
             }
+
             auto& bucketList = mPastBuckets[metricDimensionKey];
             bucketList.push_back(std::move(bucket));
         }
@@ -791,7 +814,7 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::closeCurrentBucket(
     if (mCurrentBucketIsSkipped) {
         mCurrentSkippedBucket.bucketStartTimeNs = mCurrentBucketStartTimeNs;
         mCurrentSkippedBucket.bucketEndTimeNs = bucketEndTimeNs;
-        mSkippedBuckets.emplace_back(mCurrentSkippedBucket);
+        mSkippedBuckets.push_back(mCurrentSkippedBucket);
     }
 
     // This means that the current bucket was not flushed before a forced bucket split.
