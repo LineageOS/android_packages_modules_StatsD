@@ -32,6 +32,7 @@ using android::util::FIELD_TYPE_INT32;
 using android::util::FIELD_TYPE_MESSAGE;
 using android::util::ProtoOutputStream;
 using std::map;
+using std::nullopt;
 using std::optional;
 using std::shared_ptr;
 using std::string;
@@ -66,8 +67,12 @@ KllMetricProducer::KllMetricProducer(const ConfigKey& key, const KllMetric& metr
 }
 
 KllMetricProducer::DumpProtoFields KllMetricProducer::getDumpProtoFields() const {
-    return {FIELD_ID_KLL_METRICS, FIELD_ID_BUCKET_NUM, FIELD_ID_START_BUCKET_ELAPSED_MILLIS,
-            FIELD_ID_END_BUCKET_ELAPSED_MILLIS, FIELD_ID_CONDITION_TRUE_NS};
+    return {FIELD_ID_KLL_METRICS,
+            FIELD_ID_BUCKET_NUM,
+            FIELD_ID_START_BUCKET_ELAPSED_MILLIS,
+            FIELD_ID_END_BUCKET_ELAPSED_MILLIS,
+            FIELD_ID_CONDITION_TRUE_NS,
+            /*conditionCorrectionNsFieldId=*/nullopt};
 }
 
 void KllMetricProducer::writePastBucketAggregateToProto(
