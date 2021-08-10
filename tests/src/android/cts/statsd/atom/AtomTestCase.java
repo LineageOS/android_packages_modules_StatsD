@@ -25,6 +25,7 @@ import android.os.StatsDataDumpProto;
 import android.service.battery.BatteryServiceDumpProto;
 import android.service.batterystats.BatteryStatsServiceDumpProto;
 import android.service.procstats.ProcessStatsServiceDumpProto;
+
 import com.android.annotations.Nullable;
 import com.android.internal.os.StatsdConfigProto.AtomMatcher;
 import com.android.internal.os.StatsdConfigProto.EventMetric;
@@ -51,11 +52,14 @@ import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeBucketInfo;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.os.StatsLog.StatsLogReport.GaugeMetricDataWrapper;
 import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
+import com.android.tradefed.util.Pair;
+
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
 import com.google.protobuf.ByteString;
@@ -367,11 +371,15 @@ public class AtomTestCase extends BaseTestCase {
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
             assertThat(gaugeMetricData.getBucketInfoCount()).isEqualTo(1);
             GaugeBucketInfo bucketInfo = gaugeMetricData.getBucketInfo(0);
-            for (Atom atom : bucketInfo.getAtomList()) {
-                data.add(atom);
+            if (bucketInfo.getAtomCount() != 0) {
+                for (Atom atom : bucketInfo.getAtomList()) {
+                    data.add(atom);
+                }
+            } else {
+                backFillGaugeBucketAtoms(bucketInfo.getAggregatedAtomInfoList());
             }
             if (checkTimestampTruncated) {
-                for (long timestampNs: bucketInfo.getElapsedTimestampNanosList()) {
+                for (long timestampNs : bucketInfo.getElapsedTimestampNanosList()) {
                     assertTimestampIsTruncated(timestampNs);
                 }
             }
@@ -382,6 +390,44 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.d("Atom:\n" + d.toString());
         }
         return data;
+    }
+
+    private List<Atom> backFillGaugeBucketAtoms(
+            List<StatsLog.AggregatedAtomInfo> atomInfoList) {
+        List<Pair<Atom, Long>> atomTimestamp = new ArrayList<>();
+        for (StatsLog.AggregatedAtomInfo atomInfo : atomInfoList) {
+            for (long timestampNs : atomInfo.getElapsedTimestampNanosList()) {
+                atomTimestamp.add(Pair.create(atomInfo.getAtom(), timestampNs));
+            }
+        }
+        atomTimestamp.sort(Comparator.comparing(o -> o.second));
+        return atomTimestamp.stream().map(p -> p.first).collect(Collectors.toList());
+    }
+
+    protected void backfillGaugeMetricData(GaugeMetricDataWrapper dataWrapper) {
+        for (GaugeMetricData gaugeMetricData : dataWrapper.getDataList()) {
+            for (GaugeBucketInfo bucketInfo : gaugeMetricData.getBucketInfoList()) {
+                backfillGaugeBucket(bucketInfo.toBuilder());
+            }
+        }
+    }
+
+    private void backfillGaugeBucket(GaugeBucketInfo.Builder bucketInfoBuilder) {
+        if (bucketInfoBuilder.getAtomCount() != 0) {
+            return;
+        }
+        List<Pair<Atom, Long>> atomTimestampData = new ArrayList<>();
+        for (StatsLog.AggregatedAtomInfo atomInfo : bucketInfoBuilder.getAggregatedAtomInfoList()) {
+            for (long timestampNs : atomInfo.getElapsedTimestampNanosList()) {
+                atomTimestampData.add(Pair.create(atomInfo.getAtom(), timestampNs));
+            }
+        }
+        atomTimestampData.sort(Comparator.comparing(o -> o.second));
+        bucketInfoBuilder.clearAggregatedAtomInfo();
+        for (Pair<Atom, Long> atomTimestamp : atomTimestampData) {
+            bucketInfoBuilder.addAtom(atomTimestamp.first);
+            bucketInfoBuilder.addElapsedTimestampNanos(atomTimestamp.second);
+        }
     }
 
     /**
