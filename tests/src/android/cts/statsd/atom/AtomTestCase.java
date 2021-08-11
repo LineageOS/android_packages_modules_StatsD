@@ -339,7 +339,7 @@ public class AtomTestCase extends BaseTestCase {
             if (metricData.hasAtom()) {
               data.add(metricData);
             } else {
-              data.addAll(backfillAggregatedAtomsinEventMetric(metricData));
+              data.addAll(backfillAggregatedAtomsInEventMetric(metricData));
             }
           }
         }
@@ -1244,8 +1244,8 @@ public class AtomTestCase extends BaseTestCase {
                 .that(timestampNs % fiveMinutesInNs).isEqualTo(0);
     }
 
-    private List<EventMetricData>
-    backfillAggregatedAtomsinEventMetric(EventMetricData metricData) {
+    protected List<EventMetricData> backfillAggregatedAtomsInEventMetric(
+            EventMetricData metricData) {
       if (!metricData.hasAggregatedAtomInfo()) {
         return Collections.emptyList();
       }
