@@ -1238,7 +1238,7 @@ public class AtomTestCase extends BaseTestCase {
     protected List<EventMetricData> backfillAggregatedAtomsInEventMetric(
             EventMetricData metricData) {
       if (!metricData.hasAggregatedAtomInfo()) {
-        return Collections.emptyList();
+        return Collections.singletonList(metricData);
       }
       List<EventMetricData> data = new ArrayList<>();
       StatsLog.AggregatedAtomInfo atomInfo = metricData.getAggregatedAtomInfo();
