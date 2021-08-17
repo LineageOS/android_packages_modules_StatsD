@@ -69,12 +69,14 @@ public class ValidationTests extends DeviceAtomTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        turnBatteryStatsAutoResetOff(); // Turn off Battery Stats auto resetting
     }
 
     @Override
     protected void tearDown() throws Exception {
         resetBatteryStatus(); // Undo any unplugDevice().
         turnScreenOn(); // Reset screen to on state
+        turnBatteryStatsAutoResetOn(); // Turn Battery Stats auto resetting back on
         super.tearDown();
     }
 
@@ -82,6 +84,7 @@ public class ValidationTests extends DeviceAtomTestCase {
         if (!hasFeature(FEATURE_AUTOMOTIVE, false)) return;
         resetBatteryStats();
         unplugDevice();
+        flushBatteryStatsHandlers();
         // AoD needs to be turned off because the screen should go into an off state. But, if AoD is
         // on and the device doesn't support STATE_DOZE, the screen sadly goes back to STATE_ON.
         String aodState = getAodState();
