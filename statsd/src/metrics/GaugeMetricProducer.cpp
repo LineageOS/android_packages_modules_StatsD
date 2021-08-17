@@ -418,7 +418,7 @@ void GaugeMetricProducer::pullAndMatchEventsLocked(const int64_t timestampNs) {
         return;
     }
     for (const auto& data : allData) {
-        LogEvent localCopy = data->makeCopy();
+        LogEvent localCopy = *data;
         localCopy.setElapsedTimestampNs(timestampNs);
         if (mEventMatcherWizard->matchLogEvent(localCopy, mWhatMatcherIndex) ==
             MatchingState::kMatched) {

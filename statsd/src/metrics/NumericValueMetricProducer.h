@@ -134,6 +134,9 @@ private:
     // Internal function to calculate the current used bytes.
     size_t byteSizeLocked() const override;
 
+    void combineValueFields(pair<LogEvent, vector<int>>& eventValues, const LogEvent& newEvent,
+                            const vector<int>& newValueIndices) const;
+
     const bool mUseAbsoluteValueOnReset;
 
     const ValueMetric::AggregationType mAggregationType;

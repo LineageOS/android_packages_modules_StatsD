@@ -81,6 +81,7 @@ bool StateTracker::getStateValue(const HashableDimensionKey& queryKey, FieldValu
 
     // Set the state value to kStateUnknown if query key is not found in state map.
     output->mValue = kStateUnknown;
+    VLOG("StateTracker did not find state value for query key %s", queryKey.toString().c_str());
     return false;
 }
 

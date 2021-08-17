@@ -41,6 +41,8 @@ const std::string PARTIAL_CONFIG_UPDATE_FLAG = "partial_config_update";
 const std::string KLL_METRIC_FLAG = "kll_metric";
 const std::string AGGREGATE_ATOMS_FLAG = "aggregate_atoms";
 const std::string APP_UPGRADE_BUCKET_SPLIT_FLAG = "app_upgrade_bucket_split";
+const std::string VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG =
+        "value_metric_subset_dimension_aggregation";
 
 const std::string FLAG_TRUE = "true";
 const std::string FLAG_FALSE = "false";
@@ -114,6 +116,7 @@ private:
     friend class FlagProviderTest_SPlus_RealValues;
     friend class KllMetricE2eAbTest;
     friend class MetricsManagerTest;
+    friend class NumericValueMetricProducerTest_SubsetDimensions;
     friend class PartialBucketE2e_AppUpgradeDefaultTest;
 
     FRIEND_TEST(ConfigUpdateE2eTest, TestKllMetric_KllDisabledBeforeConfigUpdate);
@@ -130,6 +133,8 @@ private:
     FRIEND_TEST(FlagProviderTest_SPlus, TestGetFlagBoolServerFlagEmptyDefaultTrue);
     FRIEND_TEST(FlagProviderTest_SPlus_RealValues, TestGetBootFlagBoolServerFlagTrue);
     FRIEND_TEST(FlagProviderTest_SPlus_RealValues, TestGetBootFlagBoolServerFlagFalse);
+    FRIEND_TEST(NumericValueMetricProducerTest_SubsetDimensions, TestSubsetDimensions_FlagTrue);
+    FRIEND_TEST(NumericValueMetricProducerTest_SubsetDimensions, TestSubsetDimensions_FlagFalse);
     FRIEND_TEST(PartialBucketE2e_AppUpgradeDefaultTest, TestCountMetricDefaultFalse);
     FRIEND_TEST(PartialBucketE2e_AppUpgradeDefaultTest, TestCountMetricDefaultTrue);
 };
