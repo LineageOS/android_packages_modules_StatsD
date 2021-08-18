@@ -149,18 +149,8 @@ public:
         return mTruncateTimestamp;
     }
 
-    // Returns the index of the uid field within the FieldValues vector if the
-    // uid exists. If there is no uid field, returns -1.
-    //
-    // If the index within the atom definition is desired, do the following:
-    //    int vectorIndex = LogEvent.getUidFieldIndex();
-    //    if (vectorIndex != -1) {
-    //        FieldValue& v = LogEvent.getValues()[vectorIndex];
-    //        int atomIndex = v.mField.getPosAtDepth(0);
-    //    }
-    // Note that atomIndex is 1-indexed.
-    inline int getUidFieldIndex() {
-        return static_cast<int>(mUidFieldIndex);
+    inline uint8_t getNumUidFields() const {
+        return mNumUidFields;
     }
 
     // Returns whether this LogEvent has an AttributionChain.
@@ -316,9 +306,7 @@ private:
     bool mTruncateTimestamp = false;
     int mResetState = -1;
 
-    // Indexes within the FieldValue vector can be stored in 7 bits because
-    // that's the assumption enforced by the encoding used in FieldValue.
-    int8_t mUidFieldIndex = -1;
+    uint8_t mNumUidFields = 0;
     int8_t mAttributionChainStartIndex = -1;
     int8_t mAttributionChainEndIndex = -1;
     int8_t mExclusiveStateFieldIndex = -1;
