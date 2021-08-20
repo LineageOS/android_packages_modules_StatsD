@@ -101,7 +101,7 @@ cc_defaults {
         "libsysutils",
         "libutils",
         "server_configurable_flags",
-        "statsd-aidl-ndk_platform",
+        "statsd-aidl-ndk",
     ],
     shared_libs: [
         "libbinder_ndk",
