@@ -37,7 +37,7 @@ cc_defaults {
     ],
     static_libs: [
         "libutils",
-        "statsd-aidl-ndk_platform",
+        "statsd-aidl-ndk",
     ],
     target: {
         android: {
