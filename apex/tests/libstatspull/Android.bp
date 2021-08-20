@@ -54,7 +54,7 @@ cc_library_shared {
     ],
     shared_libs: [
         "libbinder_ndk",
-        "statsd-aidl-ndk_platform",
+        "statsd-aidl-ndk",
     ],
     static_libs: [
         "libstatspull_private",
