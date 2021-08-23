@@ -47,6 +47,9 @@ public:
 
     void OnLogEvent(LogEvent* event);
 
+    void OnConfigUpdated(const int64_t timestampNs, const int64_t wallClockNs, const ConfigKey& key,
+                         const StatsdConfig& config, bool modularUpdate = true);
+    // For testing only.
     void OnConfigUpdated(const int64_t timestampNs, const ConfigKey& key,
                          const StatsdConfig& config, bool modularUpdate = true);
     void OnConfigRemoved(const ConfigKey& key);
@@ -55,16 +58,19 @@ public:
 
     void GetActiveConfigs(const int uid, vector<int64_t>& outActiveConfigs);
 
-    void onDumpReport(const ConfigKey& key, const int64_t dumpTimeNs,
+    void onDumpReport(const ConfigKey& key, const int64_t dumpTimeNs, const int64_t wallClockNs,
                       const bool include_current_partial_bucket, const bool erase_data,
-                      const DumpReportReason dumpReportReason,
-                      const DumpLatency dumpLatency,
+                      const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
                       vector<uint8_t>* outData);
+    void onDumpReport(const ConfigKey& key, const int64_t dumpTimeNs, const int64_t wallClockNs,
+                      const bool include_current_partial_bucket, const bool erase_data,
+                      const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
+                      ProtoOutputStream* proto);
+    // For testing only.
     void onDumpReport(const ConfigKey& key, const int64_t dumpTimeNs,
                       const bool include_current_partial_bucket, const bool erase_data,
-                      const DumpReportReason dumpReportReason,
-                      const DumpLatency dumpLatency,
-                      ProtoOutputStream* proto);
+                      const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
+                      vector<uint8_t>* outData);
 
     /* Tells MetricsManager that the alarms in alarmSet have fired. Modifies periodic alarmSet. */
     void onPeriodicAlarmFired(
@@ -73,7 +79,7 @@ public:
 
     /* Flushes data to disk. Data on memory will be gone after written to disk. */
     void WriteDataToDisk(const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
-                         const int64_t elapsedRealtimeNs);
+                         const int64_t elapsedRealtimeNs, const int64_t wallClockNs);
 
     /* Persist configs containing metrics with active activations to disk. */
     void SaveActiveConfigsToDisk(int64_t currentTimeNs);
@@ -207,14 +213,15 @@ private:
                                     metadata::StatsMetadataList* metadataList);
 
     void WriteDataToDiskLocked(const DumpReportReason dumpReportReason,
-                               const DumpLatency dumpLatency, const int64_t elapsedRealtimeNs);
+                               const DumpLatency dumpLatency, const int64_t elapsedRealtimeNs,
+                               const int64_t wallClockNs);
 
     void WriteDataToDiskLocked(const ConfigKey& key, const int64_t timestampNs,
-                               const DumpReportReason dumpReportReason,
+                               const int64_t wallClockNs, const DumpReportReason dumpReportReason,
                                const DumpLatency dumpLatency);
 
     void onConfigMetricsReportLocked(
-            const ConfigKey& key, const int64_t dumpTimeStampNs,
+            const ConfigKey& key, const int64_t dumpTimeStampNs, const int64_t wallClockNs,
             const bool include_current_partial_bucket, const bool erase_data,
             const DumpReportReason dumpReportReason, const DumpLatency dumpLatency,
             /*if dataSavedToDisk is true, it indicates the caller will write the data to disk
