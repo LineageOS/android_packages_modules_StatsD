@@ -72,6 +72,7 @@ public class TestDrive {
             "AID_NETWORK_STACK",
             "com.google.android.providers.media.module",
             "com.google.android.cellbroadcastreceiver",
+            "com.google.android.apps.nexuslauncher",
             "AID_KEYSTORE",
     };
     private static final String[] DEFAULT_PULL_SOURCES = {
@@ -358,6 +359,9 @@ public class TestDrive {
                     .addPullAtomPackages(PullAtomPackages.newBuilder()
                             .setAtomId(Atom.GENERAL_EXTERNAL_STORAGE_ACCESS_STATS_FIELD_NUMBER)
                             .addPackages("com.google.android.providers.media.module"))
+                    .addPullAtomPackages(PullAtomPackages.newBuilder()
+                            .setAtomId(Atom.LAUNCHER_LAYOUT_SNAPSHOT_FIELD_NUMBER)
+                            .addPackages("com.google.android.apps.nexuslauncher"))
                     .setHashStringsInMetricReport(false);
         }
     }
