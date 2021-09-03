@@ -266,11 +266,9 @@ void StatsService::dumpIncidentSection(int out) {
         // Don't include the current bucket to avoid skipping buckets.
         // If we need to include the current bucket later, consider changing to NO_TIME_CONSTRAINTS
         // or other alternatives to avoid skipping buckets for pulled metrics.
-        mProcessor->onDumpReport(configKey, getElapsedRealtimeNs(),
-                                 false /* includeCurrentBucket */, false /* erase_data */,
-                                 ADB_DUMP,
-                                 FAST,
-                                 &proto);
+        mProcessor->onDumpReport(configKey, getElapsedRealtimeNs(), getWallClockNs(),
+                                 false /* includeCurrentBucket */, false /* erase_data */, ADB_DUMP,
+                                 FAST, &proto);
         proto.end(reportsListToken);
         proto.flush(out);
         proto.clear();
@@ -681,9 +679,8 @@ status_t StatsService::cmd_dump_report(int out, const Vector<String8>& args) {
         if (good) {
             vector<uint8_t> data;
             mProcessor->onDumpReport(ConfigKey(uid, StrToInt64(name)), getElapsedRealtimeNs(),
-                                     includeCurrentBucket, eraseData, ADB_DUMP,
-                                     NO_TIME_CONSTRAINTS,
-                                     &data);
+                                     getWallClockNs(), includeCurrentBucket, eraseData, ADB_DUMP,
+                                     NO_TIME_CONSTRAINTS, &data);
             if (proto) {
                 for (size_t i = 0; i < data.size(); i ++) {
                     dprintf(out, "%c", data[i]);
@@ -747,7 +744,8 @@ status_t StatsService::cmd_print_uid_map(int out, const Vector<String8>& args) {
 
 status_t StatsService::cmd_write_data_to_disk(int out) {
     dprintf(out, "Writing data to disk\n");
-    mProcessor->WriteDataToDisk(ADB_DUMP, NO_TIME_CONSTRAINTS, getElapsedRealtimeNs());
+    mProcessor->WriteDataToDisk(ADB_DUMP, NO_TIME_CONSTRAINTS, getElapsedRealtimeNs(),
+                                getWallClockNs());
     return NO_ERROR;
 }
 
@@ -1017,9 +1015,10 @@ Status StatsService::informDeviceShutdown() {
     ENFORCE_UID(AID_SYSTEM);
     VLOG("StatsService::informDeviceShutdown");
     int64_t elapsedRealtimeNs = getElapsedRealtimeNs();
-    mProcessor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, elapsedRealtimeNs);
+    int64_t wallClockNs = getWallClockNs();
+    mProcessor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, elapsedRealtimeNs, wallClockNs);
     mProcessor->SaveActiveConfigsToDisk(elapsedRealtimeNs);
-    mProcessor->SaveMetadataToDisk(getWallClockNs(), elapsedRealtimeNs);
+    mProcessor->SaveMetadataToDisk(wallClockNs, elapsedRealtimeNs);
     return Status::ok();
 }
 
@@ -1069,9 +1068,11 @@ void StatsService::Terminate() {
     ALOGI("StatsService::Terminating");
     if (mProcessor != nullptr) {
         int64_t elapsedRealtimeNs = getElapsedRealtimeNs();
-        mProcessor->WriteDataToDisk(TERMINATION_SIGNAL_RECEIVED, FAST, elapsedRealtimeNs);
+        int64_t wallClockNs = getWallClockNs();
+        mProcessor->WriteDataToDisk(TERMINATION_SIGNAL_RECEIVED, FAST, elapsedRealtimeNs,
+                                    wallClockNs);
         mProcessor->SaveActiveConfigsToDisk(elapsedRealtimeNs);
-        mProcessor->SaveMetadataToDisk(getWallClockNs(), elapsedRealtimeNs);
+        mProcessor->SaveMetadataToDisk(wallClockNs, elapsedRealtimeNs);
     }
 }
 
@@ -1090,8 +1091,9 @@ Status StatsService::getData(int64_t key, const int32_t callingUid, vector<uint8
     ConfigKey configKey(callingUid, key);
     // The dump latency does not matter here since we do not include the current bucket, we do not
     // need to pull any new data anyhow.
-    mProcessor->onDumpReport(configKey, getElapsedRealtimeNs(), false /* include_current_bucket*/,
-                             true /* erase_data */, GET_DATA_CALLED, FAST, output);
+    mProcessor->onDumpReport(configKey, getElapsedRealtimeNs(), getWallClockNs(),
+                             false /* include_current_bucket*/, true /* erase_data */,
+                             GET_DATA_CALLED, FAST, output);
     return Status::ok();
 }
 
@@ -1292,13 +1294,13 @@ void StatsService::statsCompanionServiceDiedImpl() {
     if (mProcessor != nullptr) {
         ALOGW("Reset statsd upon system server restarts.");
         int64_t systemServerRestartNs = getElapsedRealtimeNs();
+        int64_t wallClockNs = getWallClockNs();
         ProtoOutputStream activeConfigsProto;
         mProcessor->WriteActiveConfigsToProtoOutputStream(systemServerRestartNs,
                 STATSCOMPANION_DIED, &activeConfigsProto);
         metadata::StatsMetadataList metadataList;
-        mProcessor->WriteMetadataToProto(getWallClockNs(),
-                systemServerRestartNs, &metadataList);
-        mProcessor->WriteDataToDisk(STATSCOMPANION_DIED, FAST, systemServerRestartNs);
+        mProcessor->WriteMetadataToProto(wallClockNs, systemServerRestartNs, &metadataList);
+        mProcessor->WriteDataToDisk(STATSCOMPANION_DIED, FAST, systemServerRestartNs, wallClockNs);
         mProcessor->resetConfigs();
 
         std::string serializedActiveConfigs;
@@ -1308,7 +1310,7 @@ void StatsService::statsCompanionServiceDiedImpl() {
                 mProcessor->SetConfigsActiveState(activeConfigs, systemServerRestartNs);
             }
         }
-        mProcessor->SetMetadataState(metadataList, getWallClockNs(), systemServerRestartNs);
+        mProcessor->SetMetadataState(metadataList, wallClockNs, systemServerRestartNs);
     }
     mAnomalyAlarmMonitor->setStatsCompanionService(nullptr);
     mPeriodicAlarmMonitor->setStatsCompanionService(nullptr);

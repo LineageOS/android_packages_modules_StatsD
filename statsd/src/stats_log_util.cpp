@@ -567,7 +567,9 @@ int64_t getSystemUptimeMillis() {
 }
 
 int64_t getWallClockNs() {
-    return time(nullptr) * NS_PER_SEC;
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return ts.tv_sec * NS_PER_SEC + ts.tv_nsec;
 }
 
 int64_t getWallClockSec() {
