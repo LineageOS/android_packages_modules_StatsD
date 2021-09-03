@@ -247,9 +247,7 @@ void LogEvent::parseIsUidAnnotation(uint8_t annotationType) {
     }
 
     bool isUid = readNextValue<uint8_t>();
-    if (isUid) {
-        mNumUidFields++;
-    }
+    if (isUid) mUidFieldIndex = static_cast<int8_t>(mValues.size() - 1);
     mValues[mValues.size() - 1].mAnnotations.setUidField(isUid);
 }
 
