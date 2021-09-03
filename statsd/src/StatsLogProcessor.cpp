@@ -149,7 +149,12 @@ void StatsLogProcessor::mapIsolatedUidToHostUidIfNecessaryLocked(LogEvent* event
             }
         }
     } else {
-        mapIsolatedUidsToHostUidInLogEvent(mUidMap, *event);
+        int uidFieldIndex = event->getUidFieldIndex();
+        if (uidFieldIndex != -1) {
+           Value& value = (*event->getMutableValues())[uidFieldIndex].mValue;
+           const int hostUid = mUidMap->getHostUidOrSelf(value.int_value);
+           value.setInt(hostUid);
+        }
     }
 }
 
