@@ -2002,7 +2002,7 @@ TEST_F(ConfigUpdateE2eTest, TestMetricActivation) {
 
     // Fake a reboot. Code is from StatsService::informDeviceShutdown.
     int64_t shutDownTimeNs = bucketStartTimeNs + 50 * NS_PER_SEC;
-    processor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, shutDownTimeNs);
+    processor->WriteDataToDisk(DEVICE_SHUTDOWN, FAST, shutDownTimeNs, getWallClockNs());
     processor->SaveActiveConfigsToDisk(shutDownTimeNs);
     processor->SaveMetadataToDisk(getWallClockNs(), shutDownTimeNs);
 

@@ -404,11 +404,9 @@ void MetricsManager::dropData(const int64_t dropTimeNs) {
     }
 }
 
-void MetricsManager::onDumpReport(const int64_t dumpTimeStampNs,
-                                  const bool include_current_partial_bucket,
-                                  const bool erase_data,
-                                  const DumpLatency dumpLatency,
-                                  std::set<string> *str_set,
+void MetricsManager::onDumpReport(const int64_t dumpTimeStampNs, const int64_t wallClockNs,
+                                  const bool include_current_partial_bucket, const bool erase_data,
+                                  const DumpLatency dumpLatency, std::set<string>* str_set,
                                   ProtoOutputStream* protoOutput) {
     VLOG("=========================Metric Reports Start==========================");
     // one StatsLogReport per MetricProduer
@@ -441,11 +439,10 @@ void MetricsManager::onDumpReport(const int64_t dumpTimeStampNs,
     // misaligned.
     if (erase_data) {
         mLastReportTimeNs = dumpTimeStampNs;
-        mLastReportWallClockNs = getWallClockNs();
+        mLastReportWallClockNs = wallClockNs;
     }
     VLOG("=========================Metric Reports End==========================");
 }
-
 
 bool MetricsManager::checkLogCredentials(const LogEvent& event) {
     if (mWhitelistedAtomIds.find(event.GetTagId()) != mWhitelistedAtomIds.end()) {
