@@ -289,9 +289,11 @@ TEST(LogEventTest, TestAnnotationIdIsUid) {
     LogEvent event(/*uid=*/0, /*pid=*/0);
     createIntWithBoolAnnotationLogEvent(&event, ANNOTATION_ID_IS_UID, true);
 
+    ASSERT_EQ(event.getNumUidFields(), 1);
+
     const vector<FieldValue>& values = event.getValues();
     ASSERT_EQ(values.size(), 1);
-    EXPECT_EQ(event.getUidFieldIndex(), 0);
+    EXPECT_TRUE(isUidField(values.at(0)));
 }
 
 TEST(LogEventTest, TestAnnotationIdStateNested) {

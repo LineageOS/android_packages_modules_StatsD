@@ -19,6 +19,8 @@
 
 #include "puller_util.h"
 
+#include "stats_log_util.h"
+
 namespace android {
 namespace os {
 namespace statsd {
@@ -52,9 +54,9 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
     // tagId have them or none of them do.
     std::pair<int, int> attrIndexRange;
     const bool hasAttributionChain = data[0]->hasAttributionChain(&attrIndexRange);
-    bool hasUidField = (data[0]->getUidFieldIndex() != -1);
+    const uint8_t numUidFields = data[0]->getNumUidFields();
 
-    if (!hasAttributionChain && !hasUidField) {
+    if (!hasAttributionChain && numUidFields == 0) {
         VLOG("No uid or attribution chain to merge, atom %d", tagId);
         return;
     }
@@ -75,14 +77,7 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
                 }
             }
         } else {
-            int uidFieldIndex = event->getUidFieldIndex();
-            if (uidFieldIndex != -1) {
-                Value& value = (*event->getMutableValues())[uidFieldIndex].mValue;
-                const int hostUid = uidMap->getHostUidOrSelf(value.int_value);
-                value.setInt(hostUid);
-            } else {
-                ALOGE("Malformed log, uid not found. %s", event->ToString().c_str());
-            }
+            mapIsolatedUidsToHostUidInLogEvent(uidMap, *event);
         }
     }
 
