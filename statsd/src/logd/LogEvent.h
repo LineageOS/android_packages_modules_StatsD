@@ -307,6 +307,9 @@ private:
     int mResetState = -1;
 
     uint8_t mNumUidFields = 0;
+
+    // Indexes within the FieldValue vector can be stored in 7 bits because
+    // that's the assumption enforced by the encoding used in FieldValue.
     int8_t mAttributionChainStartIndex = -1;
     int8_t mAttributionChainEndIndex = -1;
     int8_t mExclusiveStateFieldIndex = -1;
