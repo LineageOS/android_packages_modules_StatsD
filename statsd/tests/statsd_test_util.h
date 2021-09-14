@@ -301,14 +301,19 @@ std::shared_ptr<LogEvent> CreateNoValuesLogEvent(int atomId, int64_t eventTimeNs
 
 void CreateNoValuesLogEvent(LogEvent* logEvent, int atomId, int64_t eventTimeNs);
 
+AStatsEvent* makeUidStatsEvent(int atomId, int64_t eventTimeNs, int uid, int data1, int data2);
+
 std::shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
                                           int data2);
+
+shared_ptr<LogEvent> makeExtraUidsLogEvent(int atomId, int64_t eventTimeNs, int uid1, int data1,
+                                           int data2, const std::vector<int>& extraUids);
 
 std::shared_ptr<LogEvent> makeAttributionLogEvent(int atomId, int64_t eventTimeNs,
                                                   const vector<int>& uids,
                                                   const vector<string>& tags, int data1, int data2);
 
-sp<MockUidMap> makeMockUidMapForOneHost(int hostUid, const vector<int>& isolatedUids);
+sp<MockUidMap> makeMockUidMapForHosts(const map<int, vector<int>>& hostUidToIsolatedUidsMap);
 
 sp<MockUidMap> makeMockUidMapForPackage(const string& pkg, const set<int32_t>& uids);
 

@@ -1732,7 +1732,8 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogHostUid) {
     int atomId = 89;
     int field1 = 90;
     int field2 = 28;
-    sp<MockUidMap> mockUidMap = makeMockUidMapForOneHost(hostUid, {isolatedUid});
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts({{hostUid, {isolatedUid}}});
+
     ConfigKey cfgKey;
     StatsdConfig config = MakeConfig(false);
     sp<StatsLogProcessor> processor =
@@ -1756,7 +1757,8 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogIsolatedUid) {
     int atomId = 89;
     int field1 = 90;
     int field2 = 28;
-    sp<MockUidMap> mockUidMap = makeMockUidMapForOneHost(hostUid, {isolatedUid});
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts({{hostUid, {isolatedUid}}});
+
     ConfigKey cfgKey;
     StatsdConfig config = MakeConfig(false);
     sp<StatsLogProcessor> processor =
@@ -1774,6 +1776,38 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogIsolatedUid) {
     EXPECT_EQ(field2, actualFieldValues->at(2).mValue.int_value);
 }
 
+TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogThreeIsolatedUids) {
+    int hostUid = 20;
+    int isolatedUid = 30;
+    int hostUid2 = 200;
+    int isolatedUid2 = 300;
+    int hostUid3 = 2000;
+    int isolatedUid3 = 3000;
+    uint64_t eventTimeNs = 12355;
+    int atomId = 89;
+    int field1 = 90;
+    int field2 = 28;
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts(
+            {{hostUid, {isolatedUid}}, {hostUid2, {isolatedUid2}}, {hostUid3, {isolatedUid3}}});
+    ConfigKey cfgKey;
+    StatsdConfig config = MakeConfig(false);
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(1, 1, config, cfgKey, nullptr, 0, mockUidMap);
+
+    shared_ptr<LogEvent> logEvent = makeExtraUidsLogEvent(atomId, eventTimeNs, isolatedUid, field1,
+                                                          field2, {isolatedUid2, isolatedUid3});
+
+    processor->OnLogEvent(logEvent.get());
+
+    const vector<FieldValue>* actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(5, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(field1, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(field2, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(hostUid3, actualFieldValues->at(4).mValue.int_value);
+}
+
 TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogHostUidAttributionChain) {
     int hostUid = 20;
     int isolatedUid = 30;
@@ -1781,7 +1815,8 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogHostUidAttributionChain) 
     int atomId = 89;
     int field1 = 90;
     int field2 = 28;
-    sp<MockUidMap> mockUidMap = makeMockUidMapForOneHost(hostUid, {isolatedUid});
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts({{hostUid, {isolatedUid}}});
+
     ConfigKey cfgKey;
     StatsdConfig config = MakeConfig(false);
     sp<StatsLogProcessor> processor =
@@ -1809,7 +1844,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogIsolatedUidAttributionCha
     int atomId = 89;
     int field1 = 90;
     int field2 = 28;
-    sp<MockUidMap> mockUidMap = makeMockUidMapForOneHost(hostUid, {isolatedUid});
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts({{hostUid, {isolatedUid}}});
     ConfigKey cfgKey;
     StatsdConfig config = MakeConfig(false);
     sp<StatsLogProcessor> processor =
@@ -1833,7 +1868,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogIsolatedUidAttributionCha
 TEST(StatsLogProcessorTest, TestDumpReportWithoutErasingDataDoesNotUpdateTimestamp) {
     int hostUid = 20;
     int isolatedUid = 30;
-    sp<MockUidMap> mockUidMap = makeMockUidMapForOneHost(hostUid, {isolatedUid});
+    sp<MockUidMap> mockUidMap = makeMockUidMapForHosts({{hostUid, {isolatedUid}}});
     ConfigKey key(3, 4);
 
     // TODO: All tests should not persist state on disk. This removes any reports that were present.
