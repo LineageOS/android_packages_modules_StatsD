@@ -51,9 +51,13 @@ const int hostUid = 20;
 const int hostNonAdditiveData = 22;
 const int hostAdditiveData = 21;
 const int attributionAtomTagId = 300;
+const int hostUid2 = 2000;
+const int isolatedUid3 = 3000;
+const int isolatedUid4 = 4000;
 
 sp<MockUidMap> makeMockUidMap() {
-    return makeMockUidMapForOneHost(hostUid, {isolatedUid1, isolatedUid2});
+    return makeMockUidMapForHosts(
+            {{hostUid, {isolatedUid1, isolatedUid2}}, {hostUid2, {isolatedUid3, isolatedUid4}}});
 }
 
 }  // anonymous namespace
@@ -179,7 +183,7 @@ TEST(PullerUtilTest, MultipleIsolatedUidToOneHostUid) {
             makeUidLogEvent(uidAtomTagId, timestamp, isolatedUid1, isolatedNonAdditiveData,
                             isolatedAdditiveData),
 
-            // 31->32->21
+            // 40->32->21
             makeUidLogEvent(uidAtomTagId, timestamp, isolatedUid2, isolatedNonAdditiveData,
                             hostAdditiveData),
 
@@ -199,6 +203,32 @@ TEST(PullerUtilTest, MultipleIsolatedUidToOneHostUid) {
     EXPECT_EQ(isolatedNonAdditiveData, actualFieldValues->at(1).mValue.int_value);
     EXPECT_EQ(isolatedAdditiveData + hostAdditiveData + hostAdditiveData,
               actualFieldValues->at(2).mValue.int_value);
+}
+
+TEST(PullerUtilTest, TwoIsolatedUidsOneAtom) {
+    vector<shared_ptr<LogEvent>> data = {
+            makeExtraUidsLogEvent(uidAtomTagId, timestamp, isolatedUid1, isolatedNonAdditiveData,
+                                  isolatedAdditiveData, {isolatedUid3}),
+
+            makeExtraUidsLogEvent(uidAtomTagId, timestamp, isolatedUid2, isolatedNonAdditiveData,
+                                  hostAdditiveData, {isolatedUid4}),
+
+            makeExtraUidsLogEvent(uidAtomTagId, timestamp, hostUid, isolatedNonAdditiveData,
+                                  hostAdditiveData, {hostUid2}),
+    };
+
+    sp<MockUidMap> uidMap = makeMockUidMap();
+    mapAndMergeIsolatedUidsToHostUid(data, uidMap, uidAtomTagId, additiveFields);
+
+    ASSERT_EQ(1, (int)data.size());
+
+    const vector<FieldValue>* actualFieldValues = &data[0]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(isolatedNonAdditiveData, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(isolatedAdditiveData + hostAdditiveData + hostAdditiveData,
+              actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(3).mValue.int_value);
 }
 
 TEST(PullerUtilTest, NoNeedToMerge) {
