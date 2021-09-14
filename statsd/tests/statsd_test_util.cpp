@@ -731,8 +731,7 @@ shared_ptr<LogEvent> CreateNoValuesLogEvent(int atomId, int64_t eventTimeNs) {
     return logEvent;
 }
 
-shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
-                                     int data2) {
+AStatsEvent* makeUidStatsEvent(int atomId, int64_t eventTimeNs, int uid, int data1, int data2) {
     AStatsEvent* statsEvent = AStatsEvent_obtain();
     AStatsEvent_setAtomId(statsEvent, atomId);
     AStatsEvent_overwriteTimestamp(statsEvent, eventTimeNs);
@@ -741,6 +740,26 @@ shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, i
     AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
     AStatsEvent_writeInt32(statsEvent, data1);
     AStatsEvent_writeInt32(statsEvent, data2);
+
+    return statsEvent;
+}
+
+shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
+                                     int data2) {
+    AStatsEvent* statsEvent = makeUidStatsEvent(atomId, eventTimeNs, uid, data1, data2);
+
+    shared_ptr<LogEvent> logEvent = std::make_shared<LogEvent>(/*uid=*/0, /*pid=*/0);
+    parseStatsEventToLogEvent(statsEvent, logEvent.get());
+    return logEvent;
+}
+
+shared_ptr<LogEvent> makeExtraUidsLogEvent(int atomId, int64_t eventTimeNs, int uid1, int data1,
+                                           int data2, const vector<int>& extraUids) {
+    AStatsEvent* statsEvent = makeUidStatsEvent(atomId, eventTimeNs, uid1, data1, data2);
+    for (const int extraUid : extraUids) {
+        AStatsEvent_writeInt32(statsEvent, extraUid);
+        AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    }
 
     shared_ptr<LogEvent> logEvent = std::make_shared<LogEvent>(/*uid=*/0, /*pid=*/0);
     parseStatsEventToLogEvent(statsEvent, logEvent.get());
@@ -763,11 +782,13 @@ shared_ptr<LogEvent> makeAttributionLogEvent(int atomId, int64_t eventTimeNs,
     return logEvent;
 }
 
-sp<MockUidMap> makeMockUidMapForOneHost(int hostUid, const vector<int>& isolatedUids) {
+sp<MockUidMap> makeMockUidMapForHosts(const map<int, vector<int>>& hostUidToIsolatedUidsMap) {
     sp<MockUidMap> uidMap = new NaggyMock<MockUidMap>();
     EXPECT_CALL(*uidMap, getHostUidOrSelf(_)).WillRepeatedly(ReturnArg<0>());
-    for (const int isolatedUid : isolatedUids) {
-        EXPECT_CALL(*uidMap, getHostUidOrSelf(isolatedUid)).WillRepeatedly(Return(hostUid));
+    for (const auto& [hostUid, isolatedUids] : hostUidToIsolatedUidsMap) {
+        for (const int isolatedUid : isolatedUids) {
+            EXPECT_CALL(*uidMap, getHostUidOrSelf(isolatedUid)).WillRepeatedly(Return(hostUid));
+        }
     }
 
     return uidMap;
