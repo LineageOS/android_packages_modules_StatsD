@@ -22,6 +22,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include "flags/FlagProvider.h"
 #include "guardrail/StatsdStats.h"
 #include "metrics/parsing_utils/metrics_manager_util.h"
 #include "stats_log_util.h"
@@ -210,6 +211,23 @@ void NumericValueMetricProducer::onDataPulled(const vector<shared_ptr<LogEvent>>
     flushIfNeededLocked(originalPullTimeNs);
 }
 
+void NumericValueMetricProducer::combineValueFields(pair<LogEvent, vector<int>>& eventValues,
+                                                    const LogEvent& newEvent,
+                                                    const vector<int>& newValueIndices) const {
+    if (eventValues.second.size() != newValueIndices.size()) {
+        ALOGE("NumericValueMetricProducer value indices sizes don't match");
+        return;
+    }
+    vector<FieldValue>* const aggregateFieldValues = eventValues.first.getMutableValues();
+    const vector<FieldValue>& newFieldValues = newEvent.getValues();
+    for (size_t i = 0; i < eventValues.second.size(); ++i) {
+        if (newValueIndices[i] != -1 && eventValues.second[i] != -1) {
+            (*aggregateFieldValues)[eventValues.second[i]].mValue +=
+                    newFieldValues[newValueIndices[i]].mValue;
+        }
+    }
+}
+
 // Process events retrieved from a pull.
 void NumericValueMetricProducer::accumulateEvents(const vector<shared_ptr<LogEvent>>& allData,
                                                   int64_t originalPullTimeNs,
@@ -236,14 +254,50 @@ void NumericValueMetricProducer::accumulateEvents(const vector<shared_ptr<LogEve
     }
 
     mMatchedMetricDimensionKeys.clear();
-    for (const auto& data : allData) {
-        LogEvent localCopy = data->makeCopy();
-        if (mEventMatcherWizard->matchLogEvent(localCopy, mWhatMatcherIndex) ==
-            MatchingState::kMatched) {
-            localCopy.setElapsedTimestampNs(eventElapsedTimeNs);
-            onMatchedLogEventLocked(mWhatMatcherIndex, localCopy);
+    if (FlagProvider::getInstance().getBootFlagBool(VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG,
+                                                    FLAG_FALSE) &&
+        mUseDiff) {
+        std::unordered_map<HashableDimensionKey, pair<LogEvent, vector<int>>> aggregateEvents;
+        for (const auto& data : allData) {
+            if (mEventMatcherWizard->matchLogEvent(*data, mWhatMatcherIndex) !=
+                MatchingState::kMatched) {
+                continue;
+            }
+
+            // Get dimensions_in_what key and value indices.
+            HashableDimensionKey dimensionsInWhat;
+            vector<int> valueIndices(mFieldMatchers.size(), -1);
+            if (!filterValues(mDimensionsInWhat, mFieldMatchers, data->getValues(),
+                              dimensionsInWhat, valueIndices)) {
+                StatsdStats::getInstance().noteBadValueType(mMetricId);
+            }
+
+            // Store new event in map or combine values in existing event.
+            auto it = aggregateEvents.find(dimensionsInWhat);
+            if (it == aggregateEvents.end()) {
+                aggregateEvents.emplace(std::piecewise_construct,
+                                        std::forward_as_tuple(dimensionsInWhat),
+                                        std::forward_as_tuple(*data, valueIndices));
+            } else {
+                combineValueFields(it->second, *data, valueIndices);
+            }
+        }
+
+        for (auto& [dimKey, eventInfo] : aggregateEvents) {
+            eventInfo.first.setElapsedTimestampNs(eventElapsedTimeNs);
+            onMatchedLogEventLocked(mWhatMatcherIndex, eventInfo.first);
+        }
+    } else {
+        for (const auto& data : allData) {
+            LogEvent localCopy = *data;
+            if (mEventMatcherWizard->matchLogEvent(localCopy, mWhatMatcherIndex) ==
+                MatchingState::kMatched) {
+                localCopy.setElapsedTimestampNs(eventElapsedTimeNs);
+                onMatchedLogEventLocked(mWhatMatcherIndex, localCopy);
+            }
         }
     }
+
     // If a key that is:
     // 1. Tracked in mCurrentSlicedBucket and
     // 2. A superset of the current mStateChangePrimaryKey
