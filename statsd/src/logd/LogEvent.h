@@ -178,10 +178,6 @@ public:
         return mResetState;
     }
 
-    inline LogEvent makeCopy() {
-        return LogEvent(*this);
-    }
-
     template <class T>
     status_t updateValue(size_t key, T& value, Type type) {
         int field = getSimpleField(key);
@@ -202,12 +198,12 @@ public:
         return mValid;
     }
 
-private:
     /**
      * Only use this if copy is absolutely needed.
      */
     LogEvent(const LogEvent&) = default;
 
+private:
     void parseInt32(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
     void parseInt64(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
     void parseString(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
