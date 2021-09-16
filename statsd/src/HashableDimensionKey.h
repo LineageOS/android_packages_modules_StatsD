@@ -185,6 +185,28 @@ bool filterValues(const std::vector<Matcher>& matcherFields, const std::vector<F
                   HashableDimensionKey* output);
 
 /**
+ * Filters FieldValues to create HashableDimensionKey using dimensions matcher fields and create
+ *  vector of value indices using values matcher fields.
+ *
+ * This function may make modifications to the Field if the matcher has Position=FIRST,LAST or ALL
+ * in it. This is because: for example, when we create dimension from last uid in attribution chain,
+ * In one event, uid 1000 is at position 5 and it's the last
+ * In another event, uid 1000 is at position 6, and it's the last
+ * these 2 events should be mapped to the same dimension.  So we will remove the original position
+ * from the dimension key for the uid field (by applying 0x80 bit mask).
+ *
+ * dimKeyMatcherFields: the matchers for each dimension field
+ * valueMatcherFields: the matchers for each value field
+ * values: FieldValues being filtered by the matchers
+ * key: HashableDimensionKey containing the values filtered by the dimKeyMatcherFields
+ * valueIndices: index position of each matched FieldValue corresponding to the valueMatcherFields
+ */
+bool filterValues(const std::vector<Matcher>& dimKeyMatcherFields,
+                  const std::vector<Matcher>& valueMatcherFields,
+                  const std::vector<FieldValue>& values, HashableDimensionKey& key,
+                  std::vector<int>& valueIndices);
+
+/**
  * Creating HashableDimensionKeys from State Primary Keys in FieldValues.
  *
  * This function may make modifications to the Field if the matcher has Position=FIRST,LAST or ALL
