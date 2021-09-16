@@ -171,6 +171,32 @@ bool filterValues(const vector<Matcher>& matcherFields, const vector<FieldValue>
     return num_matches > 0;
 }
 
+bool filterValues(const vector<Matcher>& dimKeyMatcherFields,
+                  const vector<Matcher>& valueMatcherFields, const vector<FieldValue>& values,
+                  HashableDimensionKey& key, vector<int>& valueIndices) {
+    size_t key_num_matches = 0;
+    size_t value_num_matches = 0;
+    for (size_t i = 0; i < values.size(); ++i) {
+        const FieldValue& value = values[i];
+        for (const auto& matcher : dimKeyMatcherFields) {
+            if (value.mField.matches(matcher)) {
+                key.addValue(value);
+                key.mutableValue(key_num_matches)->mField.setTag(value.mField.getTag());
+                key.mutableValue(key_num_matches)
+                        ->mField.setField(value.mField.getField() & matcher.mMask);
+                key_num_matches++;
+            }
+        }
+        for (size_t j = 0; j < valueMatcherFields.size(); ++j) {
+            if (valueIndices[j] == -1 && value.mField.matches(valueMatcherFields[j])) {
+                valueIndices[j] = i;
+                value_num_matches++;
+            }
+        }
+    }
+    return value_num_matches == valueMatcherFields.size();
+}
+
 bool filterPrimaryKey(const std::vector<FieldValue>& values, HashableDimensionKey* output) {
     size_t num_matches = 0;
     const int32_t simpleFieldMask = 0xff7f0000;
