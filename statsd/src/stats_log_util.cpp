@@ -617,7 +617,7 @@ void mapIsolatedUidsToHostUidInLogEvent(const sp<UidMap> uidMap, LogEvent& event
     uint8_t remainingUidCount = event.getNumUidFields();
     vector<FieldValue>* fieldValues = event.getMutableValues();
     auto it = fieldValues->begin();
-    while (it != fieldValues->end() && remainingUidCount > 0) {
+    while(it != fieldValues->end() && remainingUidCount > 0) {
         if (isUidField(*it)) {
             it->mValue.setInt(uidMap->getHostUidOrSelf(it->mValue.int_value));
             remainingUidCount--;

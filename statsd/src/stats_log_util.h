@@ -20,10 +20,10 @@
 
 #include "FieldValue.h"
 #include "HashableDimensionKey.h"
+#include "src/statsd_config.pb.h"
 #include "guardrail/StatsdStats.h"
 #include "logd/LogEvent.h"
 #include "packages/UidMap.h"
-#include "src/statsd_config.pb.h"
 
 using android::util::ProtoOutputStream;
 

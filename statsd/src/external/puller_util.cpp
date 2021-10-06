@@ -18,7 +18,6 @@
 #include "Log.h"
 
 #include "puller_util.h"
-
 #include "stats_log_util.h"
 
 namespace android {

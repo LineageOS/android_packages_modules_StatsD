@@ -71,6 +71,7 @@ public class TestDrive {
             "AID_MEDIA",
             "AID_NETWORK_STACK",
             "com.google.android.providers.media.module",
+            "com.android.imsserviceentitlement",
             "com.google.android.cellbroadcastreceiver",
             "com.google.android.apps.nexuslauncher",
             "AID_KEYSTORE",
@@ -347,6 +348,9 @@ public class TestDrive {
             return StatsdConfig.newBuilder()
                     .addAllAllowedLogSource(allowedSources)
                     .addAllDefaultPullPackages(Arrays.asList(DEFAULT_PULL_SOURCES))
+                    .addPullAtomPackages(PullAtomPackages.newBuilder()
+                            .setAtomId(Atom.MEDIA_DRM_ACTIVITY_INFO_FIELD_NUMBER)
+                            .addPackages("AID_MEDIA"))
                     .addPullAtomPackages(PullAtomPackages.newBuilder()
                             .setAtomId(Atom.GPU_STATS_GLOBAL_INFO_FIELD_NUMBER)
                             .addPackages("AID_GPU_SERVICE"))
