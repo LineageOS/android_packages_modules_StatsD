@@ -26,6 +26,7 @@ import android.os.SystemClock;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -699,7 +700,7 @@ public final class StatsEvent {
         @GuardedBy("sLock")
         private static Buffer sPool;
 
-        private byte[] mBytes = new byte[MAX_PUSH_PAYLOAD_SIZE];
+        private byte[] mBytes;
         private boolean mOverflow = false;
         private int mMaxSize = MAX_PULL_PAYLOAD_SIZE;
 
@@ -715,6 +716,8 @@ public final class StatsEvent {
         }
 
         private Buffer() {
+            final ByteBuffer tempBuffer = ByteBuffer.allocateDirect(MAX_PUSH_PAYLOAD_SIZE);
+            mBytes = tempBuffer.hasArray() ? tempBuffer.array() : new byte [MAX_PUSH_PAYLOAD_SIZE];
         }
 
         @NonNull
