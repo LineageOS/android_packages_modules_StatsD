@@ -81,6 +81,7 @@ java_sdk_library {
     impl_library_visibility: [
         "//frameworks/base/apex/statsd/framework/test:__subpackages__",
         "//packages/modules/StatsD/framework/test:__subpackages__",
+        "//packages/modules/StatsD/service:__subpackages__",
     ],
 
     apex_available: [
