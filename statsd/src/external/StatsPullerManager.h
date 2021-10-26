@@ -164,15 +164,6 @@ private:
 
     int64_t mNextPullTimeNs;
 
-    // Death recipient that is triggered when the process holding the IPullAtomCallback has died.
-    ::ndk::ScopedAIBinder_DeathRecipient mPullAtomCallbackDeathRecipient;
-
-    /**
-     * Death recipient callback that is called when a pull atom callback dies.
-     * The cookie is a pointer to a PullAtomCallbackDeathCookie.
-     */
-    static void pullAtomCallbackDied(void* cookie);
-
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEvents);
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEvent_LateAlarm);
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsWithActivation);

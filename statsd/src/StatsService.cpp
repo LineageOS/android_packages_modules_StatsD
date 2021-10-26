@@ -130,13 +130,17 @@ StatsService::StatsService(const sp<Looper>& handlerLooper, shared_ptr<LogEventQ
                 if (receiver == nullptr) {
                     VLOG("Could not find a broadcast receiver for %s", key.ToString().c_str());
                     return false;
-                } else if (receiver->sendDataBroadcast(
-                           mProcessor->getLastReportTimeNs(key)).isOk()) {
-                    return true;
-                } else {
-                    VLOG("Failed to send a broadcast for receiver %s", key.ToString().c_str());
-                    return false;
                 }
+                Status status = receiver->sendDataBroadcast(mProcessor->getLastReportTimeNs(key));
+                if (status.isOk()) {
+                    return true;
+                }
+                if (status.getExceptionCode() == EX_TRANSACTION_FAILED &&
+                    status.getStatus() == STATUS_DEAD_OBJECT) {
+                    mConfigManager->RemoveConfigReceiver(key, receiver);
+                }
+                VLOG("Failed to send a broadcast for receiver %s", key.ToString().c_str());
+                return false;
             },
             [this](const int& uid, const vector<int64_t>& activeConfigs) {
                 shared_ptr<IPendingIntentRef> receiver =
@@ -144,13 +148,18 @@ StatsService::StatsService(const sp<Looper>& handlerLooper, shared_ptr<LogEventQ
                 if (receiver == nullptr) {
                     VLOG("Could not find receiver for uid %d", uid);
                     return false;
-                } else if (receiver->sendActiveConfigsChangedBroadcast(activeConfigs).isOk()) {
+                }
+                Status status = receiver->sendActiveConfigsChangedBroadcast(activeConfigs);
+                if (status.isOk()) {
                     VLOG("StatsService::active configs broadcast succeeded for uid %d" , uid);
                     return true;
-                } else {
-                    VLOG("StatsService::active configs broadcast failed for uid %d" , uid);
-                    return false;
                 }
+                if (status.getExceptionCode() == EX_TRANSACTION_FAILED &&
+                    status.getStatus() == STATUS_DEAD_OBJECT) {
+                    mConfigManager->RemoveActiveConfigsChangedReceiver(uid, receiver);
+                }
+                VLOG("StatsService::active configs broadcast failed for uid %d", uid);
+                return false;
             });
 
     mUidMap->setListener(mProcessor);
