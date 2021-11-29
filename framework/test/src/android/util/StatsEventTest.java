@@ -420,6 +420,194 @@ public class StatsEventTest {
     }
 
     @Test
+    public void testBoolArrayIntArrayLongArray() {
+        final int expectedAtomId = 109;
+        final boolean[] field1 = new boolean[] {true, false, false};
+        final int[] field1Converted = new int[] {1, 0, 0};
+        final int[] field2 = new int[] {4, 11};
+        final long[] field3 = new long[] {10000L, 10000L, 10000L};
+
+        final long minTimestamp = SystemClock.elapsedRealtimeNanos();
+        final StatsEvent statsEvent = StatsEvent.newBuilder()
+                                        .setAtomId(expectedAtomId)
+                                        .writeBooleanArray(field1)
+                                        .writeIntArray(field2)
+                                        .writeLongArray(field3)
+                                        .usePooledBuffer()
+                                        .build();
+        final long maxTimestamp = SystemClock.elapsedRealtimeNanos();
+
+        assertThat(statsEvent.getAtomId()).isEqualTo(expectedAtomId);
+
+        final ByteBuffer buffer =
+          ByteBuffer.wrap(statsEvent.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
+
+        assertWithMessage("Root element in buffer is not TYPE_OBJECT")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_OBJECT);
+
+        assertWithMessage("Incorrect number of elements in root object")
+                .that(buffer.get())
+                .isEqualTo(5);
+
+        assertWithMessage("First element is not timestamp")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LONG);
+
+        assertWithMessage("Incorrect timestamp")
+                .that(buffer.getLong())
+                .isIn(Range.closed(minTimestamp, maxTimestamp));
+
+        assertWithMessage("Second element is not atom id")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+
+        assertWithMessage("Incorrect atom id").that(buffer.getInt()).isEqualTo(expectedAtomId);
+
+        assertWithMessage("First field is not list")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("Incorrect number of elements in field 1 object")
+                .that(buffer.get())
+                .isEqualTo(3);
+
+        assertWithMessage("Element type of field 1 is not boolean")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_BOOLEAN);
+
+        for (int i = 0; i < field1.length; i++) {
+            assertWithMessage("Incorrect field of field 1")
+                    .that(buffer.get())
+                    .isEqualTo(field1Converted[i]);
+        }
+
+        assertWithMessage("Second field is not list")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("Incorrect number of elements in field 2 object")
+                .that(buffer.get())
+                .isEqualTo(2);
+
+        assertWithMessage("Element type of field 2 is not int")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+
+        for (int i = 0; i < field2.length; i++) {
+            assertWithMessage("Incorrect field of field 2")
+                    .that(buffer.getInt())
+                    .isEqualTo(field2[i]);
+        }
+
+        assertWithMessage("Third field is not list")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("Incorrect number of elements in field 3 object")
+                .that(buffer.get())
+                .isEqualTo(3);
+
+        assertWithMessage("Element type of field 3 is not long")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LONG);
+
+        for (int i = 0; i < field3.length; i++) {
+            assertWithMessage("Incorrect field of field 3")
+                    .that(buffer.getLong())
+                    .isEqualTo(field3[i]);
+        }
+
+        assertThat(statsEvent.getNumBytes()).isEqualTo(buffer.position());
+
+        statsEvent.release();
+    }
+
+    @Test
+    public void testFloatArrayStringArray() {
+        final int expectedAtomId = 109;
+        final float[] field1 = new float[] {0.21f, 0.13f};
+        final String[] field2 = new String[] {"str1", "str2", "str3"};
+
+        final long minTimestamp = SystemClock.elapsedRealtimeNanos();
+        final StatsEvent statsEvent = StatsEvent.newBuilder()
+                                        .setAtomId(expectedAtomId)
+                                        .writeFloatArray(field1)
+                                        .writeStringArray(field2)
+                                        .usePooledBuffer()
+                                        .build();
+        final long maxTimestamp = SystemClock.elapsedRealtimeNanos();
+
+        assertThat(statsEvent.getAtomId()).isEqualTo(expectedAtomId);
+
+        final ByteBuffer buffer =
+                ByteBuffer.wrap(statsEvent.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
+
+        assertWithMessage("Root element in buffer is not TYPE_OBJECT")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_OBJECT);
+
+        assertWithMessage("Incorrect number of elements in root object")
+                .that(buffer.get())
+                .isEqualTo(4);
+
+        assertWithMessage("First element is not timestamp")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LONG);
+
+        assertWithMessage("Incorrect timestamp")
+                .that(buffer.getLong())
+                .isIn(Range.closed(minTimestamp, maxTimestamp));
+
+        assertWithMessage("Second element is not atom id")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+
+        assertWithMessage("Incorrect atom id").that(buffer.getInt()).isEqualTo(expectedAtomId);
+
+        assertWithMessage("First field is not list")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("Incorrect number of elements in field 1 object")
+                .that(buffer.get())
+                .isEqualTo(2);
+
+        assertWithMessage("Element type of field 1 is not float")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_FLOAT);
+
+        for (int i = 0; i < field1.length; i++) {
+           assertWithMessage("Incorrect field of field 1")
+                   .that(buffer.getFloat())
+                   .isEqualTo(field1[i]);
+        }
+
+        assertWithMessage("Second field is not list")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("Incorrect number of elements in field 2 object")
+                .that(buffer.get())
+                .isEqualTo(3);
+
+        assertWithMessage("Element type of field 2 is not string")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_STRING);
+
+        for (int i = 0; i < field2.length; i++) {
+           final String fieldElementActual = getStringFromByteBuffer(buffer);
+           assertWithMessage("Incorrect field of field 2")
+                   .that(fieldElementActual)
+                   .isEqualTo(field2[i]);
+        }
+
+        assertThat(statsEvent.getNumBytes()).isEqualTo(buffer.position());
+
+        statsEvent.release();
+    }
+
+    @Test
     public void testSingleAnnotations() {
         final int expectedAtomId = 109;
         final int field1 = 1;
@@ -494,6 +682,100 @@ public class StatsEventTest {
                 .that(buffer.get()).isEqualTo(StatsEvent.TYPE_INT);
         assertWithMessage("Second field's annotation value is wrong")
                 .that(buffer.getInt()).isEqualTo(field2AnnotationValue);
+
+        assertThat(statsEvent.getNumBytes()).isEqualTo(buffer.position());
+
+        statsEvent.release();
+    }
+
+    @Test
+    public void testArrayFieldAnnotations() {
+        final int expectedAtomId = 109;
+        final int[] field1 = new int[] {4, 11};
+        final byte boolAnnotationId = 45;
+        final boolean boolAnnotationValue = false;
+        final byte intAnnotationId = 1;
+        final int intAnnotationValue = 23;
+
+        final long minTimestamp = SystemClock.elapsedRealtimeNanos();
+        final StatsEvent statsEvent = StatsEvent.newBuilder()
+                                        .setAtomId(expectedAtomId)
+                                        .writeIntArray(field1)
+                                        .addBooleanAnnotation(boolAnnotationId, boolAnnotationValue)
+                                        .addIntAnnotation(intAnnotationId, intAnnotationValue)
+                                        .usePooledBuffer()
+                                        .build();
+        final long maxTimestamp = SystemClock.elapsedRealtimeNanos();
+
+        assertThat(statsEvent.getAtomId()).isEqualTo(expectedAtomId);
+
+        final ByteBuffer buffer =
+                ByteBuffer.wrap(statsEvent.getBytes()).order(ByteOrder.LITTLE_ENDIAN);
+
+        assertWithMessage("Root element in buffer is not TYPE_OBJECT")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_OBJECT);
+
+        assertWithMessage("Incorrect number of elements in root object")
+                .that(buffer.get())
+                .isEqualTo(3);
+
+        assertWithMessage("First element is not timestamp")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_LONG);
+
+        assertWithMessage("Incorrect timestamp")
+                .that(buffer.getLong())
+                .isIn(Range.closed(minTimestamp, maxTimestamp));
+
+        assertWithMessage("Second element is not atom id")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+
+        assertWithMessage("Incorrect atom id").that(buffer.getInt()).isEqualTo(expectedAtomId);
+
+        final byte field1Header = buffer.get();
+        final int field1AnnotationValueCount = field1Header >> 4;
+        final byte field1Type = (byte) (field1Header & 0x0F);
+        assertWithMessage("First field is not list")
+                .that(field1Type).isEqualTo(StatsEvent.TYPE_LIST);
+
+        assertWithMessage("First field annotation count is wrong")
+                .that(field1AnnotationValueCount)
+                .isEqualTo(2);
+
+        assertWithMessage("Incorrect number of elements in field 1 object")
+                .that(buffer.get())
+                .isEqualTo(2);
+
+        assertWithMessage("Element type of field 1 is not int")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+
+        for (int i = 0; i < field1.length; i++) {
+           assertWithMessage("Incorrect field of field 1")
+                   .that(buffer.getInt()).isEqualTo(field1[i]);
+        }
+
+        assertWithMessage("Field 1's first annotation id is wrong")
+                .that(buffer.get())
+                .isEqualTo(boolAnnotationId);
+        assertWithMessage("Field 1's first annotation type is wrong")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_BOOLEAN);
+        assertWithMessage("Field 1's first annotation value is wrong")
+                .that(buffer.get())
+                .isEqualTo(boolAnnotationValue ? 1 : 0);
+
+        assertWithMessage("Field 1's second annotation id is wrong")
+                .that(buffer.get())
+                .isEqualTo(intAnnotationId);
+        assertWithMessage("Field 1's second annotation type is wrong")
+                .that(buffer.get())
+                .isEqualTo(StatsEvent.TYPE_INT);
+        assertWithMessage("Field 1's second annotation value is wrong")
+                .that(buffer.getInt())
+                .isEqualTo(intAnnotationValue);
 
         assertThat(statsEvent.getNumBytes()).isEqualTo(buffer.position());
 
