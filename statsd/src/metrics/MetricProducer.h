@@ -193,19 +193,19 @@ public:
     /**
      * Force a partial bucket split on app upgrade
      */
-    void notifyAppUpgrade(const int64_t& eventTimeNs, const bool bucketSplitDefault) {
+    void notifyAppUpgrade(const int64_t& eventTimeNs) {
         std::lock_guard<std::mutex> lock(mMutex);
         const bool splitBucket =
-                mSplitBucketForAppUpgrade ? mSplitBucketForAppUpgrade.value() : bucketSplitDefault;
+                mSplitBucketForAppUpgrade ? mSplitBucketForAppUpgrade.value() : false;
         if (!splitBucket) {
             return;
         }
         notifyAppUpgradeInternalLocked(eventTimeNs);
     };
 
-    void notifyAppRemoved(const int64_t& eventTimeNs, const bool bucketSplitDefault) {
+    void notifyAppRemoved(const int64_t& eventTimeNs) {
         // Force buckets to split on removal also.
-        notifyAppUpgrade(eventTimeNs, bucketSplitDefault);
+        notifyAppUpgrade(eventTimeNs);
     };
 
     /**
