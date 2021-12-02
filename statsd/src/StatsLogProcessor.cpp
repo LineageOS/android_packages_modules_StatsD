@@ -1099,10 +1099,8 @@ void StatsLogProcessor::notifyAppUpgrade(const int64_t& eventTimeNs, const strin
     std::lock_guard<std::mutex> lock(mMetricsMutex);
     VLOG("Received app upgrade");
     StateManager::getInstance().notifyAppChanged(apk, mUidMap);
-    bool splitBucketDefault =
-            FlagProvider::getInstance().getFlagBool(APP_UPGRADE_BUCKET_SPLIT_FLAG, FLAG_TRUE);
     for (const auto& it : mMetricsManagers) {
-        it.second->notifyAppUpgrade(eventTimeNs, apk, uid, version, splitBucketDefault);
+        it.second->notifyAppUpgrade(eventTimeNs, apk, uid, version);
     }
 }
 
@@ -1111,10 +1109,8 @@ void StatsLogProcessor::notifyAppRemoved(const int64_t& eventTimeNs, const strin
     std::lock_guard<std::mutex> lock(mMetricsMutex);
     VLOG("Received app removed");
     StateManager::getInstance().notifyAppChanged(apk, mUidMap);
-    const bool splitBucketDefault =
-            FlagProvider::getInstance().getFlagBool(APP_UPGRADE_BUCKET_SPLIT_FLAG, FLAG_TRUE);
     for (const auto& it : mMetricsManagers) {
-        it.second->notifyAppRemoved(eventTimeNs, apk, uid, splitBucketDefault);
+        it.second->notifyAppRemoved(eventTimeNs, apk, uid);
     }
 }
 

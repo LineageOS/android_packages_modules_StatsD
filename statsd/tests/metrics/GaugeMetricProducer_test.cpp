@@ -233,7 +233,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPushedEvents) {
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
+            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             gaugeProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -328,7 +328,7 @@ TEST_P(GaugeMetricProducerTest_PartialBucket, TestPulled) {
 
     switch (GetParam()) {
         case APP_UPGRADE:
-            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
+            gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             gaugeProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -394,7 +394,7 @@ TEST(GaugeMetricProducerTest, TestPulledWithAppUpgradeDisabled) {
                          .mFields->begin()
                          ->mValue.int_value);
 
-    gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
+    gaugeProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
     ASSERT_EQ(0UL, gaugeProducer.mPastBuckets[DEFAULT_METRIC_DIMENSION_KEY].size());
     EXPECT_EQ(0L, gaugeProducer.mCurrentBucketNum);
     EXPECT_EQ(bucketStartTimeNs, gaugeProducer.mCurrentBucketStartTimeNs);
