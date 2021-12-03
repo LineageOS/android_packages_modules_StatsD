@@ -257,8 +257,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDuration) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
-                                              getAppUpgradeBucketDefault());
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -322,8 +321,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationWithSplitInFollo
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 65 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
-                                              getAppUpgradeBucketDefault());
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -390,8 +388,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestSumDurationAnomaly) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
-                                              getAppUpgradeBucketDefault());
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -437,8 +434,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDuration) {
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
-                                              getAppUpgradeBucketDefault());
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -493,8 +489,7 @@ TEST_P(DurationMetricProducerTest_PartialBucket, TestMaxDurationWithSplitInNextB
     int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 65 * NS_PER_SEC;
     switch (GetParam()) {
         case APP_UPGRADE:
-            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs,
-                                              getAppUpgradeBucketDefault());
+            durationProducer.notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             durationProducer.onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -554,7 +549,7 @@ TEST(DurationMetricProducerTest, TestSumDurationAppUpgradeSplitDisabled) {
     EXPECT_EQ(bucketStartTimeNs, durationProducer.mCurrentBucketStartTimeNs);
 
     int64_t appUpgradeTimeNs = bucketStartTimeNs + 15 * NS_PER_SEC;
-    durationProducer.notifyAppUpgrade(appUpgradeTimeNs, getAppUpgradeBucketDefault());
+    durationProducer.notifyAppUpgrade(appUpgradeTimeNs);
 
     ASSERT_EQ(0UL, durationProducer.mPastBuckets.size());
     EXPECT_EQ(0, durationProducer.getCurrentBucketNum());

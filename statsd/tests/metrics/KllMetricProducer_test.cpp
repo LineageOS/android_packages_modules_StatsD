@@ -184,7 +184,7 @@ TEST_P(KllMetricProducerTest_PartialBucket, TestPushedEventsMultipleBuckets) {
     const int64_t partialBucketSplitTimeNs = bucketStartTimeNs + 150;
     switch (GetParam()) {
         case APP_UPGRADE:
-            kllProducer->notifyAppUpgrade(partialBucketSplitTimeNs, getAppUpgradeBucketDefault());
+            kllProducer->notifyAppUpgrade(partialBucketSplitTimeNs);
             break;
         case BOOT_COMPLETE:
             kllProducer->onStatsdInitCompleted(partialBucketSplitTimeNs);
@@ -412,7 +412,7 @@ TEST(KllMetricProducerTest, TestForcedBucketSplitWhenConditionUnknownSkipsBucket
 
     // App update event.
     int64_t appUpdateTimeNs = bucketStartTimeNs + 1000;
-    kllProducer->notifyAppUpgrade(appUpdateTimeNs, getAppUpgradeBucketDefault());
+    kllProducer->notifyAppUpgrade(appUpdateTimeNs);
 
     // Check dump report.
     ProtoOutputStream output;
