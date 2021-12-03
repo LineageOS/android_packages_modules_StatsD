@@ -457,19 +457,7 @@ TEST(PartialBucketE2eTest, TestGaugeMetricOnBootWithoutMinPartialBucket) {
             report.metrics(0).gauge_metrics().data(0).bucket_info(0).start_bucket_elapsed_nanos());
 }
 
-class PartialBucketE2e_AppUpgradeDefaultTest : public ::testing::Test {
-    void SetUp() override {
-        FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue);
-    }
-
-    void TearDown() override {
-        FlagProvider::getInstance().resetOverrides();
-    }
-};
-
-TEST_F(PartialBucketE2e_AppUpgradeDefaultTest, TestCountMetricDefaultFalse) {
-    FlagProvider::getInstance().overrideFlag(APP_UPGRADE_BUCKET_SPLIT_FLAG, FLAG_FALSE,
-                                             /*isBootFlag=*/false);
+TEST(PartialBucketE2eTest, TestCountMetricNoSplitByDefault) {
     shared_ptr<StatsService> service = SharedRefBase::make<StatsService>(nullptr, nullptr);
     StatsdConfig config = MakeCountMetricConfig({nullopt});  // Do not set the value in the metric.
     SendConfig(service, config);
@@ -495,39 +483,6 @@ TEST_F(PartialBucketE2e_AppUpgradeDefaultTest, TestCountMetricDefaultFalse) {
     const CountBucketInfo& bucketInfo = report.metrics(0).count_metrics().data(0).bucket_info(0);
     EXPECT_EQ(bucketInfo.end_bucket_elapsed_nanos(), MillisToNano(NanoToMillis(start + 4)));
     EXPECT_EQ(bucketInfo.count(), 2);
-}
-
-TEST_F(PartialBucketE2e_AppUpgradeDefaultTest, TestCountMetricDefaultTrue) {
-    FlagProvider::getInstance().overrideFlag(APP_UPGRADE_BUCKET_SPLIT_FLAG, FLAG_TRUE,
-                                             /*isBootFlag=*/false);
-    shared_ptr<StatsService> service = SharedRefBase::make<StatsService>(nullptr, nullptr);
-    StatsdConfig config = MakeCountMetricConfig({nullopt});  // Do not set the value in the metric.
-    SendConfig(service, config);
-    int64_t start = getElapsedRealtimeNs();  // This is the start-time the metrics producers are
-                                             // initialized with.
-    service->mUidMap->updateMap(start, {1}, {1}, {String16("v1")}, {String16(kApp1.c_str())},
-                                {String16("")});
-
-    // Force the uidmap to update at timestamp 2.
-    service->mProcessor->OnLogEvent(CreateAppCrashEvent(start + 1, 100).get());
-    service->mUidMap->updateApp(start + 2, String16(kApp1.c_str()), 1, 2, String16("v2"),
-                                String16(""));
-    // Goes into the second bucket.
-    service->mProcessor->OnLogEvent(CreateAppCrashEvent(start + 3, 100).get());
-
-    ConfigMetricsReport report =
-            GetReports(service->mProcessor, start + 4, /*include_current=*/true);
-    backfillStartEndTimestamp(&report);
-
-    ASSERT_EQ(1, report.metrics_size());
-    ASSERT_EQ(1, report.metrics(0).count_metrics().data_size());
-    ASSERT_EQ(2, report.metrics(0).count_metrics().data(0).bucket_info_size());
-    CountBucketInfo bucketInfo = report.metrics(0).count_metrics().data(0).bucket_info(0);
-    EXPECT_EQ(bucketInfo.end_bucket_elapsed_nanos(), MillisToNano(NanoToMillis(start + 4)));
-    EXPECT_EQ(bucketInfo.count(), 1);
-    bucketInfo = report.metrics(0).count_metrics().data(0).bucket_info(1);
-    EXPECT_EQ(bucketInfo.start_bucket_elapsed_nanos(), MillisToNano(NanoToMillis(start + 4)));
-    EXPECT_EQ(bucketInfo.count(), 1);
 }
 
 #else
