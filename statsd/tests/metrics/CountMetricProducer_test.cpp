@@ -284,7 +284,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInCurrentBucket) {
     // Check that there's a past bucket and the bucket end is not adjusted.
     switch (GetParam()) {
         case APP_UPGRADE:
-            countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
+            countProducer.notifyAppUpgrade(eventTimeNs);
             break;
         case BOOT_COMPLETE:
             countProducer.onStatsdInitCompleted(eventTimeNs);
@@ -349,7 +349,7 @@ TEST_P(CountMetricProducerTest_PartialBucket, TestSplitInNextBucket) {
     // occurred after the bucket end time.
     switch (GetParam()) {
         case APP_UPGRADE:
-            countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
+            countProducer.notifyAppUpgrade(eventTimeNs);
             break;
         case BOOT_COMPLETE:
             countProducer.onStatsdInitCompleted(eventTimeNs);
@@ -411,7 +411,7 @@ TEST(CountMetricProducerTest, TestSplitOnAppUpgradeDisabled) {
 
     // App upgrade event occurs. Make sure no bucket is split.
     // Check that there's a past bucket and the bucket end is not adjusted.
-    countProducer.notifyAppUpgrade(eventTimeNs, getAppUpgradeBucketDefault());
+    countProducer.notifyAppUpgrade(eventTimeNs);
 
     ASSERT_EQ(0UL, countProducer.mPastBuckets[DEFAULT_METRIC_DIMENSION_KEY].size());
     EXPECT_EQ(0, countProducer.getCurrentBucketNum());
