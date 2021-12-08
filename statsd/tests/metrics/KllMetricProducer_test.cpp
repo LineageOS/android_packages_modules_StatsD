@@ -59,7 +59,6 @@ const int64_t bucket3StartTimeNs = bucketStartTimeNs + 2 * bucketSizeNs;
 const int64_t bucket4StartTimeNs = bucketStartTimeNs + 3 * bucketSizeNs;
 const int64_t bucket5StartTimeNs = bucketStartTimeNs + 4 * bucketSizeNs;
 const int64_t bucket6StartTimeNs = bucketStartTimeNs + 5 * bucketSizeNs;
-const double epsilon = 0.001;
 
 static void assertPastBucketsSingleKey(
         const std::unordered_map<MetricDimensionKey,
