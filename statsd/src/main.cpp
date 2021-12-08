@@ -80,8 +80,7 @@ int main(int /*argc*/, char** /*argv*/) {
             std::make_shared<LogEventQueue>(4000 /*buffer limit. Buffer is NOT pre-allocated*/);
 
     // Initialize boot flags
-    FlagProvider::getInstance().initBootFlags(
-            {AGGREGATE_ATOMS_FLAG, VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG});
+    FlagProvider::getInstance().initBootFlags({VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG});
 
     // Create the service
     gStatsService = SharedRefBase::make<StatsService>(looper, eventQueue);
