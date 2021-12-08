@@ -20,7 +20,6 @@
 #include "config_update_utils.h"
 
 #include "external/StatsPullerManager.h"
-#include "flags/FlagProvider.h"
 #include "hash.h"
 #include "matchers/EventMatcherWizard.h"
 #include "metrics_manager_util.h"
@@ -515,7 +514,7 @@ bool determineAllMetricUpdateStatuses(const StatsdConfig& config,
                                       const unordered_map<int64_t, int>& metricToActivationMap,
                                       const set<int64_t>& replacedMatchers,
                                       const set<int64_t>& replacedConditions,
-                                      const set<int64_t>& replacedStates, const bool kllEnabled,
+                                      const set<int64_t>& replacedStates,
                                       vector<UpdateStatus>& metricsToUpdate) {
     int metricIndex = 0;
     for (int i = 0; i < config.count_metric_size(); i++, metricIndex++) {
@@ -597,23 +596,23 @@ bool determineAllMetricUpdateStatuses(const StatsdConfig& config,
             return false;
         }
     }
-    if (kllEnabled) {
-        for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
-            const KllMetric& metric = config.kll_metric(i);
-            set<int64_t> conditionDependencies;
-            if (metric.has_condition()) {
-                conditionDependencies.insert(metric.condition());
-            }
-            if (!determineMetricUpdateStatus(
-                        config, metric, metric.id(), METRIC_TYPE_KLL, {metric.what()},
-                        conditionDependencies, metric.slice_by_state(), metric.links(),
-                        oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
-                        replacedMatchers, replacedConditions, replacedStates,
-                        metricsToUpdate[metricIndex])) {
-                return false;
-            }
+
+    for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
+        const KllMetric& metric = config.kll_metric(i);
+        set<int64_t> conditionDependencies;
+        if (metric.has_condition()) {
+            conditionDependencies.insert(metric.condition());
+        }
+        if (!determineMetricUpdateStatus(
+                    config, metric, metric.id(), METRIC_TYPE_KLL, {metric.what()},
+                    conditionDependencies, metric.slice_by_state(), metric.links(),
+                    oldMetricProducerMap, oldMetricProducers, metricToActivationMap,
+                    replacedMatchers, replacedConditions, replacedStates,
+                    metricsToUpdate[metricIndex])) {
+            return false;
         }
     }
+
     return true;
 }
 
@@ -680,11 +679,9 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
                    vector<int>& metricsWithActivation, set<int64_t>& replacedMetrics) {
     sp<ConditionWizard> wizard = new ConditionWizard(allConditionTrackers);
     sp<EventMatcherWizard> matcherWizard = new EventMatcherWizard(allAtomMatchingTrackers);
-    const bool kllEnabled = FlagProvider::getInstance().getFlagBool(KLL_METRIC_FLAG, FLAG_FALSE);
     const int allMetricsCount = config.count_metric_size() + config.duration_metric_size() +
                                 config.event_metric_size() + config.gauge_metric_size() +
-                                config.value_metric_size() +
-                                (kllEnabled ? config.kll_metric_size() : 0);
+                                config.value_metric_size() + config.kll_metric_size();
     newMetricProducers.reserve(allMetricsCount);
 
     // Construct map from metric id to metric activation index. The map will be used to determine
@@ -703,8 +700,7 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
     vector<UpdateStatus> metricsToUpdate(allMetricsCount, UPDATE_UNKNOWN);
     if (!determineAllMetricUpdateStatuses(config, oldMetricProducerMap, oldMetricProducers,
                                           metricToActivationMap, replacedMatchers,
-                                          replacedConditions, replacedStates, kllEnabled,
-                                          metricsToUpdate)) {
+                                          replacedConditions, replacedStates, metricsToUpdate)) {
         return false;
     }
 
@@ -907,50 +903,45 @@ bool updateMetrics(const ConfigKey& key, const StatsdConfig& config, const int64
         newMetricProducers.push_back(producer.value());
     }
 
-    if (kllEnabled) {
-        for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
-            const KllMetric& metric = config.kll_metric(i);
-            newMetricProducerMap[metric.id()] = metricIndex;
-            optional<sp<MetricProducer>> producer;
-            switch (metricsToUpdate[metricIndex]) {
-                case UPDATE_PRESERVE: {
-                    producer = updateMetric(
-                            config, i, metricIndex, metric.id(), allAtomMatchingTrackers,
-                            oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap, matcherWizard,
-                            allConditionTrackers, conditionTrackerMap, wizard, oldMetricProducerMap,
-                            oldMetricProducers, metricToActivationMap, trackerToMetricMap,
-                            conditionToMetricMap, activationAtomTrackerToMetricMap,
-                            deactivationAtomTrackerToMetricMap, metricsWithActivation);
-                    break;
-                }
-                case UPDATE_REPLACE:
-                    replacedMetrics.insert(metric.id());
-                    [[fallthrough]];  // Intentionally fallthrough to create the new metric
-                                      // producer.
-                case UPDATE_NEW: {
-                    producer = createKllMetricProducerAndUpdateMetadata(
-                            key, config, timeBaseNs, currentTimeNs, pullerManager, metric,
-                            metricIndex, allAtomMatchingTrackers, newAtomMatchingTrackerMap,
-                            allConditionTrackers, conditionTrackerMap, initialConditionCache,
-                            wizard, matcherWizard, stateAtomIdMap, allStateGroupMaps,
-                            metricToActivationMap, trackerToMetricMap, conditionToMetricMap,
-                            activationAtomTrackerToMetricMap, deactivationAtomTrackerToMetricMap,
-                            metricsWithActivation);
-                    break;
-                }
-                default: {
-                    ALOGE("Metric \"%lld\" update state is unknown. This should never happen",
-                          (long long)metric.id());
-                    return false;
-                }
+    for (int i = 0; i < config.kll_metric_size(); i++, metricIndex++) {
+        const KllMetric& metric = config.kll_metric(i);
+        newMetricProducerMap[metric.id()] = metricIndex;
+        optional<sp<MetricProducer>> producer;
+        switch (metricsToUpdate[metricIndex]) {
+            case UPDATE_PRESERVE: {
+                producer = updateMetric(
+                        config, i, metricIndex, metric.id(), allAtomMatchingTrackers,
+                        oldAtomMatchingTrackerMap, newAtomMatchingTrackerMap, matcherWizard,
+                        allConditionTrackers, conditionTrackerMap, wizard, oldMetricProducerMap,
+                        oldMetricProducers, metricToActivationMap, trackerToMetricMap,
+                        conditionToMetricMap, activationAtomTrackerToMetricMap,
+                        deactivationAtomTrackerToMetricMap, metricsWithActivation);
+                break;
             }
-            if (!producer) {
+            case UPDATE_REPLACE:
+                replacedMetrics.insert(metric.id());
+                [[fallthrough]];  // Intentionally fallthrough to create the new metric
+                                  // producer.
+            case UPDATE_NEW: {
+                producer = createKllMetricProducerAndUpdateMetadata(
+                        key, config, timeBaseNs, currentTimeNs, pullerManager, metric, metricIndex,
+                        allAtomMatchingTrackers, newAtomMatchingTrackerMap, allConditionTrackers,
+                        conditionTrackerMap, initialConditionCache, wizard, matcherWizard,
+                        stateAtomIdMap, allStateGroupMaps, metricToActivationMap,
+                        trackerToMetricMap, conditionToMetricMap, activationAtomTrackerToMetricMap,
+                        deactivationAtomTrackerToMetricMap, metricsWithActivation);
+                break;
+            }
+            default: {
+                ALOGE("Metric \"%lld\" update state is unknown. This should never happen",
+                      (long long)metric.id());
                 return false;
             }
-            newMetricProducers.push_back(producer.value());
         }
-    } else {
-        ALOGI("KllMetrics in config being ignored due to KLL flag being disabled.");
+        if (!producer) {
+            return false;
+        }
+        newMetricProducers.push_back(producer.value());
     }
 
     for (int i = 0; i < config.no_report_metric_size(); ++i) {
