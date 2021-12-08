@@ -37,7 +37,6 @@ using IsAtLeastSFunc = std::function<bool()>;
 const std::string STATSD_NATIVE_NAMESPACE = "statsd_native";
 const std::string STATSD_NATIVE_BOOT_NAMESPACE = "statsd_native_boot";
 
-const std::string KLL_METRIC_FLAG = "kll_metric";
 const std::string AGGREGATE_ATOMS_FLAG = "aggregate_atoms";
 const std::string VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG =
         "value_metric_subset_dimension_aggregation";
