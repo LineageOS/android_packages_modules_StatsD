@@ -212,7 +212,9 @@ private:
     void parseByteArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
     void parseKeyValuePairs(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
     void parseAttributionChain(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
+    void parseArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
 
+    void skipAnnotations(uint8_t numAnnotations);
     void parseAnnotations(uint8_t numAnnotations, int firstUidInChainIndex = -1);
     void parseIsUidAnnotation(uint8_t annotationType);
     void parseTruncateTimestampAnnotation(uint8_t annotationType);
@@ -266,10 +268,8 @@ private:
     template <class T>
     void addToValues(int32_t* pos, int32_t depth, T& value, bool* last) {
         Field f = Field(mTagId, pos, depth);
-        // do not decorate last position at depth 0
-        for (int i = 1; i < depth; i++) {
-            if (last[i]) f.decorateLastPos(i);
-        }
+        // only decorate last position for depths with repeated fields (depth 1)
+        if (depth > 0 && last[1]) f.decorateLastPos(1);
 
         Value v = Value(value);
         mValues.push_back(FieldValue(f, v));
