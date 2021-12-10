@@ -93,14 +93,9 @@ private:
 
     void dumpStatesLocked(FILE* out, bool verbose) const override{};
 
-    // Maps to a EventMetricDataWrapper. Storing atom events in ProtoOutputStream
-    // is more space efficient than storing LogEvent.
-    std::unique_ptr<android::util::ProtoOutputStream> mProto;
-
     // Maps the field/value pairs of an atom to a list of timestamps used to deduplicate atoms.
     std::unordered_map<AtomDimensionKey, std::vector<int64_t>> mAggregatedAtoms;
 
-    bool mUseAtomAggregation;
 };
 
 }  // namespace statsd

@@ -212,8 +212,6 @@ private:
 
     const size_t mGaugeAtomsPerDimensionLimit;
 
-    bool mUseAtomAggregation;
-
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsWithCondition);
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsWithSlicedCondition);
     FRIEND_TEST(GaugeMetricProducerTest, TestPulledEventsNoCondition);
