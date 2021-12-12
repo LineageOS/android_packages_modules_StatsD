@@ -335,6 +335,7 @@ TEST_P(ConfigUpdateE2eAbTest, TestExistingGaugePullRandomOneSample) {
     backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);
+    backfillAggregatedAtoms(&reports);
     ASSERT_EQ(reports.reports_size(), 2);
 
     // From after the update
