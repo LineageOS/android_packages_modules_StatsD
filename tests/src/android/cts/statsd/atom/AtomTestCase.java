@@ -51,11 +51,13 @@ import com.android.os.StatsLog.EventMetricData;
 import com.android.os.StatsLog.GaugeBucketInfo;
 import com.android.os.StatsLog.GaugeMetricData;
 import com.android.os.StatsLog.StatsLogReport;
+import com.android.os.StatsLog.StatsLogReport.GaugeMetricDataWrapper;
 import com.android.os.StatsLog.ValueMetricData;
 import com.android.tradefed.device.DeviceNotAvailableException;
 import com.android.tradefed.log.LogUtil;
 import com.android.tradefed.util.CommandResult;
 import com.android.tradefed.util.CommandStatus;
+import com.android.tradefed.util.Pair;
 import com.google.common.collect.Range;
 import com.google.common.io.Files;
 import com.google.protobuf.ByteString;
@@ -367,11 +369,15 @@ public class AtomTestCase extends BaseTestCase {
                 report.getMetrics(0).getGaugeMetrics().getDataList()) {
             assertThat(gaugeMetricData.getBucketInfoCount()).isEqualTo(1);
             GaugeBucketInfo bucketInfo = gaugeMetricData.getBucketInfo(0);
-            for (Atom atom : bucketInfo.getAtomList()) {
-                data.add(atom);
+            if (bucketInfo.getAtomCount() != 0) {
+                for (Atom atom : bucketInfo.getAtomList()) {
+                    data.add(atom);
+                }
+            } else {
+                data.addAll(backFillGaugeBucketAtoms(bucketInfo.getAggregatedAtomInfoList()));
             }
             if (checkTimestampTruncated) {
-                for (long timestampNs: bucketInfo.getElapsedTimestampNanosList()) {
+                for (long timestampNs : bucketInfo.getElapsedTimestampNanosList()) {
                     assertTimestampIsTruncated(timestampNs);
                 }
             }
@@ -382,6 +388,55 @@ public class AtomTestCase extends BaseTestCase {
             LogUtil.CLog.d("Atom:\n" + d.toString());
         }
         return data;
+    }
+
+    private List<Atom> backFillGaugeBucketAtoms(
+            List<StatsLog.AggregatedAtomInfo> atomInfoList) {
+        List<Pair<Atom, Long>> atomTimestamp = new ArrayList<>();
+        for (StatsLog.AggregatedAtomInfo atomInfo : atomInfoList) {
+            for (long timestampNs : atomInfo.getElapsedTimestampNanosList()) {
+                atomTimestamp.add(Pair.create(atomInfo.getAtom(), timestampNs));
+            }
+        }
+        atomTimestamp.sort(Comparator.comparing(o -> o.second));
+        return atomTimestamp.stream().map(p -> p.first).collect(Collectors.toList());
+    }
+
+    protected GaugeMetricDataWrapper backfillGaugeMetricData(GaugeMetricDataWrapper dataWrapper) {
+        GaugeMetricDataWrapper.Builder dataWrapperBuilder = dataWrapper.toBuilder();
+        List<GaugeMetricData> backfilledMetricData = new ArrayList<>();
+        for (GaugeMetricData gaugeMetricData : dataWrapperBuilder.getDataList()) {
+            GaugeMetricData.Builder gaugeMetricDataBuilder = gaugeMetricData.toBuilder();
+            List<GaugeBucketInfo> backfilledBuckets = new ArrayList<>();
+            for (GaugeBucketInfo bucketInfo : gaugeMetricData.getBucketInfoList()) {
+                backfilledBuckets.add(backfillGaugeBucket(bucketInfo.toBuilder()));
+            }
+            gaugeMetricDataBuilder.clearBucketInfo();
+            gaugeMetricDataBuilder.addAllBucketInfo(backfilledBuckets);
+            backfilledMetricData.add(gaugeMetricDataBuilder.build());
+        }
+        dataWrapperBuilder.clearData();
+        dataWrapperBuilder.addAllData(backfilledMetricData);
+        return dataWrapperBuilder.build();
+    }
+
+    private GaugeBucketInfo backfillGaugeBucket(GaugeBucketInfo.Builder bucketInfoBuilder) {
+        if (bucketInfoBuilder.getAtomCount() != 0) {
+            return bucketInfoBuilder.build();
+        }
+        List<Pair<Atom, Long>> atomTimestampData = new ArrayList<>();
+        for (StatsLog.AggregatedAtomInfo atomInfo : bucketInfoBuilder.getAggregatedAtomInfoList()) {
+            for (long timestampNs : atomInfo.getElapsedTimestampNanosList()) {
+                atomTimestampData.add(Pair.create(atomInfo.getAtom(), timestampNs));
+            }
+        }
+        atomTimestampData.sort(Comparator.comparing(o -> o.second));
+        bucketInfoBuilder.clearAggregatedAtomInfo();
+        for (Pair<Atom, Long> atomTimestamp : atomTimestampData) {
+            bucketInfoBuilder.addAtom(atomTimestamp.first);
+            bucketInfoBuilder.addElapsedTimestampNanos(atomTimestamp.second);
+        }
+        return bucketInfoBuilder.build();
     }
 
     /**
