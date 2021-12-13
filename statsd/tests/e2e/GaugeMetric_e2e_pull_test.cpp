@@ -70,8 +70,6 @@ StatsdConfig CreateStatsdConfig(const GaugeMetric::SamplingType sampling_type,
 class GaugeMetricE2ePulledTest : public ::testing::Test {
     void SetUp() override {
         FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue);
-        FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_TRUE,
-                                                 /*isBootFlag=*/true);
     }
 
     void TearDown() override {
@@ -543,10 +541,7 @@ TEST_F(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsWithActivation) {
     EXPECT_GT(bucketInfo.atom(0).subsystem_sleep_state().time_millis(), 0);
 }
 
-// TODO(b/193493895): Delete the flag false override when the new feature is launched. The flag
-// is false here because we still want to test the previous dump format.
 TEST_F(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsNoCondition) {
-    FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_FALSE, /*isBootFlag=*/true);
     auto config = CreateStatsdConfig(GaugeMetric::RANDOM_ONE_SAMPLE, /*useCondition=*/false);
 
     int64_t baseTimeNs = getElapsedRealtimeNs();
