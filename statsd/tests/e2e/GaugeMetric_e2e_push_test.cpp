@@ -75,6 +75,8 @@ StatsdConfig CreateStatsdConfigForPushedEvent(const GaugeMetric::SamplingType sa
 class GaugeMetricE2ePushedTest : public ::testing::Test {
     void SetUp() override {
         FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue);
+        FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_TRUE,
+                                                 /*isBootFlag=*/true);
     }
 
     void TearDown() override {
