@@ -404,17 +404,27 @@ public class AtomTestCase extends BaseTestCase {
         return atomTimestamp.stream().map(p -> p.first).collect(Collectors.toList());
     }
 
-    protected void backfillGaugeMetricData(GaugeMetricDataWrapper dataWrapper) {
-        for (GaugeMetricData gaugeMetricData : dataWrapper.getDataList()) {
+    protected GaugeMetricDataWrapper backfillGaugeMetricData(GaugeMetricDataWrapper dataWrapper) {
+        GaugeMetricDataWrapper.Builder dataWrapperBuilder = dataWrapper.toBuilder();
+        List<GaugeMetricData> backfilledMetricData = new ArrayList<>();
+        for (GaugeMetricData gaugeMetricData : dataWrapperBuilder.getDataList()) {
+            GaugeMetricData.Builder gaugeMetricDataBuilder = gaugeMetricData.toBuilder();
+            List<GaugeBucketInfo> backfilledBuckets = new ArrayList<>();
             for (GaugeBucketInfo bucketInfo : gaugeMetricData.getBucketInfoList()) {
-                backfillGaugeBucket(bucketInfo.toBuilder());
+                backfilledBuckets.add(backfillGaugeBucket(bucketInfo.toBuilder()));
             }
+            gaugeMetricDataBuilder.clearBucketInfo();
+            gaugeMetricDataBuilder.addAllBucketInfo(backfilledBuckets);
+            backfilledMetricData.add(gaugeMetricDataBuilder.build());
         }
+        dataWrapperBuilder.clearData();
+        dataWrapperBuilder.addAllData(backfilledMetricData);
+        return dataWrapperBuilder.build();
     }
 
-    private void backfillGaugeBucket(GaugeBucketInfo.Builder bucketInfoBuilder) {
+    private GaugeBucketInfo backfillGaugeBucket(GaugeBucketInfo.Builder bucketInfoBuilder) {
         if (bucketInfoBuilder.getAtomCount() != 0) {
-            return;
+            return bucketInfoBuilder.build();
         }
         List<Pair<Atom, Long>> atomTimestampData = new ArrayList<>();
         for (StatsLog.AggregatedAtomInfo atomInfo : bucketInfoBuilder.getAggregatedAtomInfoList()) {
@@ -428,6 +438,7 @@ public class AtomTestCase extends BaseTestCase {
             bucketInfoBuilder.addAtom(atomTimestamp.first);
             bucketInfoBuilder.addElapsedTimestampNanos(atomTimestamp.second);
         }
+        return bucketInfoBuilder.build();
     }
 
     /**
