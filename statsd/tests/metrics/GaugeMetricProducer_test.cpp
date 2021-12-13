@@ -160,8 +160,10 @@ TEST(GaugeMetricProducerTest, TestPulledEventsNoCondition) {
     ASSERT_EQ(1UL, gaugeProducer.mPastBuckets.size());
     EXPECT_EQ(3, gaugeProducer.mPastBuckets.begin()
                          ->second.back()
-                         .mGaugeAtoms.front()
-                         .mFields->begin()
+                         .mAggregatedAtoms.begin()
+                         ->first.getAtomFieldValues()
+                         .getValues()
+                         .begin()
                          ->mValue.int_value);
 
     allData.clear();
@@ -177,24 +179,34 @@ TEST(GaugeMetricProducerTest, TestPulledEventsNoCondition) {
     // One dimension.
     ASSERT_EQ(1UL, gaugeProducer.mPastBuckets.size());
     ASSERT_EQ(2UL, gaugeProducer.mPastBuckets.begin()->second.size());
-    it = gaugeProducer.mPastBuckets.begin()->second.back().mGaugeAtoms.front().mFields->begin();
-    EXPECT_EQ(INT, it->mValue.getType());
-    EXPECT_EQ(10L, it->mValue.int_value);
-    it++;
-    EXPECT_EQ(INT, it->mValue.getType());
-    EXPECT_EQ(11L, it->mValue.int_value);
+    auto it2 = gaugeProducer.mPastBuckets.begin()
+                       ->second.back()
+                       .mAggregatedAtoms.begin()
+                       ->first.getAtomFieldValues()
+                       .getValues()
+                       .begin();
+    EXPECT_EQ(INT, it2->mValue.getType());
+    EXPECT_EQ(10L, it2->mValue.int_value);
+    it2++;
+    EXPECT_EQ(INT, it2->mValue.getType());
+    EXPECT_EQ(11L, it2->mValue.int_value);
 
     gaugeProducer.flushIfNeededLocked(bucket4StartTimeNs);
     ASSERT_EQ(0UL, gaugeProducer.mCurrentSlicedBucket->size());
     // One dimension.
     ASSERT_EQ(1UL, gaugeProducer.mPastBuckets.size());
     ASSERT_EQ(3UL, gaugeProducer.mPastBuckets.begin()->second.size());
-    it = gaugeProducer.mPastBuckets.begin()->second.back().mGaugeAtoms.front().mFields->begin();
-    EXPECT_EQ(INT, it->mValue.getType());
-    EXPECT_EQ(24L, it->mValue.int_value);
-    it++;
-    EXPECT_EQ(INT, it->mValue.getType());
-    EXPECT_EQ(25L, it->mValue.int_value);
+    it2 = gaugeProducer.mPastBuckets.begin()
+                  ->second.back()
+                  .mAggregatedAtoms.begin()
+                  ->first.getAtomFieldValues()
+                  .getValues()
+                  .begin();
+    EXPECT_EQ(INT, it2->mValue.getType());
+    EXPECT_EQ(24L, it2->mValue.int_value);
+    it2++;
+    EXPECT_EQ(INT, it2->mValue.getType());
+    EXPECT_EQ(25L, it2->mValue.int_value);
 }
 
 TEST_P(GaugeMetricProducerTest_PartialBucket, TestPushedEvents) {
@@ -458,10 +470,13 @@ TEST(GaugeMetricProducerTest, TestPulledEventsWithCondition) {
                            .mFields->begin()
                            ->mValue.int_value);
     ASSERT_EQ(1UL, gaugeProducer.mPastBuckets.size());
+
     EXPECT_EQ(100, gaugeProducer.mPastBuckets.begin()
                            ->second.back()
-                           .mGaugeAtoms.front()
-                           .mFields->begin()
+                           .mAggregatedAtoms.begin()
+                           ->first.getAtomFieldValues()
+                           .getValues()
+                           .begin()
                            ->mValue.int_value);
 
     gaugeProducer.onConditionChanged(false, bucket2StartTimeNs + 10);
@@ -470,8 +485,10 @@ TEST(GaugeMetricProducerTest, TestPulledEventsWithCondition) {
     ASSERT_EQ(2UL, gaugeProducer.mPastBuckets.begin()->second.size());
     EXPECT_EQ(110L, gaugeProducer.mPastBuckets.begin()
                             ->second.back()
-                            .mGaugeAtoms.front()
-                            .mFields->begin()
+                            .mAggregatedAtoms.begin()
+                            ->first.getAtomFieldValues()
+                            .getValues()
+                            .begin()
                             ->mValue.int_value);
 }
 
@@ -677,17 +694,13 @@ TEST(GaugeMetricProducerTest, TestPullOnTrigger) {
     gaugeProducer.onMatchedLogEvent(1 /*log matcher index*/, triggerEvent);
 
     ASSERT_EQ(1UL, gaugeProducer.mPastBuckets.size());
-    ASSERT_EQ(2UL, gaugeProducer.mPastBuckets.begin()->second.back().mGaugeAtoms.size());
-    EXPECT_EQ(4, gaugeProducer.mPastBuckets.begin()
-                         ->second.back()
-                         .mGaugeAtoms[0]
-                         .mFields->begin()
-                         ->mValue.int_value);
-    EXPECT_EQ(5, gaugeProducer.mPastBuckets.begin()
-                         ->second.back()
-                         .mGaugeAtoms[1]
-                         .mFields->begin()
-                         ->mValue.int_value);
+    ASSERT_EQ(2UL, gaugeProducer.mPastBuckets.begin()->second.back().mAggregatedAtoms.size());
+    auto it = gaugeProducer.mPastBuckets.begin()->second.back().mAggregatedAtoms.begin();
+    vector<int> atomValues;
+    atomValues.emplace_back(it->first.getAtomFieldValues().getValues().begin()->mValue.int_value);
+    it++;
+    atomValues.emplace_back(it->first.getAtomFieldValues().getValues().begin()->mValue.int_value);
+    EXPECT_THAT(atomValues, UnorderedElementsAre(4, 5));
 }
 
 TEST(GaugeMetricProducerTest, TestRemoveDimensionInOutput) {
@@ -755,14 +768,25 @@ TEST(GaugeMetricProducerTest, TestRemoveDimensionInOutput) {
 
     ASSERT_EQ(2UL, gaugeProducer.mPastBuckets.size());
     auto bucketIt = gaugeProducer.mPastBuckets.begin();
-    ASSERT_EQ(1UL, bucketIt->second.back().mGaugeAtoms.size());
+    ASSERT_EQ(1UL, bucketIt->second.back().mAggregatedAtoms.size());
     EXPECT_EQ(3, bucketIt->first.getDimensionKeyInWhat().getValues().begin()->mValue.int_value);
-    EXPECT_EQ(4, bucketIt->second.back().mGaugeAtoms[0].mFields->begin()->mValue.int_value);
+    EXPECT_EQ(4, bucketIt->second.back()
+                         .mAggregatedAtoms.begin()
+                         ->first.getAtomFieldValues()
+                         .getValues()
+                         .begin()
+                         ->mValue.int_value);
     bucketIt++;
-    ASSERT_EQ(2UL, bucketIt->second.back().mGaugeAtoms.size());
+    ASSERT_EQ(2UL, bucketIt->second.back().mAggregatedAtoms.size());
     EXPECT_EQ(4, bucketIt->first.getDimensionKeyInWhat().getValues().begin()->mValue.int_value);
-    EXPECT_EQ(5, bucketIt->second.back().mGaugeAtoms[0].mFields->begin()->mValue.int_value);
-    EXPECT_EQ(6, bucketIt->second.back().mGaugeAtoms[1].mFields->begin()->mValue.int_value);
+    auto atomIt = bucketIt->second.back().mAggregatedAtoms.begin();
+    vector<int> atomValues;
+    atomValues.emplace_back(
+            atomIt->first.getAtomFieldValues().getValues().begin()->mValue.int_value);
+    atomIt++;
+    atomValues.emplace_back(
+            atomIt->first.getAtomFieldValues().getValues().begin()->mValue.int_value);
+    EXPECT_THAT(atomValues, UnorderedElementsAre(5, 6));
 }
 
 /*
