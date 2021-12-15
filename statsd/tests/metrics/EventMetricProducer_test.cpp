@@ -54,8 +54,6 @@ void makeLogEvent(LogEvent* logEvent, int32_t atomId, int64_t timestampNs, strin
 class EventMetricProducerTest : public ::testing::Test {
     void SetUp() override {
         FlagProvider::getInstance().overrideFuncs(&isAtLeastSFuncTrue);
-        FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_FALSE,
-                                                 /*isBootFlag=*/true);
     }
 
     void TearDown() override {
@@ -92,6 +90,7 @@ TEST_F(EventMetricProducerTest, TestNoCondition) {
                                true /*erase data*/, FAST, &strSet, &output);
 
     StatsLogReport report = outputStreamToProto(&output);
+    backfillAggregatedAtoms(&report);
     EXPECT_TRUE(report.has_event_metrics());
     ASSERT_EQ(2, report.event_metrics().data_size());
     EXPECT_EQ(bucketStartTimeNs + 1, report.event_metrics().data(0).elapsed_timestamp_nanos());
@@ -134,6 +133,7 @@ TEST_F(EventMetricProducerTest, TestEventsWithNonSlicedCondition) {
 
     StatsLogReport report = outputStreamToProto(&output);
     EXPECT_TRUE(report.has_event_metrics());
+    backfillAggregatedAtoms(&report);
     ASSERT_EQ(1, report.event_metrics().data_size());
     EXPECT_EQ(bucketStartTimeNs + 1, report.event_metrics().data(0).elapsed_timestamp_nanos());
 }
@@ -185,14 +185,13 @@ TEST_F(EventMetricProducerTest, TestEventsWithSlicedCondition) {
                                true /*erase data*/, FAST, &strSet, &output);
 
     StatsLogReport report = outputStreamToProto(&output);
+    backfillAggregatedAtoms(&report);
     EXPECT_TRUE(report.has_event_metrics());
     ASSERT_EQ(1, report.event_metrics().data_size());
     EXPECT_EQ(bucketStartTimeNs + 10, report.event_metrics().data(0).elapsed_timestamp_nanos());
 }
 
 TEST_F(EventMetricProducerTest, TestOneAtomTagAggregatedEvents) {
-    FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_TRUE, /*isBootFlag=*/true);
-
     int64_t bucketStartTimeNs = 10000000000;
     int tagId = 1;
 
@@ -243,8 +242,6 @@ TEST_F(EventMetricProducerTest, TestOneAtomTagAggregatedEvents) {
 }
 
 TEST_F(EventMetricProducerTest, TestTwoAtomTagAggregatedEvents) {
-    FlagProvider::getInstance().overrideFlag(AGGREGATE_ATOMS_FLAG, FLAG_TRUE, /*isBootFlag=*/true);
-
     int64_t bucketStartTimeNs = 10000000000;
     int tagId = 1;
     int tagId2 = 0;
