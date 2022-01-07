@@ -37,10 +37,8 @@ namespace {
 Field getField(int32_t tag, const vector<int32_t>& pos, int32_t depth, const vector<bool>& last) {
     Field f(tag, (int32_t*)pos.data(), depth);
 
-    // For loop starts at 1 because the last field at depth 0 is not decorated.
-    for (int i = 1; i < depth; i++) {
-        if (last[i]) f.decorateLastPos(i);
-    }
+    // only decorate last position for depths with repeated fields (depth 1)
+    if (depth > 0 && last[1]) f.decorateLastPos(1);
 
     return f;
 }
@@ -281,6 +279,190 @@ TEST(LogEventTest, TestAttributionChain) {
     EXPECT_EQ(expectedField, tag2Item.mField);
     EXPECT_EQ(Type::STRING, tag2Item.mValue.getType());
     EXPECT_EQ(tag2, tag2Item.mValue.str_value);
+
+    AStatsEvent_release(event);
+}
+
+TEST(LogEventTest, TestArrayParsing) {
+    size_t numElements = 2;
+    int32_t int32Array[2] = {3, 6};
+    int64_t int64Array[2] = {1000L, 1002L};
+    float floatArray[2] = {0.3f, 0.09f};
+    bool boolArray[2] = {0, 1};
+
+    vector<string> stringArray = {"str1", "str2"};
+    const char* cStringArray[2];
+    for (int i = 0; i < numElements; i++) {
+        cStringArray[i] = stringArray[i].c_str();
+    }
+
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+    AStatsEvent_writeInt32Array(event, int32Array, numElements);
+    AStatsEvent_writeInt64Array(event, int64Array, numElements);
+    AStatsEvent_writeFloatArray(event, floatArray, numElements);
+    AStatsEvent_writeBoolArray(event, boolArray, numElements);
+    AStatsEvent_writeStringArray(event, cStringArray, numElements);
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+
+    EXPECT_EQ(100, logEvent.GetTagId());
+    EXPECT_EQ(1000, logEvent.GetUid());
+    EXPECT_EQ(1001, logEvent.GetPid());
+    EXPECT_FALSE(logEvent.hasAttributionChain());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    ASSERT_EQ(10, values.size());  // 2 for each array type
+
+    const FieldValue& int32ArrayItem1 = values[0];
+    Field expectedField = getField(100, {1, 1, 1}, 1, {false, false, false});
+    EXPECT_EQ(expectedField, int32ArrayItem1.mField);
+    EXPECT_EQ(Type::INT, int32ArrayItem1.mValue.getType());
+    EXPECT_EQ(3, int32ArrayItem1.mValue.int_value);
+
+    const FieldValue& int32ArrayItem2 = values[1];
+    expectedField = getField(100, {1, 2, 1}, 1, {false, true, false});
+    EXPECT_EQ(expectedField, int32ArrayItem2.mField);
+    EXPECT_EQ(Type::INT, int32ArrayItem2.mValue.getType());
+    EXPECT_EQ(6, int32ArrayItem2.mValue.int_value);
+
+    const FieldValue& int64ArrayItem1 = values[2];
+    expectedField = getField(100, {2, 1, 1}, 1, {false, false, false});
+    EXPECT_EQ(expectedField, int64ArrayItem1.mField);
+    EXPECT_EQ(Type::LONG, int64ArrayItem1.mValue.getType());
+    EXPECT_EQ(1000L, int64ArrayItem1.mValue.long_value);
+
+    const FieldValue& int64ArrayItem2 = values[3];
+    expectedField = getField(100, {2, 2, 1}, 1, {false, true, false});
+    EXPECT_EQ(expectedField, int64ArrayItem2.mField);
+    EXPECT_EQ(Type::LONG, int64ArrayItem2.mValue.getType());
+    EXPECT_EQ(1002L, int64ArrayItem2.mValue.long_value);
+
+    const FieldValue& floatArrayItem1 = values[4];
+    expectedField = getField(100, {3, 1, 1}, 1, {false, false, false});
+    EXPECT_EQ(expectedField, floatArrayItem1.mField);
+    EXPECT_EQ(Type::FLOAT, floatArrayItem1.mValue.getType());
+    EXPECT_EQ(0.3f, floatArrayItem1.mValue.float_value);
+
+    const FieldValue& floatArrayItem2 = values[5];
+    expectedField = getField(100, {3, 2, 1}, 1, {false, true, false});
+    EXPECT_EQ(expectedField, floatArrayItem2.mField);
+    EXPECT_EQ(Type::FLOAT, floatArrayItem2.mValue.getType());
+    EXPECT_EQ(0.09f, floatArrayItem2.mValue.float_value);
+
+    const FieldValue& boolArrayItem1 = values[6];
+    expectedField = getField(100, {4, 1, 1}, 1, {false, false, false});
+    EXPECT_EQ(expectedField, boolArrayItem1.mField);
+    EXPECT_EQ(Type::INT,
+              boolArrayItem1.mValue.getType());  // FieldValue does not support boolean type
+    EXPECT_EQ(false, boolArrayItem1.mValue.int_value);
+
+    const FieldValue& boolArrayItem2 = values[7];
+    expectedField = getField(100, {4, 2, 1}, 1, {false, true, false});
+    EXPECT_EQ(expectedField, boolArrayItem2.mField);
+    EXPECT_EQ(Type::INT,
+              boolArrayItem2.mValue.getType());  // FieldValue does not support boolean type
+    EXPECT_EQ(true, boolArrayItem2.mValue.int_value);
+
+    const FieldValue& stringArrayItem1 = values[8];
+    expectedField = getField(100, {5, 1, 1}, 1, {true, false, false});
+    EXPECT_EQ(expectedField, stringArrayItem1.mField);
+    EXPECT_EQ(Type::STRING, stringArrayItem1.mValue.getType());
+    EXPECT_EQ("str1", stringArrayItem1.mValue.str_value);
+
+    const FieldValue& stringArrayItem2 = values[9];
+    expectedField = getField(100, {5, 2, 1}, 1, {true, true, false});
+    EXPECT_EQ(expectedField, stringArrayItem2.mField);
+    EXPECT_EQ(Type::STRING, stringArrayItem2.mValue.getType());
+    EXPECT_EQ("str2", stringArrayItem2.mValue.str_value);
+}
+
+TEST(LogEventTest, TestEmptyStringArray) {
+    const char* cStringArray[2];
+    string empty = "";
+    cStringArray[0] = empty.c_str();
+    cStringArray[1] = empty.c_str();
+
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+    AStatsEvent_writeStringArray(event, cStringArray, 2);
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+
+    EXPECT_EQ(100, logEvent.GetTagId());
+    EXPECT_EQ(1000, logEvent.GetUid());
+    EXPECT_EQ(1001, logEvent.GetPid());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    ASSERT_EQ(2, values.size());
+
+    const FieldValue& stringArrayItem1 = values[0];
+    Field expectedField = getField(100, {1, 1, 1}, 1, {true, false, false});
+    EXPECT_EQ(expectedField, stringArrayItem1.mField);
+    EXPECT_EQ(Type::STRING, stringArrayItem1.mValue.getType());
+    EXPECT_EQ(empty, stringArrayItem1.mValue.str_value);
+
+    const FieldValue& stringArrayItem2 = values[1];
+    expectedField = getField(100, {1, 2, 1}, 1, {true, true, false});
+    EXPECT_EQ(expectedField, stringArrayItem2.mField);
+    EXPECT_EQ(Type::STRING, stringArrayItem2.mValue.getType());
+    EXPECT_EQ(empty, stringArrayItem2.mValue.str_value);
+
+    AStatsEvent_release(event);
+}
+
+TEST(LogEventTest, TestArrayTooManyElements) {
+    int32_t numElements = 128;
+    int32_t int32Array[numElements];
+
+    for (int i = 0; i < numElements; i++) {
+        int32Array[i] = 1;
+    }
+
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+    AStatsEvent_writeInt32Array(event, int32Array, numElements);
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+
+    AStatsEvent_release(event);
+}
+
+TEST(LogEventTest, TestEmptyArray) {
+    int32_t int32Array[0] = {};
+
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+    AStatsEvent_writeInt32Array(event, int32Array, 0);
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+
+    EXPECT_EQ(100, logEvent.GetTagId());
+    EXPECT_EQ(1000, logEvent.GetUid());
+    EXPECT_EQ(1001, logEvent.GetPid());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    ASSERT_EQ(0, values.size());
 
     AStatsEvent_release(event);
 }
