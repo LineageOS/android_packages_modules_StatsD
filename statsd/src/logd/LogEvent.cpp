@@ -53,6 +53,8 @@ using std::vector;
 #define ERROR_TOO_MANY_FIELDS 0x200
 #define ERROR_INVALID_VALUE_TYPE 0x400
 #define ERROR_STRING_NOT_NULL_TERMINATED 0x800
+#define ERROR_ATOM_ID_INVALID_POSITION 0x2000
+#define ERROR_LIST_TOO_LONG 0x4000
 
 /* TYPE IDS */
 #define INT32_TYPE 0x00
@@ -234,9 +236,66 @@ void LogEvent::parseAttributionChain(int32_t* pos, int32_t depth, bool* last,
     last[1] = last[2] = false;
 }
 
+void LogEvent::parseArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations) {
+    const uint8_t numElements = readNextValue<uint8_t>();
+    const uint8_t typeInfo = readNextValue<uint8_t>();
+    const uint8_t typeId = getTypeId(typeInfo);
+
+    if (numElements > 127) mValid = false;
+
+    for (pos[1] = 1; pos[1] <= numElements; pos[1]++) {
+        last[1] = (pos[1] == numElements);
+
+        // The top-level array is at depth 0, and all of its elements are at depth 1.
+        // Once nested fields are supported, array elements will be at top-level depth + 1.
+
+        switch (typeId) {
+            case INT32_TYPE:
+                parseInt32(pos, /*depth=*/1, last, /*numAnnotations=*/0);
+                break;
+            case INT64_TYPE:
+                parseInt64(pos, /*depth=*/1, last, /*numAnnotations=*/0);
+                break;
+            case FLOAT_TYPE:
+                parseFloat(pos, /*depth=*/1, last, /*numAnnotations=*/0);
+                break;
+            case BOOL_TYPE:
+                parseBool(pos, /*depth=*/1, last, /*numAnnotations=*/0);
+                break;
+            case STRING_TYPE:
+                parseString(pos, /*depth=*/1, last, /*numAnnotations=*/0);
+                break;
+            default:
+                mValid = false;
+                break;
+        }
+    }
+
+    // Repeated fields can still be annotated.
+    // However, annotation bits will be read but not added to LogEvent.
+    skipAnnotations(numAnnotations);
+
+    pos[1] = 1;
+    last[1] = false;
+}
+
 // Assumes that mValues is not empty
 bool LogEvent::checkPreviousValueType(Type expected) {
     return mValues[mValues.size() - 1].mValue.getType() == expected;
+}
+
+void LogEvent::skipAnnotations(uint8_t numAnnotations) {
+    for (uint8_t i = 0; i < numAnnotations; i++) {
+        // read annotation id, annotation type, and int/bool annotation
+        readNextValue<uint8_t>();
+        uint8_t annotationType = readNextValue<uint8_t>();
+
+        if (annotationType == BOOL_TYPE) {
+            readNextValue<uint8_t>();
+        } else {
+            readNextValue<int32_t>();
+        }
+    }
 }
 
 void LogEvent::parseIsUidAnnotation(uint8_t annotationType) {
@@ -418,6 +477,9 @@ bool LogEvent::parseBuffer(uint8_t* buf, size_t len) {
                 break;
             case ATTRIBUTION_CHAIN_TYPE:
                 parseAttributionChain(pos, /*depth=*/0, last, getNumAnnotations(typeInfo));
+                break;
+            case LIST_TYPE:
+                parseArray(pos, /*depth=*/0, last, getNumAnnotations(typeInfo));
                 break;
             case ERROR_TYPE:
                 /* mErrorBitmask =*/ readNextValue<int32_t>();
