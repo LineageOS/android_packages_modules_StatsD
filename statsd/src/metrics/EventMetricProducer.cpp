@@ -77,6 +77,7 @@ EventMetricProducer::EventMetricProducer(
         }
         mConditionSliced = true;
     }
+    mTotalSize = 0;
     VLOG("metric %lld created. bucket size %lld start_time: %lld", (long long)metric.id(),
          (long long)mBucketSizeNs, (long long)mTimeBaseNs);
 }
@@ -128,6 +129,7 @@ bool EventMetricProducer::onConfigUpdatedLocked(
 
 void EventMetricProducer::dropDataLocked(const int64_t dropTimeNs) {
     mAggregatedAtoms.clear();
+    mTotalSize = 0;
     StatsdStats::getInstance().noteBucketDropped(mMetricId);
 }
 
@@ -154,6 +156,7 @@ std::unique_ptr<std::vector<uint8_t>> serializeProtoLocked(ProtoOutputStream& pr
 
 void EventMetricProducer::clearPastBucketsLocked(const int64_t dumpTimeNs) {
     mAggregatedAtoms.clear();
+    mTotalSize = 0;
 }
 
 void EventMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
@@ -186,6 +189,7 @@ void EventMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
     protoOutput->end(protoToken);
     if (erase_data) {
         mAggregatedAtoms.clear();
+        mTotalSize = 0;
     }
 }
 
@@ -207,16 +211,15 @@ void EventMetricProducer::onMatchedLogEventInternalLocked(
     AtomDimensionKey key(event.GetTagId(), HashableDimensionKey(event.getValues()));
 
     std::vector<int64_t>& aggregatedTimestampsNs = mAggregatedAtoms[key];
+    if (aggregatedTimestampsNs.empty()) {
+        mTotalSize += getSize(key.getAtomFieldValues().getValues());
+    }
     aggregatedTimestampsNs.push_back(elapsedTimeNs);
+    mTotalSize += sizeof(int64_t); // Add the size of the event timestamp
 }
 
 size_t EventMetricProducer::byteSizeLocked() const {
-    size_t totalSize = 0;
-    for (const auto& [atomDimensionKey, elapsedTimestampsNs] : mAggregatedAtoms) {
-        totalSize += sizeof(FieldValue) * atomDimensionKey.getAtomFieldValues().getValues().size();
-        totalSize += sizeof(int64_t) * elapsedTimestampsNs.size();
-    }
-    return totalSize;
+    return mTotalSize;
 }
 
 }  // namespace statsd
