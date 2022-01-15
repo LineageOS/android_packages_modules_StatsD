@@ -161,6 +161,10 @@ public:
         return getDepth() >= depth && getRawPosAtDepth(depth) == kLastBitMask;
     }
 
+    inline size_t getSize() const {
+        return sizeof(mField) + sizeof(mTag);
+    }
+
     inline bool operator==(const Field& that) const {
         return mTag == that.getTag() && mField == that.getField();
     };
@@ -345,6 +349,8 @@ struct Value {
 
     double getDouble() const;
 
+    size_t getSize() const;
+
     Value(const Value& from);
 
     bool operator==(const Value& that) const;
@@ -433,6 +439,10 @@ struct FieldValue {
         return false;
     }
 
+    size_t getSize() const {
+        return mField.getSize() + mValue.getSize();
+    }
+
     Field mField;
     Value mValue;
     Annotations mAnnotations;
@@ -457,6 +467,10 @@ bool equalDimensions(const std::vector<Matcher>& dimension_a,
 // Returns true if dimension_a is a subset of dimension_b.
 bool subsetDimensions(const std::vector<Matcher>& dimension_a,
                       const std::vector<Matcher>& dimension_b);
+
+// Estimate the memory size of the FieldValues. This is different from sizeof(FieldValue) because
+// the size is computed at runtime using the actual contents stored in the FieldValue.
+size_t getSize(const std::vector<FieldValue>& fieldValues);
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
