@@ -415,6 +415,33 @@ double Value::getDouble() const {
     }
 }
 
+size_t Value::getSize() const {
+    size_t size = 0;
+    switch (type) {
+        case INT:
+            size = sizeof(int32_t);
+            break;
+        case LONG:
+            size = sizeof(int64_t);
+            break;
+        case FLOAT:
+            size = sizeof(float);
+            break;
+        case DOUBLE:
+            size = sizeof(double);
+            break;
+        case STRING:
+            size = sizeof(char) * str_value.length();
+            break;
+        case STORAGE:
+            size = sizeof(uint8_t) * storage_value.size();
+            break;
+        default:
+            break;
+    }
+    return size;
+}
+
 bool equalDimensions(const std::vector<Matcher>& dimension_a,
                      const std::vector<Matcher>& dimension_b) {
     bool eq = dimension_a.size() == dimension_b.size();
@@ -467,6 +494,14 @@ bool HasPositionALL(const FieldMatcher& matcher) {
         }
     }
     return false;
+}
+
+size_t getSize(const std::vector<FieldValue>& fieldValues) {
+    size_t totalSize = 0;
+    for (const FieldValue& fieldValue : fieldValues) {
+        totalSize += fieldValue.getSize();
+    }
+    return totalSize;
 }
 
 }  // namespace statsd
