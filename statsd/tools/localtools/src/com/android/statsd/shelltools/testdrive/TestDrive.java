@@ -75,6 +75,7 @@ public class TestDrive {
             "com.google.android.cellbroadcastreceiver",
             "com.google.android.apps.nexuslauncher",
             "AID_KEYSTORE",
+            "AID_VIRTUALIZATIONSERVICE",
     };
     private static final String[] DEFAULT_PULL_SOURCES = {
             "AID_KEYSTORE",
