@@ -312,8 +312,8 @@ void writeDimensionPathToProto(const std::vector<Matcher>& fieldMatchers,
 // Supported Atoms format
 // XYZ_Atom {
 //     repeated SubMsg field_1 = 1;
-//     SubMsg2 field_2 = 2;
-//     int32/float/string/int63 field_3 = 3;
+//     repeated int32/float/string/int64 field_2 = 2;
+//     optional int32/float/string/int64 field_3 = 3;
 // }
 // logd's msg format, doesn't allow us to distinguish between the 2 cases below
 // Case (1):
@@ -344,25 +344,31 @@ void writeFieldValueTreeToStreamHelper(int tagId, const std::vector<FieldValue>&
         const int valueDepth = dim.mField.getDepth();
         const int valuePrefix = dim.mField.getPrefix(depth);
         const int fieldNum = dim.mField.getPosAtDepth(depth);
+        const uint64_t repeatedFieldMask = (valueDepth == 1) ? FIELD_COUNT_REPEATED : 0;
         if (valueDepth > 2) {
             ALOGE("Depth > 2 not supported");
             return;
         }
 
-        if (depth == valueDepth && valuePrefix == prefix) {
+        // If valueDepth == 1, we're writing a repeated field. Use fieldNum at depth 0 instead
+        // of valueDepth.
+        if ((depth == valueDepth || valueDepth == 1) && valuePrefix == prefix) {
             switch (dim.mValue.getType()) {
                 case INT:
-                    protoOutput->write(FIELD_TYPE_INT32 | fieldNum, dim.mValue.int_value);
+                    protoOutput->write(FIELD_TYPE_INT32 | repeatedFieldMask | fieldNum,
+                                       dim.mValue.int_value);
                     break;
                 case LONG:
-                    protoOutput->write(FIELD_TYPE_INT64 | fieldNum,
+                    protoOutput->write(FIELD_TYPE_INT64 | repeatedFieldMask | fieldNum,
                                        (long long)dim.mValue.long_value);
                     break;
                 case FLOAT:
-                    protoOutput->write(FIELD_TYPE_FLOAT | fieldNum, dim.mValue.float_value);
+                    protoOutput->write(FIELD_TYPE_FLOAT | repeatedFieldMask | fieldNum,
+                                       dim.mValue.float_value);
                     break;
                 case STRING: {
-                    protoOutput->write(FIELD_TYPE_STRING | fieldNum, dim.mValue.str_value);
+                    protoOutput->write(FIELD_TYPE_STRING | repeatedFieldMask | fieldNum,
+                                       dim.mValue.str_value);
                     break;
                 }
                 case STORAGE:
@@ -374,15 +380,10 @@ void writeFieldValueTreeToStreamHelper(int tagId, const std::vector<FieldValue>&
                     break;
             }
             (*index)++;
-        } else if (valueDepth > depth && valuePrefix == prefix) {
+        } else if (valueDepth == depth + 2 && valuePrefix == prefix) {
             // Writing the sub tree
             uint64_t msg_token = 0ULL;
-            if (valueDepth == depth + 2) {
-                msg_token =
-                        protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED | fieldNum);
-            } else if (valueDepth == depth + 1) {
-                msg_token = protoOutput->start(FIELD_TYPE_MESSAGE | fieldNum);
-            }
+            msg_token = protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED | fieldNum);
             // Directly jump to the leaf value because the repeated position field is implied
             // by the position of the sub msg in the parent field.
             writeFieldValueTreeToStreamHelper(tagId, dims, index, valueDepth,
