@@ -586,7 +586,9 @@ public final class StatsEvent {
         /**
          * Write a repeated boolean field to this StatsEvent.
          *
-         * The list size must not exceed 127.
+         * The list size must not exceed 127. Otherwise, the array isn't written
+         * to the StatsEvent and ERROR_LIST_TOO_LONG is appended to the
+         * StatsEvent errors field.
          *
          * @param elements array of booleans.
          **/
@@ -607,7 +609,9 @@ public final class StatsEvent {
         /**
          * Write a repeated int field to this StatsEvent.
          *
-         * The list size must not exceed 127.
+         * The list size must not exceed 127. Otherwise, the array isn't written
+         * to the StatsEvent and ERROR_LIST_TOO_LONG is appended to the
+         * StatsEvent errors field.
          *
          * @param elements array of ints.
          **/
@@ -628,7 +632,9 @@ public final class StatsEvent {
         /**
          * Write a repeated long field to this StatsEvent.
          *
-         * The list size must not exceed 127.
+         * The list size must not exceed 127. Otherwise, the array isn't written
+         * to the StatsEvent and ERROR_LIST_TOO_LONG is appended to the
+         * StatsEvent errors field.
          *
          * @param elements array of longs.
          **/
@@ -649,7 +655,9 @@ public final class StatsEvent {
         /**
          * Write a repeated float field to this StatsEvent.
          *
-         * The list size must not exceed 127.
+         * The list size must not exceed 127. Otherwise, the array isn't written
+         * to the StatsEvent and ERROR_LIST_TOO_LONG is appended to the
+         * StatsEvent errors field.
          *
          * @param elements array of floats.
          **/
@@ -670,7 +678,9 @@ public final class StatsEvent {
         /**
          * Write a repeated string field to this StatsEvent.
          *
-         * The list size must not exceed 127.
+         * The list size must not exceed 127. Otherwise, the array isn't written
+         * to the StatsEvent and ERROR_LIST_TOO_LONG is appended to the
+         * StatsEvent errors field.
          *
          * @param elements array of strings.
          **/
