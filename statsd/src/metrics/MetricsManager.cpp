@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define DEBUG false  // STOPSHIP if true
+#define STATSD_DEBUG false  // STOPSHIP if true
 #include "Log.h"
 
 #include "MetricsManager.h"
@@ -281,7 +281,7 @@ void MetricsManager::initAllowedLogSources() {
         auto uids = mUidMap->getAppUid(pkg);
         mAllowedLogSources.insert(uids.begin(), uids.end());
     }
-    if (DEBUG) {
+    if (STATSD_DEBUG) {
         for (const auto& uid : mAllowedLogSources) {
             VLOG("Allowed uid %d", uid);
         }
