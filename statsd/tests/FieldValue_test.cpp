@@ -513,6 +513,64 @@ TEST(AtomMatcherTest, TestWriteAtomToProto) {
     EXPECT_EQ(999, atom.num_results());
 }
 
+TEST(AtomMatcherTest, TestWriteAtomWithRepeatedFieldsToProto) {
+    vector<int> intArray = {3, 6};
+    vector<int64_t> longArray = {1000L, 10002L};
+    vector<float> floatArray = {0.3f, 0.09f};
+    vector<string> stringArray = {"str1", "str2"};
+    int boolArrayLength = 2;
+    bool boolArray[boolArrayLength];
+    boolArray[0] = 1;
+    boolArray[1] = 0;
+    vector<int> enumArray = {TestAtomReported::ON, TestAtomReported::OFF};
+
+    unique_ptr<LogEvent> event = CreateTestAtomReportedEventVariableRepeatedFields(
+            12345, intArray, longArray, floatArray, stringArray, boolArray, boolArrayLength,
+            enumArray);
+
+    android::util::ProtoOutputStream protoOutput;
+    writeFieldValueTreeToStream(event->GetTagId(), event->getValues(), &protoOutput);
+
+    vector<uint8_t> outData;
+    outData.resize(protoOutput.size());
+    size_t pos = 0;
+    sp<ProtoReader> reader = protoOutput.data();
+    while (reader->readBuffer() != NULL) {
+        size_t toRead = reader->currentToRead();
+        std::memcpy(&(outData[pos]), reader->readBuffer(), toRead);
+        pos += toRead;
+        reader->move(toRead);
+    }
+
+    Atom result;
+    ASSERT_EQ(true, result.ParseFromArray(&outData[0], outData.size()));
+    EXPECT_EQ(Atom::PushedCase::kTestAtomReported, result.pushed_case());
+    TestAtomReported atom = result.test_atom_reported();
+    ASSERT_EQ(atom.repeated_int_field_size(), 2);
+    EXPECT_EQ(atom.repeated_int_field(0), 3);
+    EXPECT_EQ(atom.repeated_int_field(1), 6);
+
+    ASSERT_EQ(atom.repeated_long_field_size(), 2);
+    EXPECT_EQ(atom.repeated_long_field(0), 1000L);
+    EXPECT_EQ(atom.repeated_long_field(1), 10002L);
+
+    ASSERT_EQ(atom.repeated_float_field_size(), 2);
+    EXPECT_EQ(atom.repeated_float_field(0), 0.3f);
+    EXPECT_EQ(atom.repeated_float_field(1), 0.09f);
+
+    ASSERT_EQ(atom.repeated_string_field_size(), 2);
+    EXPECT_EQ(atom.repeated_string_field(0), "str1");
+    EXPECT_EQ(atom.repeated_string_field(1), "str2");
+
+    ASSERT_EQ(atom.repeated_boolean_field_size(), 2);
+    EXPECT_EQ(atom.repeated_boolean_field(0), 1);
+    EXPECT_EQ(atom.repeated_boolean_field(1), 0);
+
+    ASSERT_EQ(atom.repeated_enum_field_size(), 2);
+    EXPECT_EQ(atom.repeated_enum_field(0), TestAtomReported::ON);
+    EXPECT_EQ(atom.repeated_enum_field(1), TestAtomReported::OFF);
+}
+
 /*
  * Test two Matchers is not a subset of one Matcher.
  * Test one Matcher is subset of two Matchers.
