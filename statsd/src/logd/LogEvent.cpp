@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define DEBUG false  // STOPSHIP if true
+#define STATSD_DEBUG false  // STOPSHIP if true
 #include "logd/LogEvent.h"
 
 #include <android-base/stringprintf.h>
