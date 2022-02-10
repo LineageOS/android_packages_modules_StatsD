@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define DEBUG false  // STOPSHIP if true
+#define STATSD_DEBUG false  // STOPSHIP if true
 #include "Log.h"
 
 #include "SimpleConditionTracker.h"
@@ -249,7 +249,7 @@ void SimpleConditionTracker::handleConditionEvent(const HashableDimensionKey& ou
     }
 
     // dump all dimensions for debugging
-    if (DEBUG) {
+    if (STATSD_DEBUG) {
         dumpState();
     }
 
