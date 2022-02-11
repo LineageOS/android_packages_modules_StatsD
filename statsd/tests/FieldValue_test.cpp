@@ -59,6 +59,14 @@ void makeLogEvent(LogEvent* logEvent, const int32_t atomId, const int64_t timest
 
     parseStatsEventToLogEvent(statsEvent, logEvent);
 }
+
+void makeRepeatedIntLogEvent(LogEvent* logEvent, const int32_t atomId,
+                             const vector<int>& intArray) {
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, atomId);
+    AStatsEvent_writeInt32Array(statsEvent, intArray.data(), intArray.size());
+    parseStatsEventToLogEvent(statsEvent, logEvent);
+}
 }  // anonymous namespace
 
 TEST(AtomMatcherTest, TestFieldTranslation) {
@@ -146,6 +154,76 @@ TEST(AtomMatcherTest, TestFilter_ALL) {
 
     EXPECT_EQ((int32_t)0x00020000, output.getValues()[6].mField.getField());
     EXPECT_EQ("some value", output.getValues()[6].mValue.str_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_FIRST) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::FIRST);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)1, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01010100, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)21, output.getValues()[0].mValue.int_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_LAST) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::LAST);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)1, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01018000, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)13, output.getValues()[0].mValue.int_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_ALL) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::ALL);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)3, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01010100, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)21, output.getValues()[0].mValue.int_value);
+    EXPECT_EQ((int32_t)0x01010200, output.getValues()[1].mField.getField());
+    EXPECT_EQ((int32_t)9, output.getValues()[1].mValue.int_value);
+    EXPECT_EQ((int32_t)0x01010300, output.getValues()[2].mField.getField());
+    EXPECT_EQ((int32_t)13, output.getValues()[2].mValue.int_value);
 }
 
 TEST(AtomMatcherTest, TestSubDimension) {
