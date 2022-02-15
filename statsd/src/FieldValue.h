@@ -194,13 +194,13 @@ public:
  * It contains all information needed to match one or more leaf node.
  * All information is encoded in a Field(2 ints) and a bit mask(1 int).
  *
- * For example, to match the first/any/last uid field in attribution chain in Atom 10,
+ * For example, to match the first/all/last uid field in attribution chain in Atom 10,
  * we have the following FieldMatcher in statsd_config
  *    FieldMatcher {
  *        field:10
  *         FieldMatcher {
  *              field:1
- *              position: any/last/first
+ *              position: all/last/first
  *              FieldMatcher {
  *                  field:1
  *              }
@@ -210,7 +210,6 @@ public:
  * We translate the FieldMatcher into a Field, and mask
  * First: [Matcher Field] 0x02010101  [Mask]0xff7f7f7f
  * Last:  [Matcher Field] 0x02018001  [Mask]0xff7f807f
- * Any:   [Matcher Field] 0x02010001  [Mask]0xff7f007f
  * All:   [Matcher Field] 0x02010001  [Mask]0xff7f7f7f
  *
  * [To match a log Field with a Matcher] we apply the bit mask to the log Field and check if
@@ -242,15 +241,7 @@ struct Matcher {
     }
 
     bool hasAllPositionMatcher() const {
-        return mMatcher.getDepth() == 2 && getRawMaskAtDepth(1) == 0x7f;
-    }
-
-    bool hasAnyPositionMatcher(int* prefix) const {
-        if (mMatcher.getDepth() == 2 && mMatcher.getRawPosAtDepth(1) == 0) {
-            (*prefix) = mMatcher.getPrefix(1);
-            return true;
-        }
-        return false;
+        return mMatcher.getDepth() >= 1 && getRawMaskAtDepth(1) == 0x7f;
     }
 
     inline bool operator!=(const Matcher& that) const {
