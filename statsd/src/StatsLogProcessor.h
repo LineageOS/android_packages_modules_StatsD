@@ -322,6 +322,7 @@ private:
     FRIEND_TEST(AttributionE2eTest, TestAttributionMatchAndSliceByFirstUid);
     FRIEND_TEST(AttributionE2eTest, TestAttributionMatchAndSliceByChain);
     FRIEND_TEST(GaugeMetricE2ePushedTest, TestMultipleFieldsForPushedEvent);
+    FRIEND_TEST(GaugeMetricE2ePushedTest, TestRepeatedFieldsForPushedEvent);
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEvents);
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEvent_LateAlarm);
     FRIEND_TEST(GaugeMetricE2ePulledTest, TestRandomSamplePulledEventsWithActivation);

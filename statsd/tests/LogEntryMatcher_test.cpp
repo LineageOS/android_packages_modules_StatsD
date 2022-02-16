@@ -412,7 +412,37 @@ TEST(AtomMatcherTest, TestUidFieldMatcher) {
     EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
 }
 
-TEST(AtomMatcherTest, TestNeqAnyStringMatcher) {
+TEST(AtomMatcherTest, TestNeqAnyStringMatcher_SingleString) {
+    sp<UidMap> uidMap = new UidMap();
+
+    // Set up the matcher
+    AtomMatcher matcher;
+    SimpleAtomMatcher* simpleMatcher = matcher.mutable_simple_atom_matcher();
+    simpleMatcher->set_atom_id(TAG_ID);
+
+    FieldValueMatcher* fieldValueMatcher = simpleMatcher->add_field_value_matcher();
+    fieldValueMatcher->set_field(FIELD_ID_1);
+    StringListMatcher* neqStringList = fieldValueMatcher->mutable_neq_any_string();
+    neqStringList->add_str_value("some value");
+    neqStringList->add_str_value("another value");
+
+    // First string matched.
+    LogEvent event1(/*uid=*/0, /*pid=*/0);
+    makeStringLogEvent(&event1, TAG_ID, 0, "some value");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event1));
+
+    // Second string matched.
+    LogEvent event2(/*uid=*/0, /*pid=*/0);
+    makeStringLogEvent(&event2, TAG_ID, 0, "another value");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
+
+    // No strings matched.
+    LogEvent event3(/*uid=*/0, /*pid=*/0);
+    makeStringLogEvent(&event3, TAG_ID, 0, "foo");
+    EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event3));
+}
+
+TEST(AtomMatcherTest, TestNeqAnyStringMatcher_AttributionUids) {
     sp<UidMap> uidMap = new UidMap();
     uidMap->updateMap(
             1, {1111, 1111, 2222, 3333, 3333} /* uid list */, {1, 1, 2, 1, 2} /* version list */,
