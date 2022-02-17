@@ -151,6 +151,20 @@ AtomMatcher CreateProcessCrashAtomMatcher();
 // Create AtomMatcher proto for app launches.
 AtomMatcher CreateAppStartOccurredAtomMatcher();
 
+// Create AtomMatcher proto for test atom repeated state.
+AtomMatcher CreateTestAtomRepeatedStateAtomMatcher(const string& name,
+                                                   TestAtomReported::State state,
+                                                   Position position);
+
+// Create AtomMatcher proto for test atom repeated state is off, first position.
+AtomMatcher CreateTestAtomRepeatedStateFirstOffAtomMatcher();
+
+// Create AtomMatcher proto for test atom repeated state is on, first position.
+AtomMatcher CreateTestAtomRepeatedStateFirstOnAtomMatcher();
+
+// Create AtomMatcher proto for test atom repeated state is on, any position.
+AtomMatcher CreateTestAtomRepeatedStateAnyOnAtomMatcher();
+
 // Add an AtomMatcher to a combination AtomMatcher.
 void addMatcherToMatcherCombination(const AtomMatcher& matcher, AtomMatcher* combinationMatcher);
 
@@ -177,6 +191,9 @@ Predicate CreateIsSyncingPredicate();
 
 // Create a Predicate proto for app is in background.
 Predicate CreateIsInBackgroundPredicate();
+
+// Create a Predicate proto for test atom repeated state field is off.
+Predicate CreateTestAtomRepeatedStateFirstOffPredicate();
 
 // Create State proto for screen state atom.
 State CreateScreenState();
@@ -399,6 +416,22 @@ std::unique_ptr<LogEvent> CreateAppStartOccurredEvent(
         uint64_t timestampNs, const int uid, const string& pkg_name,
         AppStartOccurred::TransitionType type, const string& activity_name,
         const string& calling_pkg_name, const bool is_instant_app, int64_t activity_start_msec);
+
+std::unique_ptr<LogEvent> CreateTestAtomReportedEventVariableRepeatedFields(
+        uint64_t timestampNs, const vector<int>& repeatedIntField,
+        const vector<int64_t>& repeatedLongField, const vector<float>& repeatedFloatField,
+        const vector<string>& repeatedStringField, const bool* repeatedBoolField,
+        const size_t repeatedBoolFieldLength, const vector<int>& repeatedEnumField);
+
+std::unique_ptr<LogEvent> CreateTestAtomReportedEvent(
+        uint64_t timestampNs, const vector<int>& attributionUids,
+        const vector<string>& attributionTags, const int intField, const long longField,
+        const float floatField, const string& stringField, const bool boolField,
+        const TestAtomReported::State enumField, const vector<uint8_t>& bytesField,
+        const vector<int>& repeatedIntField, const vector<int64_t>& repeatedLongField,
+        const vector<float>& repeatedFloatField, const vector<string>& repeatedStringField,
+        const bool* repeatedBoolField, const size_t repeatedBoolFieldLength,
+        const vector<int>& repeatedEnumField);
 
 // Create a statsd log event processor upon the start time in seconds, config and key.
 sp<StatsLogProcessor> CreateStatsLogProcessor(const int64_t timeBaseNs, const int64_t currentTimeNs,

@@ -59,6 +59,14 @@ void makeLogEvent(LogEvent* logEvent, const int32_t atomId, const int64_t timest
 
     parseStatsEventToLogEvent(statsEvent, logEvent);
 }
+
+void makeRepeatedIntLogEvent(LogEvent* logEvent, const int32_t atomId,
+                             const vector<int>& intArray) {
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, atomId);
+    AStatsEvent_writeInt32Array(statsEvent, intArray.data(), intArray.size());
+    parseStatsEventToLogEvent(statsEvent, logEvent);
+}
 }  // anonymous namespace
 
 TEST(AtomMatcherTest, TestFieldTranslation) {
@@ -146,6 +154,76 @@ TEST(AtomMatcherTest, TestFilter_ALL) {
 
     EXPECT_EQ((int32_t)0x00020000, output.getValues()[6].mField.getField());
     EXPECT_EQ("some value", output.getValues()[6].mValue.str_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_FIRST) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::FIRST);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)1, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01010100, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)21, output.getValues()[0].mValue.int_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_LAST) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::LAST);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)1, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01018000, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)13, output.getValues()[0].mValue.int_value);
+}
+
+TEST(AtomMatcherTest, TestFilterRepeated_ALL) {
+    FieldMatcher matcher;
+    matcher.set_field(123);
+    FieldMatcher* child = matcher.add_child();
+    child->set_field(1);
+    child->set_position(Position::ALL);
+
+    vector<Matcher> matchers;
+    translateFieldMatcher(matcher, &matchers);
+
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    vector<int> intArray = {21, 9, 13};
+    makeRepeatedIntLogEvent(&event, 123, intArray);
+
+    HashableDimensionKey output;
+    EXPECT_TRUE(filterValues(matchers, event.getValues(), &output));
+
+    ASSERT_EQ((size_t)3, output.getValues().size());
+    EXPECT_EQ((int32_t)0x01010100, output.getValues()[0].mField.getField());
+    EXPECT_EQ((int32_t)21, output.getValues()[0].mValue.int_value);
+    EXPECT_EQ((int32_t)0x01010200, output.getValues()[1].mField.getField());
+    EXPECT_EQ((int32_t)9, output.getValues()[1].mValue.int_value);
+    EXPECT_EQ((int32_t)0x01010300, output.getValues()[2].mField.getField());
+    EXPECT_EQ((int32_t)13, output.getValues()[2].mValue.int_value);
 }
 
 TEST(AtomMatcherTest, TestSubDimension) {
@@ -511,6 +589,64 @@ TEST(AtomMatcherTest, TestWriteAtomToProto) {
     EXPECT_EQ(2222, atom.attribution_node(1).uid());
     EXPECT_EQ("location2", atom.attribution_node(1).tag());
     EXPECT_EQ(999, atom.num_results());
+}
+
+TEST(AtomMatcherTest, TestWriteAtomWithRepeatedFieldsToProto) {
+    vector<int> intArray = {3, 6};
+    vector<int64_t> longArray = {1000L, 10002L};
+    vector<float> floatArray = {0.3f, 0.09f};
+    vector<string> stringArray = {"str1", "str2"};
+    int boolArrayLength = 2;
+    bool boolArray[boolArrayLength];
+    boolArray[0] = 1;
+    boolArray[1] = 0;
+    vector<int> enumArray = {TestAtomReported::ON, TestAtomReported::OFF};
+
+    unique_ptr<LogEvent> event = CreateTestAtomReportedEventVariableRepeatedFields(
+            12345, intArray, longArray, floatArray, stringArray, boolArray, boolArrayLength,
+            enumArray);
+
+    android::util::ProtoOutputStream protoOutput;
+    writeFieldValueTreeToStream(event->GetTagId(), event->getValues(), &protoOutput);
+
+    vector<uint8_t> outData;
+    outData.resize(protoOutput.size());
+    size_t pos = 0;
+    sp<ProtoReader> reader = protoOutput.data();
+    while (reader->readBuffer() != NULL) {
+        size_t toRead = reader->currentToRead();
+        std::memcpy(&(outData[pos]), reader->readBuffer(), toRead);
+        pos += toRead;
+        reader->move(toRead);
+    }
+
+    Atom result;
+    ASSERT_EQ(true, result.ParseFromArray(&outData[0], outData.size()));
+    EXPECT_EQ(Atom::PushedCase::kTestAtomReported, result.pushed_case());
+    TestAtomReported atom = result.test_atom_reported();
+    ASSERT_EQ(atom.repeated_int_field_size(), 2);
+    EXPECT_EQ(atom.repeated_int_field(0), 3);
+    EXPECT_EQ(atom.repeated_int_field(1), 6);
+
+    ASSERT_EQ(atom.repeated_long_field_size(), 2);
+    EXPECT_EQ(atom.repeated_long_field(0), 1000L);
+    EXPECT_EQ(atom.repeated_long_field(1), 10002L);
+
+    ASSERT_EQ(atom.repeated_float_field_size(), 2);
+    EXPECT_EQ(atom.repeated_float_field(0), 0.3f);
+    EXPECT_EQ(atom.repeated_float_field(1), 0.09f);
+
+    ASSERT_EQ(atom.repeated_string_field_size(), 2);
+    EXPECT_EQ(atom.repeated_string_field(0), "str1");
+    EXPECT_EQ(atom.repeated_string_field(1), "str2");
+
+    ASSERT_EQ(atom.repeated_boolean_field_size(), 2);
+    EXPECT_EQ(atom.repeated_boolean_field(0), 1);
+    EXPECT_EQ(atom.repeated_boolean_field(1), 0);
+
+    ASSERT_EQ(atom.repeated_enum_field_size(), 2);
+    EXPECT_EQ(atom.repeated_enum_field(0), TestAtomReported::ON);
+    EXPECT_EQ(atom.repeated_enum_field(1), TestAtomReported::OFF);
 }
 
 /*
