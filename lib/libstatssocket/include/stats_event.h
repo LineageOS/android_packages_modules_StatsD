@@ -175,6 +175,8 @@ void AStatsEvent_writeBoolArray(AStatsEvent* event, const bool* elements, size_t
 /**
  * Write a string array field to this StatsEvent.
  *
+ * String array encoding is UTF8.
+ *
  * Strings must be null terminated. Max size of array is 127. If exceeded, array is not written and
  * ERROR_LIST_TOO_LONG is appended to StatsEvent.
  **/
