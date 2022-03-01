@@ -234,6 +234,10 @@ void addPredicateToPredicateCombination(const Predicate& predicate, Predicate* c
 // Create dimensions from primitive fields.
 FieldMatcher CreateDimensions(const int atomId, const std::vector<int>& fields);
 
+// Create dimensions from repeated primitive fields.
+FieldMatcher CreateRepeatedDimensions(const int atomId, const std::vector<int>& fields,
+                                      const std::vector<Position>& positions);
+
 // Create dimensions by attribution uid and tag.
 FieldMatcher CreateAttributionUidAndTagDimensions(const int atomId,
                                                   const std::vector<Position>& positions);
