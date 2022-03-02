@@ -103,7 +103,6 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
     private static IStatsd sStatsd;
     private static final Object sStatsdLock = new Object();
 
-    private final OnAlarmListener mAnomalyAlarmListener;
     private final OnAlarmListener mPullingAlarmListener;
     private final OnAlarmListener mPeriodicAlarmListener;
 
@@ -127,7 +126,6 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
         handlerThread.start();
         mHandler = new CompanionHandler(handlerThread.getLooper());
 
-        mAnomalyAlarmListener = new AnomalyAlarmListener(context);
         mPullingAlarmListener = new PullingAlarmListener(context);
         mPeriodicAlarmListener = new PeriodicAlarmListener(context);
     }
@@ -357,41 +355,6 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
         }
     }
 
-    public static final class AnomalyAlarmListener implements OnAlarmListener {
-        private final Context mContext;
-
-        AnomalyAlarmListener(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        public void onAlarm() {
-            if (DEBUG) {
-                Log.i(TAG, "StatsCompanionService believes an anomaly has occurred at time "
-                        + System.currentTimeMillis() + "ms.");
-            }
-            IStatsd statsd = getStatsdNonblocking();
-            if (statsd == null) {
-                Log.w(TAG, "Could not access statsd to inform it of anomaly alarm firing");
-                return;
-            }
-
-            // Wakelock needs to be retained while calling statsd.
-            Thread thread = new WakelockThread(mContext,
-                    AnomalyAlarmListener.class.getCanonicalName(), new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                statsd.informAnomalyAlarmFired();
-                            } catch (RemoteException e) {
-                                Log.w(TAG, "Failed to inform statsd of anomaly alarm firing", e);
-                            }
-                        }
-                    });
-            thread.start();
-        }
-    }
-
     public final static class PullingAlarmListener implements OnAlarmListener {
         private final Context mContext;
 
@@ -490,32 +453,12 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
     }
 
     @Override // Binder call
-    public void setAnomalyAlarm(long timestampMs) {
-        StatsCompanion.enforceStatsdCallingUid();
-        if (DEBUG) Log.d(TAG, "Setting anomaly alarm for " + timestampMs);
-        final long callingToken = Binder.clearCallingIdentity();
-        try {
-            // using ELAPSED_REALTIME, not ELAPSED_REALTIME_WAKEUP, so if device is asleep, will
-            // only fire when it awakens.
-            // AlarmManager will automatically cancel any previous mAnomalyAlarmListener alarm.
-            mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME, timestampMs, TAG + ".anomaly",
-                    mAnomalyAlarmListener, mHandler);
-        } finally {
-            Binder.restoreCallingIdentity(callingToken);
-        }
-    }
+    // Unused, but keep the IPC due to the bootstrap apex issue on R.
+    public void setAnomalyAlarm(long timestampMs) {}
 
     @Override // Binder call
-    public void cancelAnomalyAlarm() {
-        StatsCompanion.enforceStatsdCallingUid();
-        if (DEBUG) Log.d(TAG, "Cancelling anomaly alarm");
-        final long callingToken = Binder.clearCallingIdentity();
-        try {
-            mAlarmManager.cancel(mAnomalyAlarmListener);
-        } finally {
-            Binder.restoreCallingIdentity(callingToken);
-        }
-    }
+    // Unused, but keep the IPC due to the bootstrap apex issue on R.
+    public void cancelAnomalyAlarm() {}
 
     @Override // Binder call
     public void setAlarmForSubscriberTriggering(long timestampMs) {
@@ -697,11 +640,11 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
             return;
         }
 
-        // Cleann up from previous statsd - cancel any alarms that had been set. Do this here
-        // instead of in binder death because statsd can come back and set different alarms, or not
-        // want to set an alarm when it had been set. This guarantees that when we get a new statsd,
-        // we cancel any alarms before it is able to set them.
-        cancelAnomalyAlarm();
+        // Cleann up from previous statsd - cancel any alarms that had been set.
+        // Do this here instead of in binder death because statsd can come back
+        // and set different alarms, or not want to set an alarm when it had
+        // been set. This guarantees that when we get a new statsd, we cancel
+        // any alarms before it is able to set them.
         cancelPullingAlarm();
         cancelAlarmForSubscriberTriggering();
 
