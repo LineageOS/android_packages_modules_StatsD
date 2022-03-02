@@ -88,6 +88,14 @@ public final class StatsDimensionsValueTest {
         assertThat(sdvChildren.get(3).getFloatValue()).isEqualTo(floatValue);
         assertThat(sdvChildren.get(4).getBooleanValue()).isEqualTo(boolValue);
 
+        // Try to get wrong types, ensure that the default values are returned
+        assertThat(sdvChildren.get(0).getIntValue()).isEqualTo(0);
+        assertThat(sdvChildren.get(0).getLongValue()).isEqualTo(0);
+        assertThat(sdvChildren.get(0).getBooleanValue()).isEqualTo(false);
+        assertThat(sdvChildren.get(0).getFloatValue()).isEqualTo(0F);
+        assertThat(sdvChildren.get(0).getTupleValueList()).isNull();
+        assertThat(sdvChildren.get(1).getTupleValueList()).isNull();
+
         // Ensure that StatsDimensionsValue and StatsDimensionsValueParcel are
         // parceled equivalently
         Parcel sdvpParcel = Parcel.obtain();
