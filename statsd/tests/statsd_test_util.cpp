@@ -487,6 +487,22 @@ FieldMatcher CreateDimensions(const int atomId, const std::vector<int>& fields) 
     return dimensions;
 }
 
+FieldMatcher CreateRepeatedDimensions(const int atomId, const std::vector<int>& fields,
+                                      const std::vector<Position>& positions) {
+    FieldMatcher dimensions;
+    if (fields.size() != positions.size()) {
+        return dimensions;
+    }
+
+    dimensions.set_field(atomId);
+    for (size_t i = 0; i < fields.size(); i++) {
+        auto child = dimensions.add_child();
+        child->set_field(fields[i]);
+        child->set_position(positions[i]);
+    }
+    return dimensions;
+}
+
 FieldMatcher CreateAttributionUidAndOtherDimensions(const int atomId,
                                                     const std::vector<Position>& positions,
                                                     const std::vector<int>& fields) {
@@ -1651,14 +1667,13 @@ void backfillStringInReport(ConfigMetricsReportList *config_report_list) {
 
 bool backfillDimensionPath(const DimensionsValue& path,
                            const google::protobuf::RepeatedPtrField<DimensionsValue>& leafValues,
-                           int* leafIndex,
-                           DimensionsValue* dimension) {
+                           int* leafIndex, DimensionsValue* dimension) {
     dimension->set_field(path.field());
     if (path.has_value_tuple()) {
         for (int i = 0; i < path.value_tuple().dimensions_value_size(); ++i) {
-            if (!backfillDimensionPath(
-                path.value_tuple().dimensions_value(i), leafValues, leafIndex,
-                dimension->mutable_value_tuple()->add_dimensions_value())) {
+            if (!backfillDimensionPath(path.value_tuple().dimensions_value(i), leafValues,
+                                       leafIndex,
+                                       dimension->mutable_value_tuple()->add_dimensions_value())) {
                 return false;
             }
         }
