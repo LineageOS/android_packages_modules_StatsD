@@ -465,26 +465,6 @@ public class AtomTests {
     }
 
     @Test
-    public void testScreenBrightness() {
-        Context context = InstrumentationRegistry.getContext();
-        PowerManager pm = context.getSystemService(PowerManager.class);
-        PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK |
-                PowerManager.ACQUIRE_CAUSES_WAKEUP, "StatsdBrightnessTest");
-        wl.acquire();
-        sleep(500);
-
-        setScreenBrightness(47);
-        sleep(500);
-        setScreenBrightness(100);
-        sleep(500);
-        setScreenBrightness(198);
-        sleep(500);
-
-
-        wl.release();
-    }
-
-    @Test
     public void testSyncState() throws Exception {
 
         Context context = InstrumentationRegistry.getContext();
