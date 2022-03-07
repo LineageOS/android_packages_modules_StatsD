@@ -130,22 +130,6 @@ public class StatsCompanionService extends IStatsCompanionService.Stub {
         mPeriodicAlarmListener = new PeriodicAlarmListener(context);
     }
 
-    private final static int[] toIntArray(List<Integer> list) {
-        int[] ret = new int[list.size()];
-        for (int i = 0; i < ret.length; i++) {
-            ret[i] = list.get(i);
-        }
-        return ret;
-    }
-
-    private final static long[] toLongArray(List<Long> list) {
-        long[] ret = new long[list.size()];
-        for (int i = 0; i < ret.length; i++) {
-            ret[i] = list.get(i);
-        }
-        return ret;
-    }
-
     /**
      * Non-blocking call to retrieve a reference to statsd
      *
