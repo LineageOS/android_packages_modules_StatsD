@@ -51,7 +51,7 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
                                       int tagId, const vector<int>& additiveFieldsVec) {
     // Check the first LogEvent for attribution chain or a uid field as either all atoms with this
     // tagId have them or none of them do.
-    std::pair<int, int> attrIndexRange;
+    std::pair<size_t, size_t> attrIndexRange;
     const bool hasAttributionChain = data[0]->hasAttributionChain(&attrIndexRange);
     const uint8_t numUidFields = data[0]->getNumUidFields();
 
@@ -68,7 +68,7 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
         }
         if (hasAttributionChain) {
             vector<FieldValue>* const fieldValues = event->getMutableValues();
-            for (int i = attrIndexRange.first; i <= attrIndexRange.second; i++) {
+            for (size_t i = attrIndexRange.first; i <= attrIndexRange.second; i++) {
                 FieldValue& fieldValue = fieldValues->at(i);
                 if (isAttributionUidField(fieldValue)) {
                     const int hostUid = uidMap->getHostUidOrSelf(fieldValue.mValue.int_value);

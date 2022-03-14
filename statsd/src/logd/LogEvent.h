@@ -16,13 +16,14 @@
 
 #pragma once
 
-#include "FieldValue.h"
-
 #include <android/util/ProtoOutputStream.h>
 #include <private/android_logger.h>
 
+#include <optional>
 #include <string>
 #include <vector>
+
+#include "FieldValue.h"
 
 namespace android {
 namespace os {
@@ -156,20 +157,20 @@ public:
     // Returns whether this LogEvent has an AttributionChain.
     // If it does and indexRange is not a nullptr, populate indexRange with the start and end index
     // of the AttributionChain within mValues.
-    bool hasAttributionChain(std::pair<int, int>* indexRange = nullptr) const;
+    bool hasAttributionChain(std::pair<size_t, size_t>* indexRange = nullptr) const;
 
     // Returns the index of the exclusive state field within the FieldValues vector if
     // an exclusive state exists. If there is no exclusive state field, returns -1.
     //
     // If the index within the atom definition is desired, do the following:
-    //    int vectorIndex = LogEvent.getExclusiveStateFieldIndex();
-    //    if (vectorIndex != -1) {
-    //        FieldValue& v = LogEvent.getValues()[vectorIndex];
+    //    const std::optional<size_t>& vectorIndex = LogEvent.getExclusiveStateFieldIndex();
+    //    if (!vectorIndex) {
+    //        FieldValue& v = LogEvent.getValues()[vectorIndex.value()];
     //        int atomIndex = v.mField.getPosAtDepth(0);
     //    }
     // Note that atomIndex is 1-indexed.
-    inline int getExclusiveStateFieldIndex() const {
-        return static_cast<int>(mExclusiveStateFieldIndex);
+    inline std::optional<size_t> getExclusiveStateFieldIndex() const {
+        return mExclusiveStateFieldIndex;
     }
 
     // If a reset state is not sent in the StatsEvent, returns -1. Note that a
@@ -215,11 +216,13 @@ private:
     void parseArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
 
     void skipAnnotations(uint8_t numAnnotations);
-    void parseAnnotations(uint8_t numAnnotations, int firstUidInChainIndex = -1);
+    void parseAnnotations(uint8_t numAnnotations,
+                          std::optional<size_t> firstUidInChainIndex = std::nullopt);
     void parseIsUidAnnotation(uint8_t annotationType);
     void parseTruncateTimestampAnnotation(uint8_t annotationType);
     void parsePrimaryFieldAnnotation(uint8_t annotationType);
-    void parsePrimaryFieldFirstUidAnnotation(uint8_t annotationType, int firstUidInChainIndex);
+    void parsePrimaryFieldFirstUidAnnotation(uint8_t annotationType,
+                                             std::optional<size_t> firstUidInChainIndex);
     void parseExclusiveStateAnnotation(uint8_t annotationType);
     void parseTriggerStateResetAnnotation(uint8_t annotationType);
     void parseStateNestedAnnotation(uint8_t annotationType);
@@ -302,13 +305,11 @@ private:
     bool mTruncateTimestamp = false;
     int mResetState = -1;
 
-    uint8_t mNumUidFields = 0;
+    size_t mNumUidFields = 0;
 
-    // Indexes within the FieldValue vector can be stored in 7 bits because
-    // that's the assumption enforced by the encoding used in FieldValue.
-    int8_t mAttributionChainStartIndex = -1;
-    int8_t mAttributionChainEndIndex = -1;
-    int8_t mExclusiveStateFieldIndex = -1;
+    std::optional<size_t> mAttributionChainStartIndex;
+    std::optional<size_t> mAttributionChainEndIndex;
+    std::optional<size_t> mExclusiveStateFieldIndex;
 };
 
 void writeExperimentIdsToProto(const std::vector<int64_t>& experimentIds, std::vector<uint8_t>* protoOut);
