@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.android.tests.statsd;
+package com.android.tests.statsd.framework.app;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;

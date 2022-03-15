@@ -16,22 +16,18 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="com.android.tests.statsd.framework.app"
+          package="com.android.tests.statsd.framework.appnopermission"
 >
 
     <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="30" />
 
-    <uses-permission android:name="android.permission.DUMP" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
-
-
-    <application android:label="Statsd Framework Test App">
+    <application android:label="Statsd Framework Test App Without Permissions">
         <uses-library android:name="android.test.runner" />
     </application>
 
     <instrumentation
         android:name="androidx.test.runner.AndroidJUnitRunner"
-        android:targetPackage="com.android.tests.statsd.framework.app"
+        android:targetPackage="com.android.tests.statsd.framework.appnopermission"
         android:label="Framework Statsd Host Tests" />
 
 </manifest>
