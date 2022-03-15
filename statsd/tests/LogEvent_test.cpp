@@ -223,25 +223,6 @@ TEST(LogEventTest, TestByteArrayWithNullCharacter) {
     AStatsEvent_release(event);
 }
 
-TEST(LogEventTest, TestTooManyTopLevelElements) {
-    int32_t numElements = 128;
-    AStatsEvent* event = AStatsEvent_obtain();
-    AStatsEvent_setAtomId(event, 100);
-
-    for (int i = 0; i < numElements; i++) {
-        AStatsEvent_writeInt32(event, i);
-    }
-
-    AStatsEvent_build(event);
-
-    size_t size;
-    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
-    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
-    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
-
-    AStatsEvent_release(event);
-}
-
 TEST(LogEventTest, TestAttributionChain) {
     AStatsEvent* event = AStatsEvent_obtain();
     AStatsEvent_setAtomId(event, 100);
@@ -268,7 +249,7 @@ TEST(LogEventTest, TestAttributionChain) {
     const vector<FieldValue>& values = logEvent.getValues();
     ASSERT_EQ(4, values.size());  // 2 per attribution node
 
-    std::pair<size_t, size_t> attrIndexRange;
+    std::pair<int, int> attrIndexRange;
     EXPECT_TRUE(logEvent.hasAttributionChain(&attrIndexRange));
     EXPECT_EQ(0, attrIndexRange.first);
     EXPECT_EQ(3, attrIndexRange.second);
@@ -298,31 +279,6 @@ TEST(LogEventTest, TestAttributionChain) {
     EXPECT_EQ(expectedField, tag2Item.mField);
     EXPECT_EQ(Type::STRING, tag2Item.mValue.getType());
     EXPECT_EQ(tag2, tag2Item.mValue.str_value);
-
-    AStatsEvent_release(event);
-}
-
-TEST(LogEventTest, TestAttributionChainTooManyElements) {
-    int32_t numNodes = 128;
-    uint32_t uids[numNodes];
-    vector<string> tags(numNodes);  // storage that cTag elements point to
-    const char* cTags[numNodes];
-
-    for (int i = 0; i < numNodes; i++) {
-        uids[i] = i;
-        tags.push_back("test");
-        cTags[i] = tags[i].c_str();
-    }
-
-    AStatsEvent* event = AStatsEvent_obtain();
-    AStatsEvent_setAtomId(event, 100);
-    AStatsEvent_writeAttributionChain(event, uids, cTags, numNodes);
-    AStatsEvent_build(event);
-
-    size_t size;
-    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
-    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
-    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
 
     AStatsEvent_release(event);
 }
@@ -591,26 +547,90 @@ TEST(LogEventTest, TestResetStateAnnotation) {
     EXPECT_EQ(event.getResetState(), resetState);
 }
 
-TEST(LogEventTest, TestUidAnnotationWithInt8MaxValues) {
-    int32_t numElements = INT8_MAX;
-    int32_t int32Array[numElements];
-
-    for (int i = 0; i < numElements; i++) {
-        int32Array[i] = i;
-    }
-
+TEST(LogEventTest, TestExclusiveStateAnnotationAfterTooManyFields) {
     AStatsEvent* event = AStatsEvent_obtain();
     AStatsEvent_setAtomId(event, 100);
-    AStatsEvent_writeInt32Array(event, int32Array, numElements);
-    AStatsEvent_writeInt32(event, 10);
-    AStatsEvent_writeInt32(event, 11);
-    AStatsEvent_addBoolAnnotation(event, ANNOTATION_ID_IS_UID, true);
+
+    const unsigned int numAttributionNodes = 64;
+
+    uint32_t uids[numAttributionNodes];
+    const char* tags[numAttributionNodes];
+
+    for (unsigned int i = 1; i <= numAttributionNodes; i++) {
+        uids[i-1] = i;
+        tags[i-1] = std::to_string(i).c_str();
+    }
+
+    AStatsEvent_writeAttributionChain(event, uids, tags, numAttributionNodes);
+    AStatsEvent_writeInt32(event, 1);
+    AStatsEvent_addBoolAnnotation(event, ANNOTATION_ID_EXCLUSIVE_STATE, true);
+
     AStatsEvent_build(event);
 
     size_t size;
     uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
     LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
-    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(-1, logEvent.getExclusiveStateFieldIndex());
+
+    AStatsEvent_release(event);
+}
+
+TEST(LogEventTest, TestUidAnnotationAfterTooManyFields) {
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+
+    const unsigned int numAttributionNodes = 64;
+
+    uint32_t uids[numAttributionNodes];
+    const char* tags[numAttributionNodes];
+
+    for (unsigned int i = 1; i <= numAttributionNodes; i++) {
+        uids[i-1] = i;
+        tags[i-1] = std::to_string(i).c_str();
+    }
+
+    AStatsEvent_writeAttributionChain(event, uids, tags, numAttributionNodes);
+    AStatsEvent_writeInt32(event, 1);
+    AStatsEvent_addBoolAnnotation(event, ANNOTATION_ID_IS_UID, true);
+
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(0, logEvent.getNumUidFields());
+
+    AStatsEvent_release(event);
+}
+
+TEST(LogEventTest, TestAttributionChainEndIndexAfterTooManyFields) {
+    AStatsEvent* event = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(event, 100);
+
+    const unsigned int numAttributionNodes = 65;
+
+    uint32_t uids[numAttributionNodes];
+    const char* tags[numAttributionNodes];
+
+    for (unsigned int i = 1; i <= numAttributionNodes; i++) {
+        uids[i-1] = i;
+        tags[i-1] = std::to_string(i).c_str();
+    }
+
+    AStatsEvent_writeAttributionChain(event, uids, tags, numAttributionNodes);
+
+    AStatsEvent_build(event);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(event, &size);
+
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+    EXPECT_FALSE(logEvent.hasAttributionChain());
 
     AStatsEvent_release(event);
 }
