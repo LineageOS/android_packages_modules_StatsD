@@ -83,7 +83,7 @@ public:
 
     struct WhatOptions {
         const bool containsAnyPositionInDimensionsInWhat;
-        const bool sliceByPositionAll;
+        const bool containsRepeatedFieldDimension;
         const int whatMatcherIndex;
         const sp<EventMatcherWizard>& matcherWizard;
         const FieldMatcher& dimensionsInWhat;

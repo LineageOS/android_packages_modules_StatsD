@@ -728,7 +728,7 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
             MillisToNano(TimeUnitToBucketSizeInMillisGuardrailed(key.GetUid(), bucketSizeTimeUnit));
 
     const bool containsAnyPositionInDimensionsInWhat = HasPositionANY(metric.dimensions_in_what());
-    const bool sliceByPositionAll = HasPositionALL(metric.dimensions_in_what());
+    const bool containsRepeatedFieldDimension = HasPosition(metric.dimensions_in_what());
 
     const auto [dimensionSoftLimit, dimensionHardLimit] =
             StatsdStats::getAtomDimensionKeySizeLimits(pullTagId);
@@ -743,8 +743,8 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
             key, metric, metricHash, {pullTagId, pullerManager},
             {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
              conditionCorrectionThresholdNs, getAppUpgradeBucketSplit(metric)},
-            {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
-             metric.dimensions_in_what(), fieldMatchers},
+            {containsAnyPositionInDimensionsInWhat, containsRepeatedFieldDimension, trackerIndex,
+             matcherWizard, metric.dimensions_in_what(), fieldMatchers},
             {conditionIndex, metric.links(), initialConditionCache, wizard},
             {metric.state_link(), slicedStateAtoms, stateGroupMap},
             {eventActivationMap, eventDeactivationMap}, {dimensionSoftLimit, dimensionHardLimit});
@@ -845,7 +845,7 @@ optional<sp<MetricProducer>> createKllMetricProducerAndUpdateMetadata(
             MillisToNano(TimeUnitToBucketSizeInMillisGuardrailed(key.GetUid(), bucketSizeTimeUnit));
 
     const bool containsAnyPositionInDimensionsInWhat = HasPositionANY(metric.dimensions_in_what());
-    const bool sliceByPositionAll = HasPositionALL(metric.dimensions_in_what());
+    const bool containsRepeatedFieldDimension = HasPosition(metric.dimensions_in_what());
 
     sp<AtomMatchingTracker> atomMatcher = allAtomMatchingTrackers.at(trackerIndex);
     const int atomTagId = *(atomMatcher->getAtomIds().begin());
@@ -856,8 +856,8 @@ optional<sp<MetricProducer>> createKllMetricProducerAndUpdateMetadata(
             key, metric, metricHash, {/*pullTagId=*/-1, pullerManager},
             {timeBaseNs, currentTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
              /*conditionCorrectionThresholdNs=*/nullopt, getAppUpgradeBucketSplit(metric)},
-            {containsAnyPositionInDimensionsInWhat, sliceByPositionAll, trackerIndex, matcherWizard,
-             metric.dimensions_in_what(), fieldMatchers},
+            {containsAnyPositionInDimensionsInWhat, containsRepeatedFieldDimension, trackerIndex,
+             matcherWizard, metric.dimensions_in_what(), fieldMatchers},
             {conditionIndex, metric.links(), initialConditionCache, wizard},
             {metric.state_link(), slicedStateAtoms, stateGroupMap},
             {eventActivationMap, eventDeactivationMap}, {dimensionSoftLimit, dimensionHardLimit});

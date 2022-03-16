@@ -440,7 +440,7 @@ struct FieldValue {
 };
 
 bool HasPositionANY(const FieldMatcher& matcher);
-bool HasPositionALL(const FieldMatcher& matcher);
+bool HasPosition(const FieldMatcher& matcher);
 
 bool isAttributionUidField(const FieldValue& value);
 
