@@ -215,10 +215,9 @@ private:
     void parseAttributionChain(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
     void parseArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAnnotations);
 
-    void skipAnnotations(uint8_t numAnnotations);
-    void parseAnnotations(uint8_t numAnnotations,
+    void parseAnnotations(uint8_t numAnnotations, uint8_t numElements = 1,
                           std::optional<size_t> firstUidInChainIndex = std::nullopt);
-    void parseIsUidAnnotation(uint8_t annotationType);
+    void parseIsUidAnnotation(uint8_t annotationType, uint8_t numElements);
     void parseTruncateTimestampAnnotation(uint8_t annotationType);
     void parsePrimaryFieldAnnotation(uint8_t annotationType);
     void parsePrimaryFieldFirstUidAnnotation(uint8_t annotationType,

@@ -115,6 +115,15 @@ void makeRepeatedIntLogEvent(LogEvent* logEvent, const int32_t atomId,
     parseStatsEventToLogEvent(statsEvent, logEvent);
 }
 
+void makeRepeatedUidLogEvent(LogEvent* logEvent, const int32_t atomId,
+                             const vector<int>& intArray) {
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, atomId);
+    AStatsEvent_writeInt32Array(statsEvent, intArray.data(), intArray.size());
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    parseStatsEventToLogEvent(statsEvent, logEvent);
+}
+
 void makeRepeatedStringLogEvent(LogEvent* logEvent, const int32_t atomId,
                                 const vector<string>& stringArray) {
     vector<const char*> cStringArray(stringArray.size());
@@ -408,8 +417,65 @@ TEST(AtomMatcherTest, TestUidFieldMatcher) {
     EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event2));
 
     // Event has is_uid annotation, but uid maps to different package name.
-    simpleMatcher->mutable_field_value_matcher(0)->set_eq_string("Pkg2");
+    simpleMatcher->mutable_field_value_matcher(0)->set_eq_string(
+            "pkg2");  // package names are normalized
     EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
+}
+
+TEST(AtomMatcherTest, TestRepeatedUidFieldMatcher) {
+    sp<UidMap> uidMap = new UidMap();
+    uidMap->updateMap(
+            1, {1111, 1111, 2222, 3333, 3333} /* uid list */, {1, 1, 2, 1, 2} /* version list */,
+            {android::String16("v1"), android::String16("v1"), android::String16("v2"),
+             android::String16("v1"), android::String16("v2")},
+            {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
+             android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
+            {android::String16(""), android::String16(""), android::String16(""),
+             android::String16(""), android::String16("")});
+
+    // Set up matcher.
+    AtomMatcher matcher;
+    SimpleAtomMatcher* simpleMatcher = matcher.mutable_simple_atom_matcher();
+    simpleMatcher->set_atom_id(TAG_ID);
+    FieldValueMatcher* fieldValueMatcher = simpleMatcher->add_field_value_matcher();
+    fieldValueMatcher->set_field(FIELD_ID_1);
+
+    // No is_uid annotation, no mapping from uid to package name.
+    vector<int> intArray = {1111, 3333, 2222};
+    LogEvent event1(/*uid=*/0, /*pid=*/0);
+    makeRepeatedIntLogEvent(&event1, TAG_ID, intArray);
+
+    fieldValueMatcher->set_position(Position::FIRST);
+    fieldValueMatcher->set_eq_string("pkg0");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event1));
+
+    fieldValueMatcher->set_position(Position::LAST);
+    fieldValueMatcher->set_eq_string("pkg1");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event1));
+
+    fieldValueMatcher->set_position(Position::ANY);
+    fieldValueMatcher->set_eq_string("pkg2");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event1));
+
+    // is_uid annotation, mapping from uid to package name.
+    LogEvent event2(/*uid=*/0, /*pid=*/0);
+    makeRepeatedUidLogEvent(&event2, TAG_ID, intArray);
+
+    fieldValueMatcher->set_position(Position::FIRST);
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
+    fieldValueMatcher->set_eq_string("pkg0");
+    EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event2));
+
+    fieldValueMatcher->set_position(Position::LAST);
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
+    fieldValueMatcher->set_eq_string("pkg1");
+    EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event2));
+
+    fieldValueMatcher->set_position(Position::ANY);
+    fieldValueMatcher->set_eq_string("pkg");
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event2));
+    fieldValueMatcher->set_eq_string("pkg2");  // package names are normalized
+    EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event2));
 }
 
 TEST(AtomMatcherTest, TestNeqAnyStringMatcher_SingleString) {
@@ -616,6 +682,35 @@ TEST(AtomMatcherTest, TestStringMatcher) {
 
     // Test
     EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event));
+}
+
+TEST(AtomMatcherTest, TestIntMatcher_EmptyRepeatedField) {
+    sp<UidMap> uidMap = new UidMap();
+
+    // Set up the log event.
+    LogEvent event(/*uid=*/0, /*pid=*/0);
+    makeRepeatedIntLogEvent(&event, TAG_ID, {});
+
+    // Set up the matcher.
+    AtomMatcher matcher;
+    SimpleAtomMatcher* simpleMatcher = matcher.mutable_simple_atom_matcher();
+    simpleMatcher->set_atom_id(TAG_ID);
+    FieldValueMatcher* fieldValueMatcher = simpleMatcher->add_field_value_matcher();
+    fieldValueMatcher->set_field(FIELD_ID_1);
+
+    // Match first int.
+    fieldValueMatcher->set_position(Position::FIRST);
+    fieldValueMatcher->set_eq_int(9);
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event));
+
+    // Match last int.
+    fieldValueMatcher->set_position(Position::LAST);
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event));
+
+    // Match any int.
+    fieldValueMatcher->set_position(Position::ANY);
+    fieldValueMatcher->set_eq_int(13);
+    EXPECT_FALSE(matchesSimple(uidMap, *simpleMatcher, event));
 }
 
 TEST(AtomMatcherTest, TestIntMatcher_RepeatedIntField) {
