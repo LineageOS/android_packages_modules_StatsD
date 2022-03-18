@@ -137,6 +137,8 @@ TEST_F(EventMetricE2eTest, TestRepeatedFieldsAndEmptyArrays) {
             boolArray, boolArrayLength, enumArray));
     events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
             bucketStartTimeNs + 20 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 30 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArray));
 
     // Send log events to StatsLogProcessor.
     for (auto& event : events) {
@@ -158,7 +160,7 @@ TEST_F(EventMetricE2eTest, TestRepeatedFieldsAndEmptyArrays) {
     StatsLogReport testAtomEventMetricReport = report.metrics(0);
     EXPECT_EQ(testAtomEventMetricReport.metric_id(), testAtomReportedEventMetric.id());
     EXPECT_TRUE(testAtomEventMetricReport.has_event_metrics());
-    ASSERT_EQ(testAtomEventMetricReport.event_metrics().data_size(), 2);
+    ASSERT_EQ(testAtomEventMetricReport.event_metrics().data_size(), 3);
 
     EventMetricData data = testAtomEventMetricReport.event_metrics().data(0);
     EXPECT_EQ(data.elapsed_timestamp_nanos(), bucketStartTimeNs + 10 * NS_PER_SEC);
@@ -179,6 +181,16 @@ TEST_F(EventMetricE2eTest, TestRepeatedFieldsAndEmptyArrays) {
     EXPECT_EQ(atom.repeated_string_field_size(), 0);
     EXPECT_EQ(atom.repeated_boolean_field_size(), 0);
     EXPECT_EQ(atom.repeated_enum_field_size(), 0);
+
+    data = testAtomEventMetricReport.event_metrics().data(2);
+    atom = data.atom().test_atom_reported();
+    EXPECT_EQ(data.elapsed_timestamp_nanos(), bucketStartTimeNs + 30 * NS_PER_SEC);
+    EXPECT_EQ(atom.repeated_int_field_size(), 0);
+    EXPECT_EQ(atom.repeated_long_field_size(), 0);
+    EXPECT_EQ(atom.repeated_float_field_size(), 0);
+    EXPECT_EQ(atom.repeated_string_field_size(), 0);
+    EXPECT_EQ(atom.repeated_boolean_field_size(), 0);
+    EXPECT_THAT(atom.repeated_enum_field(), ElementsAreArray(enumArray));
 }
 
 TEST_F(EventMetricE2eTest, TestMatchRepeatedFieldPositionFirst) {
@@ -208,6 +220,9 @@ TEST_F(EventMetricE2eTest, TestMatchRepeatedFieldPositionFirst) {
             bucketStartTimeNs + 10 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayNoMatch));
     events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
             bucketStartTimeNs + 20 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayMatch));
+    // No matching is done on an empty array.
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 30 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
 
     // Send log events to StatsLogProcessor.
     for (auto& event : events) {
