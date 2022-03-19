@@ -393,7 +393,7 @@ public class TestDrive {
             }
         }
         void dumpEventMetrics(StatsLogReport report) {
-            final List<StatsLog.EventMetricData> data = report.getEventMetrics().getDataList();
+            final List<StatsLog.EventMetricData> data = Utils.getEventMetricData(report);
             if (data.isEmpty()) {
                 return;
             }
