@@ -520,7 +520,7 @@ protected:
 
     bool mContainANYPositionInDimensionsInWhat;
 
-    bool mSliceByPositionALL;
+    bool mContainsRepeatedFieldDimension;
 
     vector<Matcher> mDimensionsInWhat;  // The dimensions_in_what defined in statsd_config
 

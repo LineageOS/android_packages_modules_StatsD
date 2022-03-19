@@ -1066,6 +1066,9 @@ TEST(CountMetricE2eTest, TestMatchRepeatedFieldPositionAny) {
             bucketStartTimeNs + 40 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayNoOn));
     events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
             bucketStartTimeNs + 60 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayOnLast));
+    // No matching is done on empty array.
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 80 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
 
     // Send log events to StatsLogProcessor.
     for (auto& event : events) {
@@ -1131,6 +1134,8 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionFirst) {
             bucketStartTimeNs + 40 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayOffOn));
     events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
             bucketStartTimeNs + 60 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayOnOn));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 80 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
 
     // Send log events to StatsLogProcessor.
     for (auto& event : events) {
@@ -1144,7 +1149,6 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionFirst) {
                             FAST, &buffer);
     ASSERT_GT(buffer.size(), 0);
     EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
-    backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);
 
@@ -1153,9 +1157,16 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionFirst) {
     EXPECT_TRUE(reports.reports(0).metrics(0).has_count_metrics());
     StatsLogReport::CountMetricDataWrapper countMetrics;
     sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).count_metrics(), &countMetrics);
-    ASSERT_EQ(2, countMetrics.data_size());
+    ASSERT_EQ(3, countMetrics.data_size());
 
+    // Empty dimensions case.
     CountMetricData data = countMetrics.data(0);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 0);
+
+    data = countMetrics.data(1);
     ASSERT_EQ(1, data.bucket_info_size());
     ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
                         1);
@@ -1165,7 +1176,7 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionFirst) {
     EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(),
               TestAtomReported::OFF);
 
-    data = countMetrics.data(1);
+    data = countMetrics.data(2);
     ASSERT_EQ(1, data.bucket_info_size());
     ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
                         2);
@@ -1224,7 +1235,6 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionLast) {
                             FAST, &buffer);
     ASSERT_GT(buffer.size(), 0);
     EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
-    backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);
 
@@ -1360,6 +1370,251 @@ TEST(CountMetricE2eTest, TestRepeatedFieldDimension_PositionAll) {
     EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 14);
     EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(),
               TestAtomReported::ON);
+}
+
+TEST(CountMetricE2eTest, TestMultipleRepeatedFieldDimensions_PositionFirst) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    AtomMatcher testAtomReportedAtomMatcher =
+            CreateSimpleAtomMatcher("TestAtomReportedMatcher", util::TEST_ATOM_REPORTED);
+    *config.add_atom_matcher() = testAtomReportedAtomMatcher;
+
+    int64_t metricId = 123456;
+    CountMetric* countMetric = config.add_count_metric();
+    countMetric->set_id(metricId);
+    countMetric->set_what(testAtomReportedAtomMatcher.id());
+    countMetric->set_bucket(TimeUnit::FIVE_MINUTES);
+    *countMetric->mutable_dimensions_in_what() = CreateRepeatedDimensions(
+            util::TEST_ATOM_REPORTED, {9 /*repeated_int_field*/, 14 /*repeated_enum_field*/},
+            {Position::FIRST, Position::FIRST});
+
+    // Initialize StatsLogProcessor.
+    ConfigKey cfgKey(2000, 921);
+    const uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    const uint64_t bucketSizeNs =
+            TimeUnitToBucketSizeInMillis(config.count_metric(0).bucket()) * 1000000LL;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, cfgKey);
+
+    vector<int> intArrayThree = {3, 6, 9};
+    vector<int> intArraySix = {6, 9};
+    vector<int> enumArrayOn = {TestAtomReported::ON, TestAtomReported::OFF};
+
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 20 * NS_PER_SEC, intArrayThree, {}, {}, {}, {}, 0, enumArrayOn));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 40 * NS_PER_SEC, intArraySix, {}, {}, {}, {}, 0, enumArrayOn));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 60 * NS_PER_SEC, intArrayThree, {}, {}, {}, {}, 0, enumArrayOn));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 80 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArrayOn));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 100 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 120 * NS_PER_SEC, intArraySix, {}, {}, {}, {}, 0, {}));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Check dump report.
+    vector<uint8_t> buffer;
+    ConfigMetricsReportList reports;
+    processor->onDumpReport(cfgKey, bucketStartTimeNs + bucketSizeNs + 1, false, true, ADB_DUMP,
+                            FAST, &buffer);
+    ASSERT_GT(buffer.size(), 0);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+
+    ASSERT_EQ(1, reports.reports_size());
+    ASSERT_EQ(1, reports.reports(0).metrics_size());
+    EXPECT_TRUE(reports.reports(0).metrics(0).has_count_metrics());
+    StatsLogReport::CountMetricDataWrapper countMetrics;
+    sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).count_metrics(), &countMetrics);
+    ASSERT_EQ(5, countMetrics.data_size());
+
+    CountMetricData data = countMetrics.data(0);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 0);
+
+    data = countMetrics.data(1);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 1);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 6);
+
+    data = countMetrics.data(2);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 1);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(),
+              TestAtomReported::ON);
+
+    data = countMetrics.data(3);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        2);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 2);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 3);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(),
+              TestAtomReported::ON);
+
+    data = countMetrics.data(4);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 2);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 6);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(),
+              TestAtomReported::ON);
+}
+
+TEST(CountMetricE2eTest, TestMultipleRepeatedFieldDimensions_PositionAll) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    AtomMatcher testAtomReportedAtomMatcher =
+            CreateSimpleAtomMatcher("TestAtomReportedMatcher", util::TEST_ATOM_REPORTED);
+    *config.add_atom_matcher() = testAtomReportedAtomMatcher;
+
+    int64_t metricId = 123456;
+    CountMetric* countMetric = config.add_count_metric();
+    countMetric->set_id(metricId);
+    countMetric->set_what(testAtomReportedAtomMatcher.id());
+    countMetric->set_bucket(TimeUnit::FIVE_MINUTES);
+    *countMetric->mutable_dimensions_in_what() = CreateRepeatedDimensions(
+            util::TEST_ATOM_REPORTED, {9 /*repeated_int_field*/, 14 /*repeated_enum_field*/},
+            {Position::ALL, Position::ALL});
+
+    // Initialize StatsLogProcessor.
+    ConfigKey cfgKey(2000, 921);
+    const uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    const uint64_t bucketSizeNs =
+            TimeUnitToBucketSizeInMillis(config.count_metric(0).bucket()) * 1000000LL;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, cfgKey);
+
+    vector<int> intArray1 = {3, 6};
+    vector<int> intArray2 = {6, 9};
+    vector<int> enumArray = {TestAtomReported::ON, TestAtomReported::OFF};
+
+    std::vector<std::unique_ptr<LogEvent>> events;
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 20 * NS_PER_SEC, intArray1, {}, {}, {}, {}, 0, enumArray));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 40 * NS_PER_SEC, intArray2, {}, {}, {}, {}, 0, enumArray));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 80 * NS_PER_SEC, intArray1, {}, {}, {}, {}, 0, enumArray));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 100 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, enumArray));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 120 * NS_PER_SEC, {}, {}, {}, {}, {}, 0, {}));
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 140 * NS_PER_SEC, intArray2, {}, {}, {}, {}, 0, {}));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Check dump report.
+    vector<uint8_t> buffer;
+    ConfigMetricsReportList reports;
+    processor->onDumpReport(cfgKey, bucketStartTimeNs + bucketSizeNs + 1, false, true, ADB_DUMP,
+                            FAST, &buffer);
+    ASSERT_GT(buffer.size(), 0);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+
+    ASSERT_EQ(1, reports.reports_size());
+    ASSERT_EQ(1, reports.reports(0).metrics_size());
+    EXPECT_TRUE(reports.reports(0).metrics(0).has_count_metrics());
+    StatsLogReport::CountMetricDataWrapper countMetrics;
+    sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).count_metrics(), &countMetrics);
+    ASSERT_EQ(5, countMetrics.data_size());
+
+    CountMetricData data = countMetrics.data(0);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 0);
+
+    data = countMetrics.data(1);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 2);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 6);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(), 9);
+
+    data = countMetrics.data(2);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 2);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(),
+              TestAtomReported::ON);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(),
+              TestAtomReported::OFF);
+
+    data = countMetrics.data(3);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        2);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 4);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 3);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(), 6);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(2).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(2).value_int(),
+              TestAtomReported::ON);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(3).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(3).value_int(),
+              TestAtomReported::OFF);
+
+    data = countMetrics.data(4);
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    EXPECT_EQ(util::TEST_ATOM_REPORTED, data.dimensions_in_what().field());
+    ASSERT_EQ(data.dimensions_in_what().value_tuple().dimensions_value_size(), 4);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(0).value_int(), 6);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).field(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(1).value_int(), 9);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(2).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(2).value_int(),
+              TestAtomReported::ON);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(3).field(), 14);
+    EXPECT_EQ(data.dimensions_in_what().value_tuple().dimensions_value(3).value_int(),
+              TestAtomReported::OFF);
 }
 
 }  // namespace statsd

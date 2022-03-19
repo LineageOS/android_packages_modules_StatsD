@@ -101,7 +101,7 @@ ValueMetricProducer<AggregatedValue, DimExtras>::ValueMetricProducer(
         translateFieldMatcher(whatOptions.dimensionsInWhat, &mDimensionsInWhat);
     }
     mContainANYPositionInDimensionsInWhat = whatOptions.containsAnyPositionInDimensionsInWhat;
-    mSliceByPositionALL = whatOptions.sliceByPositionAll;
+    mContainsRepeatedFieldDimension = whatOptions.containsRepeatedFieldDimension;
 
     if (conditionOptions.conditionLinks.size() > 0) {
         for (const auto& link : conditionOptions.conditionLinks) {
@@ -324,8 +324,8 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onDumpReportLocked(
     }
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_TIME_BASE, (long long)mTimeBaseNs);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_SIZE, (long long)mBucketSizeNs);
-    // Fills the dimension path if not slicing by ALL.
-    if (!mSliceByPositionALL) {
+    // Fills the dimension path if not slicing by a repeated field.
+    if (!mContainsRepeatedFieldDimension) {
         if (!mDimensionsInWhat.empty()) {
             uint64_t dimenPathToken =
                     protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_ID_DIMENSION_PATH_IN_WHAT);
@@ -364,7 +364,7 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onDumpReportLocked(
                 protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED | FIELD_ID_DATA);
 
         // First fill dimension.
-        if (mSliceByPositionALL) {
+        if (mContainsRepeatedFieldDimension) {
             uint64_t dimensionToken =
                     protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_ID_DIMENSION_IN_WHAT);
             writeDimensionToProto(metricDimensionKey.getDimensionKeyInWhat(), strSet, protoOutput);
