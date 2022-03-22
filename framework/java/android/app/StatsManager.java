@@ -481,9 +481,11 @@ public final class StatsManager {
                                     + "registered experiment IDs");
                 }
                 throw new StatsUnavailableException("could not connect", e);
+            } catch (SecurityException e) {
+              throw new StatsUnavailableException(e.getMessage(), e);
             } catch (IllegalStateException e) {
-                Log.e(TAG, "Failed to getRegisteredExperimentIds in statsmanager");
-                throw new StatsUnavailableException(e.getMessage(), e);
+              Log.e(TAG, "Failed to getRegisteredExperimentIds in statsmanager");
+              throw new StatsUnavailableException(e.getMessage(), e);
             }
         }
     }
