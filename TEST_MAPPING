@@ -9,7 +9,22 @@
       "name" : "FrameworkStatsdTest"
     },
     {
+      "name" : "FrameworkStatsdHostTest"
+    },
+    {
       "name" : "LibStatsPullTests"
+    },
+    {
+      "name" : "libkll_test"
+    },
+    {
+      "name" : "libstatspull_test"
+    },
+    {
+      "name" : "libstatssocket_test"
+    },
+    {
+      "name" : "statsd_test"
     }
   ],
 
