@@ -20,11 +20,11 @@
 
 #include "StatsService.h"
 #include "config/ConfigKey.h"
-#include "src/stats_log.pb.h"
-#include "src/statsd_config.pb.h"
 #include "guardrail/StatsdStats.h"
 #include "logd/LogEvent.h"
 #include "packages/UidMap.h"
+#include "src/stats_log.pb.h"
+#include "src/statsd_config.pb.h"
 #include "statslog_statsdtest.h"
 #include "storage/StorageManager.h"
 #include "tests/statsd_test_util.h"
@@ -1863,6 +1863,86 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogIsolatedUidAttributionCha
     EXPECT_EQ("tag2", actualFieldValues->at(3).mValue.str_value);
     EXPECT_EQ(field1, actualFieldValues->at(4).mValue.int_value);
     EXPECT_EQ(field2, actualFieldValues->at(5).mValue.int_value);
+}
+
+/* *
+ * Test cases for repeated uid fields:
+ * - empty field
+ * - single host uid
+ * - single isolated uid
+ * - multiple host uids
+ * - multiple isolated uids
+ * - multiple host and isolated uids
+ */
+TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
+    int hostUid1 = 21;
+    int hostUid2 = 22;
+    int isolatedUid1 = 31;
+    int isolatedUid2 = 32;
+    uint64_t eventTimeNs = 12355;
+    int atomId = 89;
+    int field1 = 90;
+    int field2 = 28;
+    sp<MockUidMap> mockUidMap =
+            makeMockUidMapForHosts({{hostUid1, {isolatedUid1}}, {hostUid2, {isolatedUid2}}});
+
+    ConfigKey cfgKey;
+    StatsdConfig config = MakeConfig(false);
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(1, 1, config, cfgKey, nullptr, 0, mockUidMap);
+
+    // Empty repeated uid field.
+    shared_ptr<LogEvent> logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {}, 0);
+    processor->OnLogEvent(logEvent.get());
+
+    const vector<FieldValue>* actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(0, actualFieldValues->size());
+
+    // Single host uid.
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1}, 1);
+    processor->OnLogEvent(logEvent.get());
+
+    actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(1, actualFieldValues->size());
+    EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
+
+    // Single isolated uid.
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1}, 1);
+    processor->OnLogEvent(logEvent.get());
+
+    actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(1, actualFieldValues->size());
+    EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
+
+    // Multiple host uids.
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1, hostUid2}, 2);
+    processor->OnLogEvent(logEvent.get());
+
+    actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(2, actualFieldValues->size());
+    EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
+
+    // Multiple isolated uids.
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1, isolatedUid2}, 2);
+    processor->OnLogEvent(logEvent.get());
+
+    actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(2, actualFieldValues->size());
+    EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
+
+    // Multiple host and isolated uids.
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs,
+                                       {isolatedUid1, hostUid2, isolatedUid2, hostUid1}, 4);
+    processor->OnLogEvent(logEvent.get());
+
+    actualFieldValues = &logEvent->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostUid1, actualFieldValues->at(3).mValue.int_value);
 }
 
 TEST(StatsLogProcessorTest, TestDumpReportWithoutErasingDataDoesNotUpdateTimestamp) {

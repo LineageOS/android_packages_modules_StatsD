@@ -233,7 +233,7 @@ void LogEvent::parseAttributionChain(int32_t* pos, int32_t depth, bool* last,
     }
 
     if (mValid) {
-        parseAnnotations(numAnnotations, firstUidInChainIndex);
+        parseAnnotations(numAnnotations, /*numElements*/ 1, firstUidInChainIndex);
     }
 
     pos[1] = pos[2] = 1;
@@ -275,9 +275,7 @@ void LogEvent::parseArray(int32_t* pos, int32_t depth, bool* last, uint8_t numAn
         }
     }
 
-    // Repeated fields can still be annotated.
-    // However, annotation bits will be read but not added to LogEvent.
-    skipAnnotations(numAnnotations);
+    parseAnnotations(numAnnotations, numElements);
 
     pos[1] = 1;
     last[1] = false;
@@ -288,31 +286,27 @@ bool LogEvent::checkPreviousValueType(Type expected) {
     return mValues[mValues.size() - 1].mValue.getType() == expected;
 }
 
-void LogEvent::skipAnnotations(uint8_t numAnnotations) {
-    for (uint8_t i = 0; i < numAnnotations; i++) {
-        // read annotation id, annotation type, and int/bool annotation
+void LogEvent::parseIsUidAnnotation(uint8_t annotationType, uint8_t numElements) {
+    // If array is empty, skip uid parsing.
+    if (numElements == 0 && annotationType == BOOL_TYPE) {
         readNextValue<uint8_t>();
-        uint8_t annotationType = readNextValue<uint8_t>();
-
-        if (annotationType == BOOL_TYPE) {
-            readNextValue<uint8_t>();
-        } else {
-            readNextValue<int32_t>();
-        }
+        return;
     }
-}
 
-void LogEvent::parseIsUidAnnotation(uint8_t annotationType) {
-    if (mValues.empty() || !checkPreviousValueType(INT) || annotationType != BOOL_TYPE) {
+    if (numElements > mValues.size() || !checkPreviousValueType(INT) ||
+        annotationType != BOOL_TYPE) {
         mValid = false;
         return;
     }
 
     bool isUid = readNextValue<uint8_t>();
     if (isUid) {
-        mNumUidFields++;
+        mNumUidFields += numElements;
     }
-    mValues[mValues.size() - 1].mAnnotations.setUidField(isUid);
+
+    for (int i = 1; i <= numElements; i++) {
+        mValues[mValues.size() - i].mAnnotations.setUidField(isUid);
+    }
 }
 
 void LogEvent::parseTruncateTimestampAnnotation(uint8_t annotationType) {
@@ -383,7 +377,9 @@ void LogEvent::parseStateNestedAnnotation(uint8_t annotationType) {
 
 // firstUidInChainIndex is a default parameter that is only needed when parsing
 // annotations for attribution chains.
-void LogEvent::parseAnnotations(uint8_t numAnnotations,
+// numElements is a default parameter that is only needed when parsing is_uid annotations
+// for repeated fields.
+void LogEvent::parseAnnotations(uint8_t numAnnotations, uint8_t numElements,
                                 std::optional<size_t> firstUidInChainIndex) {
     for (uint8_t i = 0; i < numAnnotations; i++) {
         uint8_t annotationId = readNextValue<uint8_t>();
@@ -391,7 +387,7 @@ void LogEvent::parseAnnotations(uint8_t numAnnotations,
 
         switch (annotationId) {
             case ANNOTATION_ID_IS_UID:
-                parseIsUidAnnotation(annotationType);
+                parseIsUidAnnotation(annotationType, numElements);
                 break;
             case ANNOTATION_ID_TRUNCATE_TIMESTAMP:
                 parseTruncateTimestampAnnotation(annotationType);

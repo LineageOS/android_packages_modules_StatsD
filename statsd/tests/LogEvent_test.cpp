@@ -539,6 +539,123 @@ TEST(LogEventTest, TestAnnotationIdIsUid) {
     EXPECT_TRUE(isUidField(values.at(0)));
 }
 
+TEST(LogEventTest, TestAnnotationIdIsUid_RepeatedIntAndOtherFields) {
+    size_t numElements = 2;
+    int32_t int32Array[2] = {3, 6};
+
+    vector<string> stringArray = {"str1", "str2"};
+    const char* cStringArray[2];
+    for (int i = 0; i < numElements; i++) {
+        cStringArray[i] = stringArray[i].c_str();
+    }
+
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, 100);
+    AStatsEvent_writeInt32(statsEvent, 5);
+    AStatsEvent_writeInt32Array(statsEvent, int32Array, numElements);
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_writeStringArray(statsEvent, cStringArray, numElements);
+    AStatsEvent_build(statsEvent);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(statsEvent, &size);
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(2, logEvent.getNumUidFields());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    ASSERT_EQ(values.size(), 5);
+    EXPECT_FALSE(isUidField(values.at(0)));
+    EXPECT_TRUE(isUidField(values.at(1)));
+    EXPECT_TRUE(isUidField(values.at(2)));
+    EXPECT_FALSE(isUidField(values.at(3)));
+    EXPECT_FALSE(isUidField(values.at(4)));
+}
+
+TEST(LogEventTest, TestAnnotationIdIsUid_RepeatedIntOneEntry) {
+    size_t numElements = 1;
+    int32_t int32Array[1] = {3};
+
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, 100);
+    AStatsEvent_writeInt32Array(statsEvent, int32Array, numElements);
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_build(statsEvent);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(statsEvent, &size);
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(1, logEvent.getNumUidFields());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    ASSERT_EQ(values.size(), 1);
+    EXPECT_TRUE(isUidField(values.at(0)));
+}
+
+TEST(LogEventTest, TestAnnotationIdIsUid_EmptyIntArray) {
+    int32_t int32Array[0] = {};
+
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, 100);
+    AStatsEvent_writeInt32Array(statsEvent, int32Array, /*numElements*/ 0);
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_writeInt32(statsEvent, 5);
+    AStatsEvent_build(statsEvent);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(statsEvent, &size);
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+    EXPECT_TRUE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(0, logEvent.getNumUidFields());
+
+    const vector<FieldValue>& values = logEvent.getValues();
+    EXPECT_EQ(values.size(), 1);
+}
+
+TEST(LogEventTest, TestAnnotationIdIsUid_BadRepeatedInt64) {
+    int64_t int64Array[2] = {1000L, 1002L};
+
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, /*atomId=*/100);
+    AStatsEvent_writeInt64Array(statsEvent, int64Array, /*numElements*/ 2);
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_build(statsEvent);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(statsEvent, &size);
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(0, logEvent.getNumUidFields());
+
+    AStatsEvent_release(statsEvent);
+}
+
+TEST(LogEventTest, TestAnnotationIdIsUid_BadRepeatedString) {
+    size_t numElements = 2;
+    vector<string> stringArray = {"str1", "str2"};
+    const char* cStringArray[2];
+    for (int i = 0; i < numElements; i++) {
+        cStringArray[i] = stringArray[i].c_str();
+    }
+
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, /*atomId=*/100);
+    AStatsEvent_writeStringArray(statsEvent, cStringArray, /*numElements*/ 2);
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_build(statsEvent);
+
+    size_t size;
+    uint8_t* buf = AStatsEvent_getBuffer(statsEvent, &size);
+    LogEvent logEvent(/*uid=*/1000, /*pid=*/1001);
+
+    EXPECT_FALSE(logEvent.parseBuffer(buf, size));
+    EXPECT_EQ(0, logEvent.getNumUidFields());
+
+    AStatsEvent_release(statsEvent);
+}
+
 TEST(LogEventTest, TestAnnotationIdStateNested) {
     LogEvent event(/*uid=*/0, /*pid=*/0);
     createIntWithBoolAnnotationLogEvent(&event, ANNOTATION_ID_STATE_NESTED, true);
