@@ -39,36 +39,6 @@ using android::util::ProtoOutputStream;
 using std::string;
 using std::vector;
 
-// stats_event.h socket types. Keep in sync.
-/* ERRORS */
-#define ERROR_NO_TIMESTAMP 0x1
-#define ERROR_NO_ATOM_ID 0x2
-#define ERROR_OVERFLOW 0x4
-#define ERROR_ATTRIBUTION_CHAIN_TOO_LONG 0x8
-#define ERROR_TOO_MANY_KEY_VALUE_PAIRS 0x10
-#define ERROR_ANNOTATION_DOES_NOT_FOLLOW_FIELD 0x20
-#define ERROR_INVALID_ANNOTATION_ID 0x40
-#define ERROR_ANNOTATION_ID_TOO_LARGE 0x80
-#define ERROR_TOO_MANY_ANNOTATIONS 0x100
-#define ERROR_TOO_MANY_FIELDS 0x200
-#define ERROR_INVALID_VALUE_TYPE 0x400
-#define ERROR_STRING_NOT_NULL_TERMINATED 0x800
-#define ERROR_ATOM_ID_INVALID_POSITION 0x2000
-#define ERROR_LIST_TOO_LONG 0x4000
-
-/* TYPE IDS */
-#define INT32_TYPE 0x00
-#define INT64_TYPE 0x01
-#define STRING_TYPE 0x02
-#define LIST_TYPE 0x03
-#define FLOAT_TYPE 0x04
-#define BOOL_TYPE 0x05
-#define BYTE_ARRAY_TYPE 0x06
-#define OBJECT_TYPE 0x07
-#define KEY_VALUE_PAIRS_TYPE 0x08
-#define ATTRIBUTION_CHAIN_TYPE 0x09
-#define ERROR_TYPE 0x0F
-
 LogEvent::LogEvent(int32_t uid, int32_t pid)
     : mLogdTimestampNs(time(nullptr)), mLogUid(uid), mLogPid(pid) {
 }
@@ -233,7 +203,7 @@ void LogEvent::parseAttributionChain(int32_t* pos, int32_t depth, bool* last,
     }
 
     if (mValid) {
-        parseAnnotations(numAnnotations, /*numElements*/ 1, firstUidInChainIndex);
+        parseAnnotations(numAnnotations, /*numElements*/ std::nullopt, firstUidInChainIndex);
     }
 
     pos[1] = pos[2] = 1;
@@ -286,13 +256,19 @@ bool LogEvent::checkPreviousValueType(Type expected) {
     return mValues[mValues.size() - 1].mValue.getType() == expected;
 }
 
-void LogEvent::parseIsUidAnnotation(uint8_t annotationType, uint8_t numElements) {
+void LogEvent::parseIsUidAnnotation(uint8_t annotationType, std::optional<uint8_t> numElements) {
+    // Need to set numElements if not an array.
+    if (!numElements) {
+        numElements = 1;
+    }
+
     // If array is empty, skip uid parsing.
     if (numElements == 0 && annotationType == BOOL_TYPE) {
         readNextValue<uint8_t>();
         return;
     }
 
+    // Allowed types: INT, repeated INT
     if (numElements > mValues.size() || !checkPreviousValueType(INT) ||
         annotationType != BOOL_TYPE) {
         mValid = false;
@@ -301,7 +277,7 @@ void LogEvent::parseIsUidAnnotation(uint8_t annotationType, uint8_t numElements)
 
     bool isUid = readNextValue<uint8_t>();
     if (isUid) {
-        mNumUidFields += numElements;
+        mNumUidFields += numElements.value();
     }
 
     for (int i = 1; i <= numElements; i++) {
@@ -318,8 +294,11 @@ void LogEvent::parseTruncateTimestampAnnotation(uint8_t annotationType) {
     mTruncateTimestamp = readNextValue<uint8_t>();
 }
 
-void LogEvent::parsePrimaryFieldAnnotation(uint8_t annotationType) {
-    if (mValues.empty() || annotationType != BOOL_TYPE) {
+void LogEvent::parsePrimaryFieldAnnotation(uint8_t annotationType,
+                                           std::optional<uint8_t> numElements,
+                                           std::optional<size_t> firstUidInChainIndex) {
+    // Allowed types: all types except for attribution chains and repeated fields.
+    if (mValues.empty() || annotationType != BOOL_TYPE || firstUidInChainIndex || numElements) {
         mValid = false;
         return;
     }
@@ -330,6 +309,7 @@ void LogEvent::parsePrimaryFieldAnnotation(uint8_t annotationType) {
 
 void LogEvent::parsePrimaryFieldFirstUidAnnotation(uint8_t annotationType,
                                                    std::optional<size_t> firstUidInChainIndex) {
+    // Allowed types: attribution chains
     if (mValues.empty() || annotationType != BOOL_TYPE || !firstUidInChainIndex) {
         mValid = false;
         return;
@@ -345,8 +325,11 @@ void LogEvent::parsePrimaryFieldFirstUidAnnotation(uint8_t annotationType,
     mValues[firstUidInChainIndex.value()].mAnnotations.setPrimaryField(primaryField);
 }
 
-void LogEvent::parseExclusiveStateAnnotation(uint8_t annotationType) {
-    if (mValues.empty() || annotationType != BOOL_TYPE) {
+void LogEvent::parseExclusiveStateAnnotation(uint8_t annotationType,
+                                             std::optional<uint8_t> numElements) {
+    // Allowed types: INT
+    if (mValues.empty() || annotationType != BOOL_TYPE || !checkPreviousValueType(INT) ||
+        numElements) {
         mValid = false;
         return;
     }
@@ -356,8 +339,11 @@ void LogEvent::parseExclusiveStateAnnotation(uint8_t annotationType) {
     mValues[getExclusiveStateFieldIndex().value()].mAnnotations.setExclusiveState(exclusiveState);
 }
 
-void LogEvent::parseTriggerStateResetAnnotation(uint8_t annotationType) {
-    if (mValues.empty() || annotationType != INT32_TYPE) {
+void LogEvent::parseTriggerStateResetAnnotation(uint8_t annotationType,
+                                                std::optional<uint8_t> numElements) {
+    // Allowed types: INT
+    if (mValues.empty() || annotationType != INT32_TYPE || !checkPreviousValueType(INT) ||
+        numElements) {
         mValid = false;
         return;
     }
@@ -365,8 +351,11 @@ void LogEvent::parseTriggerStateResetAnnotation(uint8_t annotationType) {
     mResetState = readNextValue<int32_t>();
 }
 
-void LogEvent::parseStateNestedAnnotation(uint8_t annotationType) {
-    if (mValues.empty() || annotationType != BOOL_TYPE) {
+void LogEvent::parseStateNestedAnnotation(uint8_t annotationType,
+                                          std::optional<uint8_t> numElements) {
+    // Allowed types: INT
+    if (mValues.empty() || annotationType != BOOL_TYPE || !checkPreviousValueType(INT) ||
+        numElements) {
         mValid = false;
         return;
     }
@@ -377,9 +366,8 @@ void LogEvent::parseStateNestedAnnotation(uint8_t annotationType) {
 
 // firstUidInChainIndex is a default parameter that is only needed when parsing
 // annotations for attribution chains.
-// numElements is a default parameter that is only needed when parsing is_uid annotations
-// for repeated fields.
-void LogEvent::parseAnnotations(uint8_t numAnnotations, uint8_t numElements,
+// numElements is a default param that is only needed when parsing annotations for repeated fields
+void LogEvent::parseAnnotations(uint8_t numAnnotations, std::optional<uint8_t> numElements,
                                 std::optional<size_t> firstUidInChainIndex) {
     for (uint8_t i = 0; i < numAnnotations; i++) {
         uint8_t annotationId = readNextValue<uint8_t>();
@@ -393,19 +381,19 @@ void LogEvent::parseAnnotations(uint8_t numAnnotations, uint8_t numElements,
                 parseTruncateTimestampAnnotation(annotationType);
                 break;
             case ANNOTATION_ID_PRIMARY_FIELD:
-                parsePrimaryFieldAnnotation(annotationType);
+                parsePrimaryFieldAnnotation(annotationType, numElements, firstUidInChainIndex);
                 break;
             case ANNOTATION_ID_PRIMARY_FIELD_FIRST_UID:
                 parsePrimaryFieldFirstUidAnnotation(annotationType, firstUidInChainIndex);
                 break;
             case ANNOTATION_ID_EXCLUSIVE_STATE:
-                parseExclusiveStateAnnotation(annotationType);
+                parseExclusiveStateAnnotation(annotationType, numElements);
                 break;
             case ANNOTATION_ID_TRIGGER_STATE_RESET:
-                parseTriggerStateResetAnnotation(annotationType);
+                parseTriggerStateResetAnnotation(annotationType, numElements);
                 break;
             case ANNOTATION_ID_STATE_NESTED:
-                parseStateNestedAnnotation(annotationType);
+                parseStateNestedAnnotation(annotationType, numElements);
                 break;
             default:
                 mValid = false;
