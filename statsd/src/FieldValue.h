@@ -451,6 +451,7 @@ void translateFieldMatcher(const FieldMatcher& matcher, std::vector<Matcher>* ou
 
 bool isAttributionUidField(const Field& field, const Value& value);
 bool isUidField(const FieldValue& fieldValue);
+bool isPrimitiveRepeatedField(const Field& field);
 
 bool equalDimensions(const std::vector<Matcher>& dimension_a,
                      const std::vector<Matcher>& dimension_b);
