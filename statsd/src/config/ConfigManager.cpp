@@ -72,7 +72,7 @@ void ConfigManager::UpdateConfig(const ConfigKey& key, const StatsdConfig& confi
 
         const int numBytes = config.ByteSize();
         vector<uint8_t> buffer(numBytes);
-        config.SerializeToArray(&buffer[0], numBytes);
+        config.SerializeToArray(buffer.data(), numBytes);
 
         auto uidIt = mConfigs.find(key.GetUid());
         // GuardRail: Limit the number of configs per uid.
