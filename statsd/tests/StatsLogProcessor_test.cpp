@@ -1892,14 +1892,14 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
             CreateStatsLogProcessor(1, 1, config, cfgKey, nullptr, 0, mockUidMap);
 
     // Empty repeated uid field.
-    shared_ptr<LogEvent> logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {}, 0);
+    shared_ptr<LogEvent> logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {});
     processor->OnLogEvent(logEvent.get());
 
     const vector<FieldValue>* actualFieldValues = &logEvent->getValues();
     ASSERT_EQ(0, actualFieldValues->size());
 
     // Single host uid.
-    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1}, 1);
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1});
     processor->OnLogEvent(logEvent.get());
 
     actualFieldValues = &logEvent->getValues();
@@ -1907,7 +1907,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
     EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
 
     // Single isolated uid.
-    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1}, 1);
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1});
     processor->OnLogEvent(logEvent.get());
 
     actualFieldValues = &logEvent->getValues();
@@ -1915,7 +1915,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
     EXPECT_EQ(hostUid1, actualFieldValues->at(0).mValue.int_value);
 
     // Multiple host uids.
-    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1, hostUid2}, 2);
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {hostUid1, hostUid2});
     processor->OnLogEvent(logEvent.get());
 
     actualFieldValues = &logEvent->getValues();
@@ -1924,7 +1924,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
     EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
 
     // Multiple isolated uids.
-    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1, isolatedUid2}, 2);
+    logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs, {isolatedUid1, isolatedUid2});
     processor->OnLogEvent(logEvent.get());
 
     actualFieldValues = &logEvent->getValues();
@@ -1934,7 +1934,7 @@ TEST(StatsLogProcessorTest_mapIsolatedUidToHostUid, LogRepeatedUidField) {
 
     // Multiple host and isolated uids.
     logEvent = makeRepeatedUidLogEvent(atomId, eventTimeNs,
-                                       {isolatedUid1, hostUid2, isolatedUid2, hostUid1}, 4);
+                                       {isolatedUid1, hostUid2, isolatedUid2, hostUid1});
     processor->OnLogEvent(logEvent.get());
 
     actualFieldValues = &logEvent->getValues();

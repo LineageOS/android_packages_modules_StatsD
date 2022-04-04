@@ -842,12 +842,45 @@ shared_ptr<LogEvent> makeExtraUidsLogEvent(int atomId, int64_t eventTimeNs, int 
 }
 
 shared_ptr<LogEvent> makeRepeatedUidLogEvent(int atomId, int64_t eventTimeNs,
-                                             const vector<int>& uids, const size_t numElements) {
+                                             const vector<int>& uids) {
     AStatsEvent* statsEvent = AStatsEvent_obtain();
     AStatsEvent_setAtomId(statsEvent, atomId);
     AStatsEvent_overwriteTimestamp(statsEvent, eventTimeNs);
-    AStatsEvent_writeInt32Array(statsEvent, uids.data(), numElements);
+    AStatsEvent_writeInt32Array(statsEvent, uids.data(), uids.size());
     AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+
+    shared_ptr<LogEvent> logEvent = std::make_shared<LogEvent>(/*uid=*/0, /*pid=*/0);
+    parseStatsEventToLogEvent(statsEvent, logEvent.get());
+
+    return logEvent;
+}
+
+shared_ptr<LogEvent> makeRepeatedUidLogEvent(int atomId, int64_t eventTimeNs,
+                                             const vector<int>& uids, int data1, int data2) {
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, atomId);
+    AStatsEvent_overwriteTimestamp(statsEvent, eventTimeNs);
+    AStatsEvent_writeInt32Array(statsEvent, uids.data(), uids.size());
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_writeInt32(statsEvent, data1);
+    AStatsEvent_writeInt32(statsEvent, data2);
+
+    shared_ptr<LogEvent> logEvent = std::make_shared<LogEvent>(/*uid=*/0, /*pid=*/0);
+    parseStatsEventToLogEvent(statsEvent, logEvent.get());
+
+    return logEvent;
+}
+
+shared_ptr<LogEvent> makeRepeatedUidLogEvent(int atomId, int64_t eventTimeNs,
+                                             const vector<int>& uids, int data1,
+                                             const vector<int>& data2) {
+    AStatsEvent* statsEvent = AStatsEvent_obtain();
+    AStatsEvent_setAtomId(statsEvent, atomId);
+    AStatsEvent_overwriteTimestamp(statsEvent, eventTimeNs);
+    AStatsEvent_writeInt32Array(statsEvent, uids.data(), uids.size());
+    AStatsEvent_addBoolAnnotation(statsEvent, ANNOTATION_ID_IS_UID, true);
+    AStatsEvent_writeInt32(statsEvent, data1);
+    AStatsEvent_writeInt32Array(statsEvent, data2.data(), data2.size());
 
     shared_ptr<LogEvent> logEvent = std::make_shared<LogEvent>(/*uid=*/0, /*pid=*/0);
     parseStatsEventToLogEvent(statsEvent, logEvent.get());
