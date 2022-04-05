@@ -767,6 +767,31 @@ TEST(AtomMatcherTest, TestSubsetDimensions4) {
     EXPECT_FALSE(subsetDimensions(matchers2, matchers1));
 }
 
+TEST(AtomMatcherTest, TestIsPrimitiveRepeatedField) {
+    int pos1[] = {1, 1, 1};  // attribution uid
+    int pos2[] = {1, 1, 2};  // attribution tag
+    int pos3[] = {1, 2, 1};  // attribution uid - second node
+    int pos4[] = {1, 2, 2};  // attribution tag - second node
+    int pos5[] = {2, 1, 1};  // repeated field first element
+    int pos6[] = {2, 2, 1};  // repeated field second element
+    int pos7[] = {3, 1, 1};  // top-level field
+    Field field1(10, pos1, 2);
+    Field field2(10, pos2, 2);
+    Field field3(10, pos3, 2);
+    Field field4(10, pos4, 2);
+    Field field5(10, pos5, 1);
+    Field field6(10, pos6, 1);
+    Field field7(10, pos7, 0);
+
+    EXPECT_FALSE(isPrimitiveRepeatedField(field1));
+    EXPECT_FALSE(isPrimitiveRepeatedField(field2));
+    EXPECT_FALSE(isPrimitiveRepeatedField(field3));
+    EXPECT_FALSE(isPrimitiveRepeatedField(field4));
+    EXPECT_TRUE(isPrimitiveRepeatedField(field5));
+    EXPECT_TRUE(isPrimitiveRepeatedField(field6));
+    EXPECT_FALSE(isPrimitiveRepeatedField(field7));
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android

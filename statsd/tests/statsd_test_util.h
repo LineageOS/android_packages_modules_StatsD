@@ -324,8 +324,14 @@ void CreateNoValuesLogEvent(LogEvent* logEvent, int atomId, int64_t eventTimeNs)
 
 AStatsEvent* makeUidStatsEvent(int atomId, int64_t eventTimeNs, int uid, int data1, int data2);
 
+AStatsEvent* makeUidStatsEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
+                               const vector<int>& data2);
+
 std::shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
                                           int data2);
+
+std::shared_ptr<LogEvent> makeUidLogEvent(int atomId, int64_t eventTimeNs, int uid, int data1,
+                                          const vector<int>& data2);
 
 shared_ptr<LogEvent> makeExtraUidsLogEvent(int atomId, int64_t eventTimeNs, int uid1, int data1,
                                            int data2, const std::vector<int>& extraUids);

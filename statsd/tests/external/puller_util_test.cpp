@@ -430,6 +430,46 @@ TEST(PullerUtilTest, MultipleIsolatedUidToOneHostUidAttributionChain) {
               actualFieldValues->at(5).mValue.int_value);
 }
 
+// Test that repeated fields are treated as non-additive fields even when marked as additive.
+TEST(PullerUtilTest, RepeatedAdditiveField) {
+    vector<int> int32Array1 = {3, 6};
+    vector<int> int32Array2 = {6, 9};
+
+    vector<shared_ptr<LogEvent>> data = {
+            // 30->22->{3,6}
+            makeUidLogEvent(uidAtomTagId, timestamp, isolatedUid1, hostNonAdditiveData,
+                            int32Array1),
+
+            // 30->22->{6,9}
+            makeUidLogEvent(uidAtomTagId, timestamp, isolatedUid1, hostNonAdditiveData,
+                            int32Array2),
+
+            // 20->22->{3,6}
+            makeUidLogEvent(uidAtomTagId, timestamp, hostUid, hostNonAdditiveData, int32Array1),
+    };
+
+    sp<MockUidMap> uidMap = makeMockUidMap();
+    mapAndMergeIsolatedUidsToHostUid(data, uidMap, uidAtomTagId, additiveFields);
+
+    ASSERT_EQ(2, (int)data.size());
+    // Events 1 and 3 are merged - non-additive fields, including the repeated additive field, are
+    // equal.
+    const vector<FieldValue>* actualFieldValues = &data[0]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostNonAdditiveData, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(3, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(6, actualFieldValues->at(3).mValue.int_value);
+
+    // Event 2 isn't merged - repeated additive field is not equal.
+    actualFieldValues = &data[1]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostNonAdditiveData, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(6, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(9, actualFieldValues->at(3).mValue.int_value);
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
