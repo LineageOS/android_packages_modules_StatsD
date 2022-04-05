@@ -118,7 +118,9 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
             if ((*lhsValues)[p] != (*rhsValues)[p]) {
                 int pos = (*lhsValues)[p].mField.getPosAtDepth(0);
                 // Differ on non-additive field, abort.
-                if (additiveFields.find(pos) == additiveFields.end()) {
+                // Repeated additive fields are treated as non-additive fields.
+                if (isPrimitiveRepeatedField((*lhsValues)[p].mField) ||
+                    (additiveFields.find(pos) == additiveFields.end())) {
                     needMerge = false;
                     break;
                 }
@@ -131,7 +133,9 @@ void mapAndMergeIsolatedUidsToHostUid(vector<shared_ptr<LogEvent>>& data, const 
         // This should be infrequent operation.
         for (int p = 0; p < (int)lhsValues->size(); p++) {
             int pos = (*lhsValues)[p].mField.getPosAtDepth(0);
-            if (additiveFields.find(pos) != additiveFields.end()) {
+            // Don't merge repeated fields.
+            if (!isPrimitiveRepeatedField((*lhsValues)[p].mField) &&
+                (additiveFields.find(pos) != additiveFields.end())) {
                 (*rhsValues)[p].mValue += (*lhsValues)[p].mValue;
             }
         }
