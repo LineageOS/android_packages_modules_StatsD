@@ -137,6 +137,10 @@ bool isUidField(const FieldValue& fieldValue) {
     return fieldValue.mAnnotations.isUidField();
 }
 
+bool isPrimitiveRepeatedField(const Field& field) {
+    return field.getDepth() == 1;
+}
+
 Value::Value(const Value& from) {
     type = from.getType();
     switch (type) {
