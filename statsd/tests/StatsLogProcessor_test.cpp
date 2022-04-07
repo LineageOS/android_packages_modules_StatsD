@@ -163,7 +163,8 @@ TEST(StatsLogProcessorTest, TestUidMapHasSnapshot) {
     sp<UidMap> m = new UidMap();
     sp<StatsPullerManager> pullerManager = new StatsPullerManager();
     m->updateMap(1, {1, 2}, {1, 2}, {String16("v1"), String16("v2")},
-                 {String16("p1"), String16("p2")}, {String16(""), String16("")});
+                 {String16("p1"), String16("p2")}, {String16(""), String16("")},
+                 /* certificateHash */ {{}, {}});
     sp<AlarmMonitor> anomalyAlarmMonitor;
     sp<AlarmMonitor> subscriberAlarmMonitor;
     int broadcastCount = 0;
@@ -194,7 +195,8 @@ TEST(StatsLogProcessorTest, TestEmptyConfigHasNoUidMap) {
     sp<UidMap> m = new UidMap();
     sp<StatsPullerManager> pullerManager = new StatsPullerManager();
     m->updateMap(1, {1, 2}, {1, 2}, {String16("v1"), String16("v2")},
-                 {String16("p1"), String16("p2")}, {String16(""), String16("")});
+                 {String16("p1"), String16("p2")}, {String16(""), String16("")},
+                 /* certificateHash */ {{}, {}});
     sp<AlarmMonitor> anomalyAlarmMonitor;
     sp<AlarmMonitor> subscriberAlarmMonitor;
     int broadcastCount = 0;
@@ -328,7 +330,8 @@ TEST(StatsLogProcessorTest, InvalidConfigRemoved) {
     sp<UidMap> m = new UidMap();
     sp<StatsPullerManager> pullerManager = new StatsPullerManager();
     m->updateMap(1, {1, 2}, {1, 2}, {String16("v1"), String16("v2")},
-                 {String16("p1"), String16("p2")}, {String16(""), String16("")});
+                 {String16("p1"), String16("p2")}, {String16(""), String16("")},
+                 /* certificateHash */ {{}, {}});
     sp<AlarmMonitor> anomalyAlarmMonitor;
     sp<AlarmMonitor> subscriberAlarmMonitor;
     StatsLogProcessor p(m, pullerManager, anomalyAlarmMonitor, subscriberAlarmMonitor, 0,
