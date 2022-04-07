@@ -241,7 +241,8 @@ TEST(AtomMatcherTest, TestAttributionMatcher) {
             {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
              android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
             {android::String16(""), android::String16(""), android::String16(""),
-             android::String16(""), android::String16("")});
+             android::String16(""), android::String16("")},
+            /* certificateHash */ {{}, {}, {}, {}, {}});
 
     EXPECT_TRUE(matchesSimple(uidMap, *simpleMatcher, event));
     attributionMatcher->mutable_matches_tuple()->mutable_field_value_matcher(0)->set_eq_string(
@@ -394,7 +395,8 @@ TEST(AtomMatcherTest, TestUidFieldMatcher) {
             {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
              android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
             {android::String16(""), android::String16(""), android::String16(""),
-             android::String16(""), android::String16("")});
+             android::String16(""), android::String16("")},
+            /* certificateHash */ {{}, {}, {}, {}, {}});
 
     // Set up matcher
     AtomMatcher matcher;
@@ -431,7 +433,8 @@ TEST(AtomMatcherTest, TestRepeatedUidFieldMatcher) {
             {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
              android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
             {android::String16(""), android::String16(""), android::String16(""),
-             android::String16(""), android::String16("")});
+             android::String16(""), android::String16("")},
+            /* certificateHash */ {{}, {}, {}, {}, {}});
 
     // Set up matcher.
     AtomMatcher matcher;
@@ -517,7 +520,8 @@ TEST(AtomMatcherTest, TestNeqAnyStringMatcher_AttributionUids) {
             {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
              android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
             {android::String16(""), android::String16(""), android::String16(""),
-             android::String16(""), android::String16("")});
+             android::String16(""), android::String16("")},
+            /* certificateHash */ {{}, {}, {}, {}, {}});
 
     std::vector<int> attributionUids = {1111, 2222, 3333, 1066};
     std::vector<string> attributionTags = {"location1", "location2", "location3", "location3"};
@@ -578,7 +582,8 @@ TEST(AtomMatcherTest, TestEqAnyStringMatcher) {
             {android::String16("pkg0"), android::String16("pkg1"), android::String16("pkg1"),
              android::String16("Pkg2"), android::String16("PkG3")} /* package name list */,
             {android::String16(""), android::String16(""), android::String16(""),
-             android::String16(""), android::String16("")});
+             android::String16(""), android::String16("")},
+            /* certificateHash */ {{}, {}, {}, {}, {}});
 
     std::vector<int> attributionUids = {1067, 2222, 3333, 1066};
     std::vector<string> attributionTags = {"location1", "location2", "location3", "location3"};

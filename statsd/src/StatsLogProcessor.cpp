@@ -693,9 +693,10 @@ void StatsLogProcessor::onConfigMetricsReportLocked(
     // This skips the uid map if it's an empty config.
     if (it->second->getNumMetrics() > 0) {
         uint64_t uidMapToken = tempProto.start(FIELD_TYPE_MESSAGE | FIELD_ID_UID_MAP);
-        mUidMap->appendUidMap(
-                dumpTimeStampNs, key, it->second->hashStringInReport() ? &str_set : nullptr,
-                it->second->versionStringsInReport(), it->second->installerInReport(), &tempProto);
+        mUidMap->appendUidMap(dumpTimeStampNs, key, it->second->versionStringsInReport(),
+                              it->second->installerInReport(),
+                              it->second->packageCertificateHashSizeBytes(),
+                              it->second->hashStringInReport() ? &str_set : nullptr, &tempProto);
         tempProto.end(uidMapToken);
     }
 
