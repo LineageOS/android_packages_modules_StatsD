@@ -561,6 +561,8 @@ message StatsdConfig {
 
   repeated int32 whitelisted_atom_ids = 24;
 
+  optional uint32 package_certificate_hash_size_bytes = 26;
+
   // Do not use.
   reserved 1000, 1001;
 }
