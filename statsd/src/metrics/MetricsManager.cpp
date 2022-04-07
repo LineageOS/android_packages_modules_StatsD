@@ -66,6 +66,8 @@ MetricsManager::MetricsManager(const ConfigKey& key, const StatsdConfig& config,
                                const sp<AlarmMonitor>& periodicAlarmMonitor)
     : mConfigKey(key),
       mUidMap(uidMap),
+      mPackageCertificateHashSizeBytes(
+              static_cast<uint8_t>(config.package_certificate_hash_size_bytes())),
       mTtlNs(config.has_ttl_in_seconds() ? config.ttl_in_seconds() * NS_PER_SEC : -1),
       mTtlEndNs(-1),
       mLastReportTimeNs(currentTimeNs),
@@ -166,6 +168,7 @@ bool MetricsManager::updateConfig(const StatsdConfig& config, const int64_t time
     mWhitelistedAtomIds.insert(config.whitelisted_atom_ids().begin(),
                                config.whitelisted_atom_ids().end());
     mShouldPersistHistory = config.persist_locally();
+    mPackageCertificateHashSizeBytes = config.package_certificate_hash_size_bytes();
 
     // Store the sub-configs used.
     mAnnotations.clear();

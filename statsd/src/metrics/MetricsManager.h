@@ -106,6 +106,10 @@ public:
         return mInstallerInReport;
     };
 
+    inline uint8_t packageCertificateHashSizeBytes() const {
+        return mPackageCertificateHashSizeBytes;
+    }
+
     void refreshTtl(const int64_t currentTimestampNs) {
         if (mTtlNs > 0) {
             mTtlEndNs = currentTimestampNs + mTtlNs;
@@ -169,6 +173,7 @@ private:
     bool mHashStringsInReport = false;
     bool mVersionStringsInReport = false;
     bool mInstallerInReport = false;
+    uint8_t mPackageCertificateHashSizeBytes;
 
     int64_t mTtlNs;
     int64_t mTtlEndNs;
