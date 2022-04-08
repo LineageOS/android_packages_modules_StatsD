@@ -470,6 +470,177 @@ TEST(PullerUtilTest, RepeatedAdditiveField) {
     EXPECT_EQ(9, actualFieldValues->at(3).mValue.int_value);
 }
 
+// Test that repeated uid events are sorted and merged correctly.
+TEST(PullerUtilTest, RepeatedUidField) {
+    vector<int> uidArray1 = {isolatedUid1, hostUid};
+    vector<int> uidArray2 = {isolatedUid1, isolatedUid3};
+    vector<int> uidArray3 = {isolatedUid1, hostUid, isolatedUid2};
+
+    vector<shared_ptr<LogEvent>> data = {
+            // {30, 20}->22->21
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostNonAdditiveData,
+                                    hostAdditiveData),
+
+            // {30, 3000}->22->21 (different uid, not merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray2, hostNonAdditiveData,
+                                    hostAdditiveData),
+
+            // {30, 20}->22->31 (different additive field, merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostNonAdditiveData,
+                                    isolatedAdditiveData),
+
+            // {30, 20}->32->21 (different non-additive field, not merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, isolatedNonAdditiveData,
+                                    hostAdditiveData),
+
+            // {30, 20, 40}->22->21 (different repeated uid length, not merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray3, hostNonAdditiveData,
+                                    hostAdditiveData),
+
+            // {30, 20}->22->21 (same as first event, merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostNonAdditiveData,
+                                    hostAdditiveData),
+    };
+
+    sp<MockUidMap> uidMap = makeMockUidMap();
+    mapAndMergeIsolatedUidsToHostUid(data, uidMap, uidAtomTagId, additiveFields);
+
+    ASSERT_EQ(4, (int)data.size());
+    // Events 1 and 3 and 6 are merged.
+    const vector<FieldValue>* actualFieldValues = &data[0]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostNonAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData + isolatedAdditiveData + hostAdditiveData,
+              actualFieldValues->at(3).mValue.int_value);
+
+    // Event 4 isn't merged - different non-additive data.
+    actualFieldValues = &data[1]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(isolatedNonAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData, actualFieldValues->at(3).mValue.int_value);
+
+    // Event 2 isn't merged - different uid.
+    actualFieldValues = &data[2]->getValues();
+    ASSERT_EQ(4, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostNonAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData, actualFieldValues->at(3).mValue.int_value);
+
+    // Event 5 isn't merged - different repeated uid length.
+    actualFieldValues = &data[3]->getValues();
+    ASSERT_EQ(5, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostNonAdditiveData, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData, actualFieldValues->at(4).mValue.int_value);
+}
+
+// Test that repeated uid events with multiple repeated non-additive fields are sorted and merged
+// correctly.
+TEST(PullerUtilTest, MultipleRepeatedFields) {
+    vector<int> uidArray1 = {isolatedUid1, hostUid};
+    vector<int> uidArray2 = {isolatedUid1, isolatedUid3};
+    vector<int> uidArray3 = {isolatedUid1, hostUid, isolatedUid2};
+
+    vector<int> nonAdditiveArray1 = {1, 2, 3};
+    vector<int> nonAdditiveArray2 = {1, 5, 3};
+    vector<int> nonAdditiveArray3 = {1, 2};
+
+    const vector<int> secondAdditiveField = {2};
+
+    vector<shared_ptr<LogEvent>> data = {
+            // TODO: Once b/224880904 is fixed, can use different additive data without
+            // having the sort order messed up.
+
+            // Event 1 {30, 20}->21->{1, 2, 3} (merged with event 4)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostAdditiveData,
+                                    nonAdditiveArray1),
+
+            // Event 2 {30, 3000}->21->{1, 2, 3} (different uid, not merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray2, hostAdditiveData,
+                                    nonAdditiveArray1),
+
+            // Event 3 {30, 20, 40}->21->{1, 2} (different repeated fields with total length equal
+            // to event 1, merged with event 6)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray3, hostAdditiveData,
+                                    nonAdditiveArray3),
+
+            // Event 4 {30, 20}->21->{1, 2, 3} (merged with event 1)
+            // TODO: once sorting bug is fixed, can change this additive field
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostAdditiveData,
+                                    nonAdditiveArray1),
+
+            // Event 5 {30, 20}->21->{1, 5, 3} (different repeated field, not merged)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray1, hostAdditiveData,
+                                    nonAdditiveArray2),
+
+            // Event 6 {30, 20, 40}->22->{1, 2} (different repeated fields with total length equal
+            // to event 1, merged with event 3)
+            makeRepeatedUidLogEvent(uidAtomTagId, timestamp, uidArray3, isolatedAdditiveData,
+                                    nonAdditiveArray3),
+    };
+
+    // Expected event ordering after the sort:
+    // Event 3 {30, 20, 40}->21->{1, 2} (total size equal to event 1, merged with event 6)
+    // Event 6 {30, 20, 40}->22->{1, 2} (total size equal to event 1, merged with event 3)
+    // Event 1 {30, 20}->21->{1, 2, 3}
+    // Event 4 {30, 20}->21->{1, 2, 3} (merged with event 1)
+    // Event 5 {30, 20}->21->{1, 5, 3} (different repeated field, not merged)
+    // Event 2 {30, 3000}->21->{1, 2, 3} (different uid, not merged)
+
+    sp<MockUidMap> uidMap = makeMockUidMap();
+    mapAndMergeIsolatedUidsToHostUid(data, uidMap, uidAtomTagId, secondAdditiveField);
+
+    ASSERT_EQ(4, (int)data.size());
+
+    // Events 3 and 6 are merged. Not merged with event 1 because different repeated uids and
+    // fields, though length is same.
+    const vector<FieldValue>* actualFieldValues = &data[0]->getValues();
+    ASSERT_EQ(6, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData + isolatedAdditiveData, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(1, actualFieldValues->at(4).mValue.int_value);
+    EXPECT_EQ(2, actualFieldValues->at(5).mValue.int_value);
+
+    // Events 1 and 4 are merged.
+    actualFieldValues = &data[1]->getValues();
+    ASSERT_EQ(6, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData + hostAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(1, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(2, actualFieldValues->at(4).mValue.int_value);
+    EXPECT_EQ(3, actualFieldValues->at(5).mValue.int_value);
+
+    // Event 5 isn't merged - different repeated field.
+    actualFieldValues = &data[2]->getValues();
+    ASSERT_EQ(6, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(1, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(5, actualFieldValues->at(4).mValue.int_value);
+    EXPECT_EQ(3, actualFieldValues->at(5).mValue.int_value);
+
+    // Event 2 isn't merged - different uid.
+    actualFieldValues = &data[3]->getValues();
+    ASSERT_EQ(6, actualFieldValues->size());
+    EXPECT_EQ(hostUid, actualFieldValues->at(0).mValue.int_value);
+    EXPECT_EQ(hostUid2, actualFieldValues->at(1).mValue.int_value);
+    EXPECT_EQ(hostAdditiveData, actualFieldValues->at(2).mValue.int_value);
+    EXPECT_EQ(1, actualFieldValues->at(3).mValue.int_value);
+    EXPECT_EQ(2, actualFieldValues->at(4).mValue.int_value);
+    EXPECT_EQ(3, actualFieldValues->at(5).mValue.int_value);
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
