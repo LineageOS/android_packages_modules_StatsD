@@ -352,6 +352,10 @@ message UidMapping {
             optional string installer = 8;
 
             optional uint64 installer_hash = 9;
+
+            optional uint32 installer_index = 10;
+
+            optional bytes truncated_certificate_hash = 11;
         }
         optional int64 elapsed_timestamp_nanos = 1;
 
@@ -375,6 +379,12 @@ message UidMapping {
         optional uint64 prev_version_string_hash = 11;
     }
     repeated Change changes = 2;
+
+    // Populated when StatsdConfig.hash_strings_in_metric_reports = true
+    repeated uint64 installer_hash = 3;
+
+    // Populated when StatsdConfig.hash_strings_in_metric_reports = false
+    repeated string installer_name = 4;
 }
 
 message ConfigMetricsReport {

@@ -59,12 +59,14 @@ INSTANTIATE_TEST_SUITE_P(ConfigUpdateE2eAbTest, ConfigUpdateE2eAbTest, testing::
 
 TEST_P(ConfigUpdateE2eAbTest, TestUidMapVersionStringInstaller) {
     sp<UidMap> uidMap = new UidMap();
-    vector<int32_t> uids({1000});
-    vector<int64_t> versions({1});
-    vector<String16> apps({String16("app1")});
-    vector<String16> versionStrings({String16("v1")});
-    vector<String16> installers({String16("installer1")});
-    uidMap->updateMap(1, uids, versions, versionStrings, apps, installers);
+    const vector<int32_t> uids{1000};
+    const vector<int64_t> versions{1};
+    const vector<String16> apps{String16("app1")};
+    const vector<String16> versionStrings{String16("v1")};
+    const vector<String16> installers{String16("installer1")};
+    const vector<vector<uint8_t>> certificateHashes{{}};
+    uidMap->updateMap(1 /* timestamp */, uids, versions, versionStrings, apps, installers,
+                      certificateHashes);
 
     StatsdConfig config = CreateSimpleConfig();
     config.set_version_strings_in_metric_report(true);
@@ -101,12 +103,14 @@ TEST_P(ConfigUpdateE2eAbTest, TestUidMapVersionStringInstaller) {
 
 TEST_P(ConfigUpdateE2eAbTest, TestHashStrings) {
     sp<UidMap> uidMap = new UidMap();
-    vector<int32_t> uids({1000});
-    vector<int64_t> versions({1});
-    vector<String16> apps({String16("app1")});
-    vector<String16> versionStrings({String16("v1")});
-    vector<String16> installers({String16("installer1")});
-    uidMap->updateMap(1, uids, versions, versionStrings, apps, installers);
+    const vector<int32_t> uids{1000};
+    const vector<int64_t> versions{1};
+    const vector<String16> apps{String16("app1")};
+    const vector<String16> versionStrings{String16("v1")};
+    const vector<String16> installers{String16("installer1")};
+    const vector<vector<uint8_t>> certificateHashes{{}};
+    uidMap->updateMap(1 /* timestamp */, uids, versions, versionStrings, apps, installers,
+                      certificateHashes);
 
     StatsdConfig config = CreateSimpleConfig();
     config.set_version_strings_in_metric_report(true);

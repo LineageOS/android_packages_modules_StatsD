@@ -1126,6 +1126,12 @@ bool updateStatsdConfig(const ConfigKey& key, const StatsdConfig& config, const 
     unordered_map<int64_t, int> stateAtomIdMap;
     unordered_map<int64_t, unordered_map<int, int64_t>> allStateGroupMaps;
 
+    if (config.package_certificate_hash_size_bytes() > UINT8_MAX) {
+        ALOGE("Invalid value for package_certificate_hash_size_bytes: %d",
+              config.package_certificate_hash_size_bytes());
+        return false;
+    }
+
     if (!updateAtomMatchingTrackers(config, uidMap, oldAtomMatchingTrackerMap,
                                     oldAtomMatchingTrackers, allTagIds, newAtomMatchingTrackerMap,
                                     newAtomMatchingTrackers, replacedMatchers)) {
