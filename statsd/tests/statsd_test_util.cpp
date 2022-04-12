@@ -1752,6 +1752,14 @@ vector<pair<Atom, int64_t>> unnestGaugeAtomData(const GaugeBucketInfo& bucketInf
     return atomData;
 }
 
+void sortReportsByElapsedTime(ConfigMetricsReportList* configReportList) {
+    RepeatedPtrField<ConfigMetricsReport>* reports = configReportList->mutable_reports();
+    sort(reports->pointer_begin(), reports->pointer_end(),
+         [](const ConfigMetricsReport* lhs, const ConfigMetricsReport* rhs) {
+             return lhs->current_report_elapsed_nanos() < rhs->current_report_elapsed_nanos();
+         });
+}
+
 Status FakeSubsystemSleepCallback::onPullAtom(int atomTag,
         const shared_ptr<IPullAtomResultReceiver>& resultReceiver) {
     // Convert stats_events into StatsEventParcels.
