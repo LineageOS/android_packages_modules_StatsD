@@ -1983,6 +1983,7 @@ TEST_F(ConfigUpdateE2eTest, TestMetricActivation) {
     vector<uint8_t> buffer;
     processor->onDumpReport(key, dumpTimeNs, true, true, ADB_DUMP, FAST, &buffer);
     EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    sortReportsByElapsedTime(&reports);
     backfillDimensionPath(&reports);
     backfillStringInReport(&reports);
     backfillStartEndTimestamp(&reports);

@@ -545,6 +545,8 @@ bool backfillDimensionPath(const DimensionsValue& path,
                            const google::protobuf::RepeatedPtrField<DimensionsValue>& leafValues,
                            DimensionsValue* dimension);
 
+void sortReportsByElapsedTime(ConfigMetricsReportList* configReportList);
+
 class FakeSubsystemSleepCallback : public BnPullAtomCallback {
 public:
     // Track the number of pulls.
