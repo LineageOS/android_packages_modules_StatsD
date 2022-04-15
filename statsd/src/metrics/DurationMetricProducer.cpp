@@ -117,7 +117,7 @@ DurationMetricProducer::DurationMetricProducer(
         mValid = false;
     }
 
-    mContainsRepeatedFieldDimension = HasPosition(metric.dimensions_in_what());
+    mShouldUseNestedDimensions = ShouldUseNestedDimensions(metric.dimensions_in_what());
 
     if (metric.links().size() > 0) {
         for (const auto& link : metric.links()) {
@@ -507,7 +507,7 @@ void DurationMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_TIME_BASE, (long long)mTimeBaseNs);
     protoOutput->write(FIELD_TYPE_INT64 | FIELD_ID_BUCKET_SIZE, (long long)mBucketSizeNs);
 
-    if (!mContainsRepeatedFieldDimension) {
+    if (!mShouldUseNestedDimensions) {
         if (!mDimensionsInWhat.empty()) {
             uint64_t dimenPathToken = protoOutput->start(
                     FIELD_TYPE_MESSAGE | FIELD_ID_DIMENSION_PATH_IN_WHAT);
@@ -528,7 +528,7 @@ void DurationMetricProducer::onDumpReportLocked(const int64_t dumpTimeNs,
                 protoOutput->start(FIELD_TYPE_MESSAGE | FIELD_COUNT_REPEATED | FIELD_ID_DATA);
 
         // First fill dimension.
-        if (mContainsRepeatedFieldDimension) {
+        if (mShouldUseNestedDimensions) {
             uint64_t dimensionToken = protoOutput->start(
                     FIELD_TYPE_MESSAGE | FIELD_ID_DIMENSION_IN_WHAT);
             writeDimensionToProto(dimensionKey.getDimensionKeyInWhat(), str_set, protoOutput);
