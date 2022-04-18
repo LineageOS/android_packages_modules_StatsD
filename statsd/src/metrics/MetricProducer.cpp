@@ -66,7 +66,7 @@ MetricProducer::MetricProducer(
       mConditionSliced(false),
       mWizard(wizard),
       mContainANYPositionInDimensionsInWhat(false),
-      mContainsRepeatedFieldDimension(false),
+      mShouldUseNestedDimensions(false),
       mHasLinksToAllConditionDimensionsInTracker(false),
       mEventActivationMap(eventActivationMap),
       mEventDeactivationMap(eventDeactivationMap),
