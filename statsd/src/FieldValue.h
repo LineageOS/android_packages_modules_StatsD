@@ -440,7 +440,8 @@ struct FieldValue {
 };
 
 bool HasPositionANY(const FieldMatcher& matcher);
-bool HasPosition(const FieldMatcher& matcher);
+bool HasPrimitiveRepeatedField(const FieldMatcher& matcher);
+bool ShouldUseNestedDimensions(const FieldMatcher& matcher);
 
 bool isAttributionUidField(const FieldValue& value);
 

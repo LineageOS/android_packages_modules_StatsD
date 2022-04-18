@@ -186,7 +186,8 @@ public:
                 TimeUnitToBucketSizeInMillisGuardrailed(kConfigKey.GetUid(), metric.bucket()));
         const bool containsAnyPositionInDimensionsInWhat =
                 HasPositionANY(metric.dimensions_in_what());
-        const bool containsRepeatedFieldDimension = HasPosition(metric.dimensions_in_what());
+        const bool shouldUseNestedDimensions =
+                ShouldUseNestedDimensions(metric.dimensions_in_what());
 
         vector<Matcher> fieldMatchers;
         translateFieldMatcher(metric.value_field(), &fieldMatchers);
@@ -210,7 +211,7 @@ public:
                 kConfigKey, metric, protoHash, {pullAtomId, pullerManager},
                 {timeBaseNs, startTimeNs, bucketSizeNs, metric.min_bucket_size_nanos(),
                  conditionCorrectionThresholdNs, metric.split_bucket_for_app_upgrade()},
-                {containsAnyPositionInDimensionsInWhat, containsRepeatedFieldDimension,
+                {containsAnyPositionInDimensionsInWhat, shouldUseNestedDimensions,
                  logEventMatcherIndex, eventMatcherWizard, metric.dimensions_in_what(),
                  fieldMatchers},
                 {conditionIndex, metric.links(), initialConditionCache, wizard},

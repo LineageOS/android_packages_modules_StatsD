@@ -520,7 +520,9 @@ protected:
 
     bool mContainANYPositionInDimensionsInWhat;
 
-    bool mContainsRepeatedFieldDimension;
+    // Metrics slicing by primitive repeated field and/or position ALL need to use nested
+    // dimensions.
+    bool mShouldUseNestedDimensions;
 
     vector<Matcher> mDimensionsInWhat;  // The dimensions_in_what defined in statsd_config
 

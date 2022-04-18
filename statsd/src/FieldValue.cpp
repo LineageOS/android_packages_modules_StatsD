@@ -488,16 +488,29 @@ bool HasPositionANY(const FieldMatcher& matcher) {
     return false;
 }
 
-bool HasPosition(const FieldMatcher& matcher) {
-    if (matcher.has_position()) {
+bool HasPositionALL(const FieldMatcher& matcher) {
+    if (matcher.has_position() && matcher.position() == Position::ALL) {
         return true;
     }
     for (const auto& child : matcher.child()) {
-        if (HasPosition(child)) {
+        if (HasPositionALL(child)) {
             return true;
         }
     }
     return false;
+}
+
+bool HasPrimitiveRepeatedField(const FieldMatcher& matcher) {
+    for (const auto& child : matcher.child()) {
+        if (child.has_position() && child.child_size() == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool ShouldUseNestedDimensions(const FieldMatcher& matcher) {
+    return HasPositionALL(matcher) || HasPrimitiveRepeatedField(matcher);
 }
 
 size_t getSize(const std::vector<FieldValue>& fieldValues) {
