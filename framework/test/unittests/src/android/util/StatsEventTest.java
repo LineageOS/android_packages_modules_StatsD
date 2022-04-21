@@ -18,22 +18,18 @@ package android.util;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.os.SystemClock;
-
 import androidx.test.filters.SmallTest;
 import androidx.test.runner.AndroidJUnit4;
-
+import com.android.modules.utils.build.SdkLevel;
 import com.google.common.collect.Range;
-
-import org.junit.Test;
-import org.junit.runner.RunWith;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * Internal tests for {@link StatsEvent}.
@@ -421,6 +417,11 @@ public class StatsEventTest {
 
     @Test
     public void testBoolArrayIntArrayLongArray() {
+        // Skip test if build version isn't T or greater.
+        if (!SdkLevel.isAtLeastT()) {
+            return;
+        }
+
         final int expectedAtomId = 109;
         final boolean[] field1 = new boolean[] {true, false, false};
         final int[] field1Converted = new int[] {1, 0, 0};
@@ -525,6 +526,11 @@ public class StatsEventTest {
 
     @Test
     public void testFloatArrayStringArray() {
+        // Skip test if build version isn't T or greater.
+        if (!SdkLevel.isAtLeastT()) {
+            return;
+        }
+
         final int expectedAtomId = 109;
         final float[] field1 = new float[] {0.21f, 0.13f};
         final String[] field2 = new String[] {"str1", "str2", "str3"};
@@ -690,6 +696,11 @@ public class StatsEventTest {
 
     @Test
     public void testArrayFieldAnnotations() {
+        // Skip test if build version isn't T or greater.
+        if (!SdkLevel.isAtLeastT()) {
+            return;
+        }
+
         final int expectedAtomId = 109;
         final int[] field1 = new int[] {4, 11};
         final byte boolAnnotationId = 45;
