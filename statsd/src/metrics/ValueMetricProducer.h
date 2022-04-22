@@ -266,9 +266,6 @@ protected:
         // Number of samples collected.
         int sampleSize = 0;
 
-        // Whether new data is seen in the bucket.
-        bool seenNewData = false;
-
         inline bool hasValue() const {
             return sampleSize > 0;
         }
@@ -298,6 +295,10 @@ protected:
         }
 
         DimExtras dimExtras;
+
+        // Whether new data is seen in the bucket.
+        // TODO, this could be per base in the dim extras.
+        bool seenNewData = false;
 
         // Last seen state value(s).
         HashableDimensionKey currentState;
@@ -357,7 +358,9 @@ protected:
         return eventTimeNs < mCurrentBucketStartTimeNs;
     }
 
-    virtual void aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
+    // Returns true if any of the intervals have seen new data.
+    // This should return true unless there is an error parsing the value fields from the event.
+    virtual bool aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
                                  const LogEvent& event, std::vector<Interval>& intervals,
                                  DimExtras& dimExtras) = 0;
 

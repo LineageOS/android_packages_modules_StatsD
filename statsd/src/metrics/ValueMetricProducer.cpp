@@ -688,7 +688,8 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::onMatchedLogEventInternalL
     dimensionsInWhatInfo.hasCurrentState = true;
     dimensionsInWhatInfo.currentState = stateKey;
 
-    aggregateFields(eventTimeNs, eventKey, event, intervals, dimensionsInWhatInfo.dimExtras);
+    dimensionsInWhatInfo.seenNewData |= aggregateFields(eventTimeNs, eventKey, event, intervals,
+                                                        dimensionsInWhatInfo.dimExtras);
 
     // State change.
     if (!mSlicedStateAtoms.empty() && stateChange) {
@@ -834,18 +835,15 @@ template <typename AggregatedValue, typename DimExtras>
 void ValueMetricProducer<AggregatedValue, DimExtras>::initNextSlicedBucket(
         int64_t nextBucketStartTimeNs) {
     StatsdStats::getInstance().noteBucketCount(mMetricId);
-    // Cleanup data structure to aggregate values.
-    for (auto it = mCurrentSlicedBucket.begin(); it != mCurrentSlicedBucket.end();) {
-        bool obsolete = true;
-        for (auto& interval : it->second.intervals) {
-            interval.sampleSize = 0;
-            if (interval.seenNewData) {
-                obsolete = false;
+    if (mSlicedStateAtoms.empty()) {
+        mCurrentSlicedBucket.clear();
+    } else {
+        for (auto it = mCurrentSlicedBucket.begin(); it != mCurrentSlicedBucket.end();) {
+            bool obsolete = true;
+            for (auto& interval : it->second.intervals) {
+                interval.sampleSize = 0;
             }
-            interval.seenNewData = false;
-        }
 
-        if (obsolete && !mSlicedStateAtoms.empty()) {
             // When slicing by state, only delete the MetricDimensionKey when the
             // state key in the MetricDimensionKey is not the current state key.
             const HashableDimensionKey& dimensionInWhatKey = it->first.getDimensionKeyInWhat();
@@ -855,13 +853,20 @@ void ValueMetricProducer<AggregatedValue, DimExtras>::initNextSlicedBucket(
                 (it->first.getStateValuesKey() == currentDimInfoItr->second.currentState)) {
                 obsolete = false;
             }
+            if (obsolete) {
+                it = mCurrentSlicedBucket.erase(it);
+            } else {
+                it++;
+            }
         }
-        if (obsolete) {
-            it = mCurrentSlicedBucket.erase(it);
+    }
+    for (auto it = mDimInfos.begin(); it != mDimInfos.end();) {
+        if (!it->second.seenNewData) {
+            it = mDimInfos.erase(it);
         } else {
+            it->second.seenNewData = false;
             it++;
         }
-        // TODO(b/157655103): remove mDimInfos entries when obsolete
     }
 
     mCurrentBucketIsSkipped = false;
