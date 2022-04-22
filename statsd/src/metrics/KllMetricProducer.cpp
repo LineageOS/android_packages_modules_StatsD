@@ -109,9 +109,10 @@ optional<int64_t> getInt64ValueFromEvent(const LogEvent& event, const Matcher& m
     return nullopt;
 }
 
-void KllMetricProducer::aggregateFields(const int64_t eventTimeNs,
+bool KllMetricProducer::aggregateFields(const int64_t eventTimeNs,
                                         const MetricDimensionKey& eventKey, const LogEvent& event,
                                         vector<Interval>& intervals, Empty& empty) {
+    bool seenNewData = false;
     for (size_t i = 0; i < mFieldMatchers.size(); i++) {
         const Matcher& matcher = mFieldMatchers[i];
         Interval& interval = intervals[i];
@@ -120,7 +121,7 @@ void KllMetricProducer::aggregateFields(const int64_t eventTimeNs,
         if (!valueOpt) {
             VLOG("Failed to get value %zu from event %s", i, event.ToString().c_str());
             StatsdStats::getInstance().noteBadValueType(mMetricId);
-            return;
+            return seenNewData;
         }
 
         // interval.aggregate can be nullptr from cases:
@@ -130,10 +131,11 @@ void KllMetricProducer::aggregateFields(const int64_t eventTimeNs,
         if (!interval.aggregate) {
             interval.aggregate = KllQuantile::Create();
         }
-        interval.seenNewData = true;
+        seenNewData = true;
         interval.aggregate->Add(valueOpt.value());
         interval.sampleSize += 1;
     }
+    return seenNewData;
 }
 
 PastBucket<unique_ptr<KllQuantile>> KllMetricProducer::buildPartialBucket(
