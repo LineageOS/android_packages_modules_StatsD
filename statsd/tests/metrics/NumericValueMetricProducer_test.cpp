@@ -2673,6 +2673,16 @@ TEST_P(NumericValueMetricProducerTest_PartialBucket, TestFullBucketResetWhenLast
     sp<NumericValueMetricProducer> valueProducer =
             NumericValueMetricProducerTestHelper::createValueProducerNoConditions(pullerManager,
                                                                                   metric);
+
+    sp<AlarmMonitor> alarmMonitor;
+    Alert alert;
+    alert.set_id(101);
+    alert.set_metric_id(metricId);
+    alert.set_trigger_if_sum_gt(100);
+    alert.set_num_buckets(1);
+    alert.set_refractory_period_secs(3);
+    sp<AnomalyTracker> anomalyTracker =
+            valueProducer->addAnomalyTracker(alert, alarmMonitor, UPDATE_NEW, bucketStartTimeNs);
     ASSERT_EQ(0UL, valueProducer->mCurrentFullBucket.size());
 
     switch (GetParam()) {

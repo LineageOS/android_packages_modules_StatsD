@@ -418,27 +418,30 @@ void CountMetricProducer::flushCurrentBucketLocked(const int64_t& eventTimeNs,
         }
     }
 
-    // If we have finished a full bucket, then send this to anomaly tracker.
-    if (eventTimeNs > fullBucketEndTimeNs) {
-        // Accumulate partial buckets with current value and then send to anomaly tracker.
-        if (mCurrentFullCounters->size() > 0) {
+    // Only update mCurrentFullCounters if any anomaly tackers are present.
+    if (mAnomalyTrackers.size() > 0) {
+        // If we have finished a full bucket, then send this to anomaly tracker.
+        if (eventTimeNs > fullBucketEndTimeNs) {
+            // Accumulate partial buckets with current value and then send to anomaly tracker.
+            if (mCurrentFullCounters->size() > 0) {
+                for (const auto& keyValuePair : *mCurrentSlicedCounter) {
+                    (*mCurrentFullCounters)[keyValuePair.first] += keyValuePair.second;
+                }
+                for (auto& tracker : mAnomalyTrackers) {
+                    tracker->addPastBucket(mCurrentFullCounters, mCurrentBucketNum);
+                }
+                mCurrentFullCounters = std::make_shared<DimToValMap>();
+            } else {
+                // Skip aggregating the partial buckets since there's no previous partial bucket.
+                for (auto& tracker : mAnomalyTrackers) {
+                    tracker->addPastBucket(mCurrentSlicedCounter, mCurrentBucketNum);
+                }
+            }
+        } else {
+            // Accumulate partial bucket.
             for (const auto& keyValuePair : *mCurrentSlicedCounter) {
                 (*mCurrentFullCounters)[keyValuePair.first] += keyValuePair.second;
             }
-            for (auto& tracker : mAnomalyTrackers) {
-                tracker->addPastBucket(mCurrentFullCounters, mCurrentBucketNum);
-            }
-            mCurrentFullCounters = std::make_shared<DimToValMap>();
-        } else {
-            // Skip aggregating the partial buckets since there's no previous partial bucket.
-            for (auto& tracker : mAnomalyTrackers) {
-                tracker->addPastBucket(mCurrentSlicedCounter, mCurrentBucketNum);
-            }
-        }
-    } else {
-        // Accumulate partial bucket.
-        for (const auto& keyValuePair : *mCurrentSlicedCounter) {
-            (*mCurrentFullCounters)[keyValuePair.first] += keyValuePair.second;
         }
     }
 
