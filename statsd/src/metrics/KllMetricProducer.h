@@ -101,7 +101,7 @@ private:
                                          const std::unique_ptr<KllQuantile>& kll,
                                          ProtoOutputStream* const protoOutput) const override;
 
-    void aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
+    bool aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
                          const LogEvent& event, std::vector<Interval>& intervals,
                          Empty& empty) override;
 
