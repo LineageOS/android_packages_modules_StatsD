@@ -120,7 +120,7 @@ private:
                (isPulled() && !mUseDiff && mCondition != ConditionState::kTrue);
     }
 
-    void aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
+    bool aggregateFields(const int64_t eventTimeNs, const MetricDimensionKey& eventKey,
                          const LogEvent& event, std::vector<Interval>& intervals,
                          ValueBases& bases) override;
 
@@ -217,6 +217,9 @@ private:
     FRIEND_TEST(NumericValueMetricProducerTest, TestSlicedStateWithDataMissingInConditionChange);
     FRIEND_TEST(NumericValueMetricProducerTest, TestSlicedStateWithMissingDataThenFlushBucket);
     FRIEND_TEST(NumericValueMetricProducerTest, TestSlicedStateWithNoPullOnBucketBoundary);
+    FRIEND_TEST(NumericValueMetricProducerTest, TestSlicedStateWithConditionFalseMultipleBuckets);
+    FRIEND_TEST(NumericValueMetricProducerTest,
+                TestSlicedStateWithMultipleDimensionsMissingDataInPull);
     FRIEND_TEST(NumericValueMetricProducerTest, TestUploadThreshold);
 
     FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenOneConditionFailed);
@@ -224,7 +227,11 @@ private:
     FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenLastPullFailed);
     FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop, TestInvalidBucketWhenGuardRailHit);
     FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop,
+                TestInvalidBucketWhenDumpReportRequested);
+    FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop,
                 TestInvalidBucketWhenAccumulateEventWrongBucket);
+    FRIEND_TEST(NumericValueMetricProducerTest_BucketDrop,
+                TestInvalidBucketWhenMultipleBucketsSkipped);
 
     FRIEND_TEST(NumericValueMetricProducerTest_PartialBucket, TestBucketBoundariesOnPartialBucket);
     FRIEND_TEST(NumericValueMetricProducerTest_PartialBucket,
@@ -256,6 +263,8 @@ private:
                 TestThresholdUploadPassWhenGreater);
     FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestThresholdUploadSkip);
     FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestLateStateChangeSlicedAtoms);
+
+    FRIEND_TEST(NumericValueMetricProducerTest_SubsetDimensions, TestSubsetDimensions_FlagTrue);
 
     FRIEND_TEST(ConfigUpdateTest, TestUpdateValueMetrics);
 
