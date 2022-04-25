@@ -533,7 +533,9 @@ PastBucket<Value> NumericValueMetricProducer::buildPartialBucket(int64_t bucketE
 void NumericValueMetricProducer::closeCurrentBucket(const int64_t eventTimeNs,
                                                     const int64_t nextBucketStartTimeNs) {
     ValueMetricProducer::closeCurrentBucket(eventTimeNs, nextBucketStartTimeNs);
-    appendToFullBucket(eventTimeNs > getCurrentBucketEndTimeNs());
+    if (mAnomalyTrackers.size() > 0) {
+        appendToFullBucket(eventTimeNs > getCurrentBucketEndTimeNs());
+    }
 }
 
 void NumericValueMetricProducer::initNextSlicedBucket(int64_t nextBucketStartTimeNs) {
