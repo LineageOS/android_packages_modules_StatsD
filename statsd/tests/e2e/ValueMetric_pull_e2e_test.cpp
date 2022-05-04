@@ -670,6 +670,36 @@ TEST(ValueMetricE2eTest, TestInitWithSlicedState_WithIncorrectDimensions) {
     ASSERT_EQ(0, processor->mMetricsManagers.size());
 }
 
+TEST(ValueMetricE2eTest, TestInitWithValueFieldPositionALL) {
+    // Create config.
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    AtomMatcher testAtomReportedMatcher =
+            CreateSimpleAtomMatcher("TestAtomReportedMatcher", util::TEST_ATOM_REPORTED);
+    *config.add_atom_matcher() = testAtomReportedMatcher;
+
+    // Create value metric.
+    int64_t metricId = 123456;
+    ValueMetric* valueMetric = config.add_value_metric();
+    valueMetric->set_id(metricId);
+    valueMetric->set_bucket(TimeUnit::FIVE_MINUTES);
+    valueMetric->set_what(testAtomReportedMatcher.id());
+    *valueMetric->mutable_value_field() = CreateRepeatedDimensions(
+            util::TEST_ATOM_REPORTED, {9 /*repeated_int_field*/}, {Position::ALL});
+
+    // Initialize StatsLogProcessor.
+    const uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    int uid = 12345;
+    int64_t cfgId = 98765;
+    ConfigKey cfgKey(uid, cfgId);
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, cfgKey);
+
+    // Config initialization fails.
+    ASSERT_EQ(0, processor->mMetricsManagers.size());
+}
+
 #else
 GTEST_LOG_(INFO) << "This test does nothing.\n";
 #endif
