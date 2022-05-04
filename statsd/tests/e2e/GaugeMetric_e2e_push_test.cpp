@@ -82,7 +82,33 @@ StatsdConfig CreateStatsdConfigForRepeatedFieldsPushedEvent(
     gaugeMetric->set_id(123456);
     gaugeMetric->set_what(testAtomReportedAtomMatcher.id());
     gaugeMetric->set_sampling_type(sampling_type);
-    gaugeMetric->mutable_gauge_fields_filter()->set_include_all(true);
+    FieldMatcher* fieldMatcher = gaugeMetric->mutable_gauge_fields_filter()->mutable_fields();
+    fieldMatcher->set_field(util::TEST_ATOM_REPORTED);
+
+    FieldMatcher* childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(9);  // repeated_int_field
+    childFieldMatcher->set_position(Position::FIRST);
+
+    childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(10);  // repeated_long_field
+    childFieldMatcher->set_position(Position::LAST);
+
+    childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(11);  // repeated_float_field
+    childFieldMatcher->set_position(Position::ALL);
+
+    childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(12);  // repeated_string_field
+    childFieldMatcher->set_position(Position::FIRST);
+
+    childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(13);  // repeated_boolean_field
+    childFieldMatcher->set_position(Position::LAST);
+
+    childFieldMatcher = fieldMatcher->add_child();
+    childFieldMatcher->set_field(14);  // repeated_enum_field
+    childFieldMatcher->set_position(Position::ALL);
+
     gaugeMetric->set_bucket(FIVE_MINUTES);
     return config;
 }
@@ -357,11 +383,11 @@ TEST_F(GaugeMetricE2ePushedTest, TestRepeatedFieldsForPushedEvent) {
             ASSERT_EQ(2, data.bucket_info(0).atom_size());
 
             TestAtomReported atom = data.bucket_info(0).atom(0).test_atom_reported();
-            EXPECT_THAT(atom.repeated_int_field(), ElementsAreArray(intArray));
-            EXPECT_THAT(atom.repeated_long_field(), ElementsAreArray(longArray));
+            EXPECT_THAT(atom.repeated_int_field(), ElementsAreArray({3}));
+            EXPECT_THAT(atom.repeated_long_field(), ElementsAreArray({10002L}));
             EXPECT_THAT(atom.repeated_float_field(), ElementsAreArray(floatArray));
-            EXPECT_THAT(atom.repeated_string_field(), ElementsAreArray(stringArray));
-            EXPECT_THAT(atom.repeated_boolean_field(), ElementsAreArray(boolArrayVector));
+            EXPECT_THAT(atom.repeated_string_field(), ElementsAreArray({"str1"}));
+            EXPECT_THAT(atom.repeated_boolean_field(), ElementsAreArray({0}));
             EXPECT_THAT(atom.repeated_enum_field(), ElementsAreArray(enumArray));
 
             atom = data.bucket_info(0).atom(1).test_atom_reported();
@@ -378,11 +404,11 @@ TEST_F(GaugeMetricE2ePushedTest, TestRepeatedFieldsForPushedEvent) {
             ASSERT_EQ(1, data.bucket_info(0).atom_size());
 
             TestAtomReported atom = data.bucket_info(0).atom(0).test_atom_reported();
-            EXPECT_THAT(atom.repeated_int_field(), ElementsAreArray(intArray));
-            EXPECT_THAT(atom.repeated_long_field(), ElementsAreArray(longArray));
+            EXPECT_THAT(atom.repeated_int_field(), ElementsAreArray({3}));
+            EXPECT_THAT(atom.repeated_long_field(), ElementsAreArray({10002L}));
             EXPECT_THAT(atom.repeated_float_field(), ElementsAreArray(floatArray));
-            EXPECT_THAT(atom.repeated_string_field(), ElementsAreArray(stringArray));
-            EXPECT_THAT(atom.repeated_boolean_field(), ElementsAreArray(boolArrayVector));
+            EXPECT_THAT(atom.repeated_string_field(), ElementsAreArray({"str1"}));
+            EXPECT_THAT(atom.repeated_boolean_field(), ElementsAreArray({0}));
             EXPECT_THAT(atom.repeated_enum_field(), ElementsAreArray(enumArray));
         }
     }
