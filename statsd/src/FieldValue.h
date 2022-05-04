@@ -440,6 +440,7 @@ struct FieldValue {
 };
 
 bool HasPositionANY(const FieldMatcher& matcher);
+bool HasPositionALL(const FieldMatcher& matcher);
 bool HasPrimitiveRepeatedField(const FieldMatcher& matcher);
 bool ShouldUseNestedDimensions(const FieldMatcher& matcher);
 
