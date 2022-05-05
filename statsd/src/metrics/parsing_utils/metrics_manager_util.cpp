@@ -655,6 +655,11 @@ optional<sp<MetricProducer>> createNumericValueMetricProducerAndUpdateMetadata(
         ALOGE("cannot find \"value_field\" in ValueMetric \"%lld\"", (long long)metric.id());
         return nullopt;
     }
+    if (HasPositionALL(metric.value_field())) {
+        ALOGE("value field with position ALL is not supported. ValueMetric \"%lld\"",
+              (long long)metric.id());
+        return nullopt;
+    }
     std::vector<Matcher> fieldMatchers;
     translateFieldMatcher(metric.value_field(), &fieldMatchers);
     if (fieldMatchers.size() < 1) {
@@ -774,6 +779,11 @@ optional<sp<MetricProducer>> createKllMetricProducerAndUpdateMetadata(
     }
     if (!metric.has_kll_field()) {
         ALOGE("cannot find \"kll_field\" in KllMetric \"%lld\"", (long long)metric.id());
+        return nullopt;
+    }
+    if (HasPositionALL(metric.kll_field())) {
+        ALOGE("kll field with position ALL is not supported. KllMetric \"%lld\"",
+              (long long)metric.id());
         return nullopt;
     }
     std::vector<Matcher> fieldMatchers;
