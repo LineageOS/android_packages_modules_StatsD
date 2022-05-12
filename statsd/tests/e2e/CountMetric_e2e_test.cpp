@@ -1617,6 +1617,136 @@ TEST(CountMetricE2eTest, TestMultipleRepeatedFieldDimensions_PositionAll) {
               TestAtomReported::OFF);
 }
 
+TEST(CountMetricE2eTest, TestConditionSlicedByRepeatedUidWithUidDimension) {
+    StatsdConfig config;
+    config.add_allowed_log_source("AID_ROOT");  // LogEvent defaults to UID of root.
+
+    AtomMatcher uidProcessStateChangedAtomMatcher = CreateUidProcessStateChangedAtomMatcher();
+    AtomMatcher repeatedStateFirstOffAtomMatcher = CreateTestAtomRepeatedStateFirstOffAtomMatcher();
+    AtomMatcher repeatedStateFirstOnAtomMatcher = CreateTestAtomRepeatedStateFirstOnAtomMatcher();
+    *config.add_atom_matcher() = uidProcessStateChangedAtomMatcher;
+    *config.add_atom_matcher() = repeatedStateFirstOffAtomMatcher;
+    *config.add_atom_matcher() = repeatedStateFirstOnAtomMatcher;
+
+    Predicate testAtomRepeatedStateFirstOffPerUidPredicate =
+            CreateTestAtomRepeatedStateFirstOffPredicate();
+    FieldMatcher* dimensions =
+            testAtomRepeatedStateFirstOffPerUidPredicate.mutable_simple_predicate()
+                    ->mutable_dimensions();
+    *dimensions = CreateRepeatedDimensions(util::TEST_ATOM_REPORTED, {9 /* repeated uid*/},
+                                           {Position::FIRST});
+    *config.add_predicate() = testAtomRepeatedStateFirstOffPerUidPredicate;
+
+    int64_t metricId = 123456;
+    CountMetric* countMetric = config.add_count_metric();
+    countMetric->set_id(metricId);
+    countMetric->set_what(uidProcessStateChangedAtomMatcher.id());
+    countMetric->set_condition(testAtomRepeatedStateFirstOffPerUidPredicate.id());
+    countMetric->set_bucket(TimeUnit::FIVE_MINUTES);
+    *countMetric->mutable_dimensions_in_what() =
+            CreateDimensions(util::UID_PROCESS_STATE_CHANGED, {1 /*uid*/});
+    MetricConditionLink* links = countMetric->add_links();
+    links->set_condition(testAtomRepeatedStateFirstOffPerUidPredicate.id());
+    *links->mutable_fields_in_what() =
+            CreateDimensions(util::UID_PROCESS_STATE_CHANGED, {1 /* uid*/});
+    *links->mutable_fields_in_condition() = CreateRepeatedDimensions(
+            util::TEST_ATOM_REPORTED, {9 /* repeated uid*/}, {Position::FIRST});
+
+    // Initialize StatsLogProcessor.
+    ConfigKey cfgKey(2000, 921);
+    const uint64_t bucketStartTimeNs = 10000000000;  // 0:10
+    const uint64_t bucketSizeNs =
+            TimeUnitToBucketSizeInMillis(config.count_metric(0).bucket()) * 1000000LL;
+    const uint64_t bucket2StartTimeNs = bucketStartTimeNs + bucketSizeNs;
+    sp<StatsLogProcessor> processor =
+            CreateStatsLogProcessor(bucketStartTimeNs, bucketStartTimeNs, config, cfgKey);
+
+    vector<int> intArray1 = {1, 2};
+    vector<int> intArray2 = {2, 1};
+    vector<int> enumArrayOn = {TestAtomReported::ON, TestAtomReported::OFF};
+    vector<int> enumArrayOff = {TestAtomReported::OFF, TestAtomReported::ON};
+
+    std::vector<std::unique_ptr<LogEvent>> events;
+    // Set condition to true for uid 1.
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 20 * NS_PER_SEC, intArray1, {}, {}, {}, {}, 0, enumArrayOff));
+
+    // Uid 1 process state changed.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 40 * NS_PER_SEC, 1 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+    // Uid 2 process state changed. Should not be counted.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 60 * NS_PER_SEC, 2 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+
+    // Set condition to true for uid 2.
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucketStartTimeNs + 80 * NS_PER_SEC, intArray2, {}, {}, {}, {}, 0, enumArrayOff));
+    // Uid 1 process state changed.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 100 * NS_PER_SEC, 1 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+    // Uid 2 process state changed.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucketStartTimeNs + 120 * NS_PER_SEC, 2 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+
+    // Bucket 2
+    // Set condition to false for uid 1.
+    events.push_back(CreateTestAtomReportedEventVariableRepeatedFields(
+            bucket2StartTimeNs + 20 * NS_PER_SEC, intArray1, {}, {}, {}, {}, 0, enumArrayOn));
+    // Uid 1 process state changed. Should not be counted.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucket2StartTimeNs + 40 * NS_PER_SEC, 1 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+    // Uid 2 process state changed.
+    events.push_back(CreateUidProcessStateChangedEvent(
+            bucket2StartTimeNs + 60 * NS_PER_SEC, 2 /*uid*/,
+            android::app::ProcessStateEnum::PROCESS_STATE_IMPORTANT_FOREGROUND));
+
+    // Send log events to StatsLogProcessor.
+    for (auto& event : events) {
+        processor->OnLogEvent(event.get());
+    }
+
+    // Check dump report.
+    vector<uint8_t> buffer;
+    ConfigMetricsReportList reports;
+    processor->onDumpReport(cfgKey, bucket2StartTimeNs + bucketSizeNs + 1, false, true, ADB_DUMP,
+                            FAST, &buffer);
+    ASSERT_GT(buffer.size(), 0);
+    EXPECT_TRUE(reports.ParseFromArray(&buffer[0], buffer.size()));
+    backfillDimensionPath(&reports);
+    backfillStringInReport(&reports);
+    backfillStartEndTimestamp(&reports);
+
+    ASSERT_EQ(1, reports.reports_size());
+    ASSERT_EQ(1, reports.reports(0).metrics_size());
+    EXPECT_TRUE(reports.reports(0).metrics(0).has_count_metrics());
+    StatsLogReport::CountMetricDataWrapper countMetrics;
+    sortMetricDataByDimensionsValue(reports.reports(0).metrics(0).count_metrics(), &countMetrics);
+    ASSERT_EQ(2, countMetrics.data_size());
+
+    CountMetricData data = countMetrics.data(0);
+    ASSERT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value_size());
+    EXPECT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value(0).field());
+    EXPECT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value(0).value_int());
+    ASSERT_EQ(1, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        2);
+
+    data = countMetrics.data(1);
+    ASSERT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value_size());
+    EXPECT_EQ(1, data.dimensions_in_what().value_tuple().dimensions_value(0).field());
+    EXPECT_EQ(2, data.dimensions_in_what().value_tuple().dimensions_value(0).value_int());
+    ASSERT_EQ(2, data.bucket_info_size());
+    ValidateCountBucket(data.bucket_info(0), bucketStartTimeNs, bucketStartTimeNs + bucketSizeNs,
+                        1);
+    ValidateCountBucket(data.bucket_info(1), bucket2StartTimeNs, bucket2StartTimeNs + bucketSizeNs,
+                        1);
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android
