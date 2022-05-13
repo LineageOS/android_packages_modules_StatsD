@@ -264,7 +264,7 @@ private:
     FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestThresholdUploadSkip);
     FRIEND_TEST(NumericValueMetricProducerTest_ConditionCorrection, TestLateStateChangeSlicedAtoms);
 
-    FRIEND_TEST(NumericValueMetricProducerTest_SubsetDimensions, TestSubsetDimensions_FlagTrue);
+    FRIEND_TEST(NumericValueMetricProducerTest, TestSubsetDimensions);
 
     FRIEND_TEST(ConfigUpdateTest, TestUpdateValueMetrics);
 
