@@ -22,7 +22,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "flags/FlagProvider.h"
 #include "guardrail/StatsdStats.h"
 #include "metrics/parsing_utils/metrics_manager_util.h"
 #include "stats_log_util.h"
@@ -254,9 +253,9 @@ void NumericValueMetricProducer::accumulateEvents(const vector<shared_ptr<LogEve
     }
 
     mMatchedMetricDimensionKeys.clear();
-    if (FlagProvider::getInstance().getBootFlagBool(VALUE_METRIC_SUBSET_DIMENSION_AGGREGATION_FLAG,
-                                                    FLAG_FALSE) &&
-        mUseDiff) {
+    if (mUseDiff) {
+        // An extra aggregation step is needed to sum values with matching dimensions
+        // before calculating the diff between sums of consecutive pulls.
         std::unordered_map<HashableDimensionKey, pair<LogEvent, vector<int>>> aggregateEvents;
         for (const auto& data : allData) {
             if (mEventMatcherWizard->matchLogEvent(*data, mWhatMatcherIndex) !=
