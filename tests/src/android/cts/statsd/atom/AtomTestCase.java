@@ -125,6 +125,8 @@ public class AtomTestCase extends BaseTestCase {
     public static final String FEATURE_INCREMENTAL_DELIVERY =
             "android.software.incremental_delivery";
 
+    public static final int SHELL_UID = 2000;
+
     // Telephony phone types
     public static final int PHONE_TYPE_GSM = 1;
     public static final int PHONE_TYPE_CDMA = 2;
@@ -300,13 +302,14 @@ public class AtomTestCase extends BaseTestCase {
         getDevice().pushFile(configFile, remotePath);
         getDevice().executeShellCommand(
                 String.join(" ", "cat", remotePath, "|", UPDATE_CONFIG_CMD,
-                        String.valueOf(CONFIG_ID)));
+                        String.valueOf(SHELL_UID), String.valueOf(CONFIG_ID)));
         getDevice().executeShellCommand("rm " + remotePath);
     }
 
     protected void removeConfig(long configId) throws Exception {
         getDevice().executeShellCommand(
-                String.join(" ", REMOVE_CONFIG_CMD, String.valueOf(configId)));
+                String.join(" ", REMOVE_CONFIG_CMD,
+                        String.valueOf(SHELL_UID), String.valueOf(configId)));
     }
 
     /** Gets the statsd report and sorts it. Note that this also deletes that report from statsd. */
@@ -521,8 +524,8 @@ public class AtomTestCase extends BaseTestCase {
     protected ConfigMetricsReportList getReportList() throws Exception {
         try {
             ConfigMetricsReportList reportList = getDump(ConfigMetricsReportList.parser(),
-                    String.join(" ", DUMP_REPORT_CMD, String.valueOf(CONFIG_ID),
-                            "--include_current_bucket", "--proto"));
+                    String.join(" ", DUMP_REPORT_CMD, String.valueOf(SHELL_UID),
+                            String.valueOf(CONFIG_ID), "--include_current_bucket", "--proto"));
             return reportList;
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
             LogUtil.CLog.e("Failed to fetch and parse the statsd output report. "
