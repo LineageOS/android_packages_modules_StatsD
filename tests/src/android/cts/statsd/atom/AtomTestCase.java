@@ -875,21 +875,9 @@ public class AtomTestCase extends BaseTestCase {
         data.subList(lastStateIdx+1, data.size()).clear();
     }
 
-    /** Returns the UID of the host, which should always either be SHELL (2000) or ROOT (0). */
+    /** Returns the UID of the host, which should always either be SHELL (2000). */
     protected int getHostUid() throws DeviceNotAvailableException {
-        String strUid = "";
-        try {
-            strUid = getDevice().executeShellCommand("id -u");
-            return Integer.parseInt(strUid.trim());
-        } catch (NumberFormatException e) {
-            LogUtil.CLog.e("Failed to get host's uid via shell command. Found " + strUid);
-            // Fall back to alternative method...
-            if (getDevice().isAdbRoot()) {
-                return 0; // ROOT
-            } else {
-                return 2000; // SHELL
-            }
-        }
+        return SHELL_UID;
     }
 
     protected String getProperty(String prop) throws Exception {
@@ -993,7 +981,7 @@ public class AtomTestCase extends BaseTestCase {
 
     public void doAppBreadcrumbReported(int label, int state) throws Exception {
         getDevice().executeShellCommand(String.format(
-                "cmd stats log-app-breadcrumb %d %d", label, state));
+                "cmd stats log-app-breadcrumb %d %d %d", SHELL_UID, label, state));
     }
 
     protected void setBatteryLevel(int level) throws Exception {
