@@ -499,6 +499,7 @@ public class MetricActivationTests extends DeviceAtomTestCase {
         // Metric 2 event ignored.
         // Seventh logged event for Metric 3.
         logAllMetrics();
+        Thread.sleep(500L);
 
         ConfigMetricsReportList reportList = getReportList();
         List<ConfigMetricsReport> reports = getSortedConfigMetricsReports(reportList);
