@@ -339,6 +339,13 @@ private:
     void statsCompanionServiceDiedImpl();
 
     /**
+     *  This method is used to stop log reader thread.
+     */
+    void stopReadingLogs();
+
+    std::atomic<bool> mIsStopRequested = false;
+
+    /**
      * Tracks the uid <--> package name mapping.
      */
     sp<UidMap> mUidMap;
@@ -380,6 +387,8 @@ private:
      */
     mutable mutex mShellSubscriberMutex;
     std::shared_ptr<LogEventQueue> mEventQueue;
+
+    std::unique_ptr<std::thread> mLogsReaderThread;
 
     MultiConditionTrigger mBootCompleteTrigger;
     static const inline string kBootCompleteTag = "BOOT_COMPLETE";
