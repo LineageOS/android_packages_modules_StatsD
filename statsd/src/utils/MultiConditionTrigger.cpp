@@ -13,11 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 #define DEBUG false  // STOPSHIP if true
+#include "Log.h"
 
 #include "MultiConditionTrigger.h"
-
-#include <thread>
 
 using namespace std;
 
@@ -31,8 +31,7 @@ MultiConditionTrigger::MultiConditionTrigger(const set<string>& conditionNames,
       mTrigger(trigger),
       mCompleted(mRemainingConditionNames.empty()) {
     if (mCompleted) {
-        thread executorThread([this] { mTrigger(); });
-        executorThread.detach();
+        startExecutorThread();
     }
 }
 
@@ -48,10 +47,21 @@ void MultiConditionTrigger::markComplete(const string& conditionName) {
         doTrigger = mCompleted;
     }
     if (doTrigger) {
-        std::thread executorThread([this] { mTrigger(); });
-        executorThread.detach();
+        startExecutorThread();
     }
 }
+
+void MultiConditionTrigger::startExecutorThread() {
+    mExecutorThread = make_unique<thread>([this] { mTrigger(); });
+}
+
+MultiConditionTrigger::~MultiConditionTrigger() {
+    if (mExecutorThread != nullptr && mExecutorThread->joinable()) {
+        VLOG("MultiConditionTrigger waiting on execution thread termination");
+        mExecutorThread->join();
+    }
+}
+
 }  // namespace statsd
 }  // namespace os
 }  // namespace android

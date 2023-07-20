@@ -325,7 +325,6 @@ TEST(StatsLogProcessorTest, TestPullUidProviderSetOnConfigUpdate) {
 
 TEST(StatsLogProcessorTest, InvalidConfigRemoved) {
     // Setup simple config key corresponding to empty config.
-    StatsdStats::getInstance().reset();
     sp<UidMap> m = new UidMap();
     sp<StatsPullerManager> pullerManager = new StatsPullerManager();
     m->updateMap(1, {1, 2}, {1, 2}, {String16("v1"), String16("v2")},
@@ -337,6 +336,9 @@ TEST(StatsLogProcessorTest, InvalidConfigRemoved) {
                         [](const int&, const vector<int64_t>&) {return true;});
     ConfigKey key(3, 4);
     StatsdConfig config = MakeConfig(true);
+    // Remove the config mConfigStats so that the Icebox starts at 0 configs.
+    p.OnConfigRemoved(key);
+    StatsdStats::getInstance().reset();
     p.OnConfigUpdated(0, key, config);
     EXPECT_EQ(1, p.mMetricsManagers.size());
     EXPECT_NE(p.mMetricsManagers.find(key), p.mMetricsManagers.end());
@@ -354,7 +356,6 @@ TEST(StatsLogProcessorTest, InvalidConfigRemoved) {
               StatsdStats::getInstance().mConfigStats.find(key));
     // Both "config" and "invalidConfig" should be in the icebox.
     EXPECT_EQ(2, StatsdStats::getInstance().mIceBox.size());
-
 }
 
 
